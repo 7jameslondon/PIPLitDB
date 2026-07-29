@@ -29,6 +29,8 @@ database/
 ├── schema/
 │   └── paper.schema.json
 └── vocabularies/
+    ├── document-types.yaml
+    ├── publication-stages.yaml
     ├── relationship-types.yaml
     └── record-statuses.yaml
 ```
@@ -37,7 +39,8 @@ Each relationship type in `database/vocabularies/relationship-types.yaml` must d
 
 The database records the following fields for each paper:
 
-- Paper type (`paper_type`): The kind of paper, such as a research article, review, preprint, or correction
+- Document type (`document_type`): The kind of document. Allowed values are `research_article`, `review`, and `correction`.
+- Publication stage (`publication_stage`): The publication stage of the document. Allowed values are `preprint` and `publication`.
 - Title
 - Authors: An ordered list of author names, ideally using each author's full name
 - DOI
@@ -48,12 +51,15 @@ The database records the following fields for each paper:
 - PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
 
+Document type and publication stage describe independent characteristics. For example, a preprint and its corresponding published article may both have `document_type: research_article`, while the preprint has `publication_stage: preprint` and the published article has `publication_stage: publication`. They remain separate records and are connected using the appropriate related-paper relationship.
+
 Optional fields with no value, including status and notes, should be omitted rather than stored as empty strings.
 
 An example paper record is:
 
 ```yaml
-paper_type: preprint
+document_type: research_article
+publication_stage: preprint
 title: "Example paper title"
 authors:
   - name: "Alex Jones"
@@ -82,6 +88,7 @@ Both entries must be added, changed, or removed together.
 Database validation should check:
 
 - Every record follows `paper.schema.json`.
+- Every `document_type` and `publication_stage` value is defined in its corresponding vocabulary file.
 - Every record filename matches the five-digit format `NNNNN.yaml`, begins at `00001`, and uniquely determines that record's PIP LitDB ID.
 - Duplicate DOIs.
 - Related-paper IDs and relationship types.
