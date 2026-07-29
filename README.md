@@ -10,7 +10,7 @@
 
 - One ID for each paper found. Sometimes a paper found online will have slightly diffrent metadata then an entry already in the database but is really just the same paper. For example a title might appear slightly diffrently due to how special charactuers are handled. Another example is when author names are abbrviated or spelled out. In cases like these there is really only one paper with the same content and so only one entry should be put into the database with just one ID. In other cases there is really two diffrent papers. For example one paper might have two diffrent versions from a publisher that really have diffrent conent. Another example is a preprint and a published article of that preprint. In these cases a seperate entry with a seperate ID should be put in the database and then they should be linked via their relasionship.
 
-- The public data base is organized as a file system of YMAL files so that tracking is handeled by git.
+- The public database is organized as a file system of YMAL files so that tracking is handeled by git.
 
 ## Public Metadata Database
 
@@ -80,15 +80,19 @@ Search and export tools read the YAML files directly.
 
 ## Private Paper Copies and Extractions
 
-Users with authorized access to papers may store PDF or HTML copies in the `papers (private)` directory. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
+Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
 
 ```text
 papers (private)/
 └── 00001/
     ├── pdf/
+        ├── main.pdf
+        └── supplementary.pdf
     ├── html/
+        └── main.html
     └── extraction/
-        ├── text.md
+        ├── main.md
+        ├── supplementary.md
         └── figures/
             └── figure 1.png
 ```
