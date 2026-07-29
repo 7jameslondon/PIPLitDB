@@ -45,7 +45,7 @@ The database records the following fields for each paper:
 - Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper. Every relationship must be stored in both related records using inverse relationship types. For example, if one record uses `is_preprint_of`, the other must use `has_preprint`.
 - Publication year
 - Journal: Ideally the standard full name, not an abbreviation. If it's a preprint, use the server name.
-- PIP LitDB status: An optional text field
+- PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
 
 Optional fields with no value, including status and notes, should be omitted rather than stored as empty strings.
