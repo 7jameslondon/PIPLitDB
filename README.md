@@ -16,7 +16,7 @@
 
 The database includes published research articles, preprints, and reviews about PIPs. The database accounts for relationships between articles such as errata, preprints, and versions.
 
-The YAML files are the complete and only database. Each paper is stored in its own YAML file in `database/records`. The filename is the PIP LitDB ID, such as `00001.yaml` for PIP LitDB ID `00001`.
+The YAML files are the complete and only database. Each paper is stored in its own YAML file in `database/records`. The filename is the authoritative PIP LitDB ID: for example, `00001.yaml` has PIP LitDB ID `00001`. The ID is not repeated as a field inside the YAML record. Search and export tools derive the ID from the filename and include it in exported data when appropriate.
 
 The database is organized as follows:
 
@@ -43,7 +43,6 @@ The database records the following fields for each paper:
 - Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper, such as `is_preprint_of` or `corrects`
 - Publication year
 - Journal: Ideally the standard full name, not an abbreviation. If it's a preprint, use the server name.
-- PIP LitDB ID: The five-digit, zero-padded identifier in the YAML filename, beginning with `00001`
 - PIP LitDB status: An optional text field
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
 
@@ -71,7 +70,7 @@ related_papers:
 Database validation should check:
 
 - Every record follows `paper.schema.json`.
-- PIP LitDB IDs and record filenames.
+- Every record filename matches the five-digit format `NNNNN.yaml`, begins at `00001`, and uniquely determines that record's PIP LitDB ID.
 - Duplicate DOIs.
 - Related-paper IDs and relationship types.
 - Values governed by the files in `database/vocabularies`.
