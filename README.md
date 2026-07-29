@@ -33,6 +33,8 @@ database/
     └── record-statuses.yaml
 ```
 
+Each relationship type in `database/vocabularies/relationship-types.yaml` must define its inverse relationship type. For example, the inverse of `is_preprint_of` is `has_preprint`, and the inverse of `corrects` is `is_corrected_by`. A symmetric relationship type may define itself as its inverse.
+
 The database records the following fields for each paper:
 
 - Paper type (`paper_type`): The kind of paper, such as a research article, review, preprint, or correction
@@ -40,7 +42,7 @@ The database records the following fields for each paper:
 - Authors: An ordered list of author names, ideally using each author's full name
 - DOI
 - URL: Ideally a DOI link; otherwise, a publisher link
-- Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper, such as `is_preprint_of` or `corrects`
+- Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper. Every relationship must be stored in both related records using inverse relationship types. For example, if one record uses `is_preprint_of`, the other must use `has_preprint`.
 - Publication year
 - Journal: Ideally the standard full name, not an abbreviation. If it's a preprint, use the server name.
 - PIP LitDB status: An optional text field
@@ -65,6 +67,16 @@ related_papers:
     relationship_type: is_preprint_of
 ```
 
+Because `00001.yaml` contains an `is_preprint_of` relationship to `00002`, `00002.yaml` must contain the corresponding inverse relationship:
+
+```yaml
+related_papers:
+  - pip_litdb_id: "00001"
+    relationship_type: has_preprint
+```
+
+Both entries must be added, changed, or removed together.
+
 ### Validation
 
 Database validation should check:
@@ -73,6 +85,7 @@ Database validation should check:
 - Every record filename matches the five-digit format `NNNNN.yaml`, begins at `00001`, and uniquely determines that record's PIP LitDB ID.
 - Duplicate DOIs.
 - Related-paper IDs and relationship types.
+- Every related-paper entry has exactly one corresponding entry in the related record using the inverse relationship type defined in `relationship-types.yaml`.
 - Values governed by the files in `database/vocabularies`.
 
 Search and export tools read the YAML files directly.
