@@ -31,6 +31,7 @@ VOCABULARY_KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 IDENTITY_FIELDS = frozenset({"title", "authors", "doi"})
 ALLOWED_RECORD_DIRECTORY_FILES = frozenset({".gitkeep"})
 MAX_YAML_NESTING_DEPTH = 100
+YAML_VALUE_ERRORS = (AttributeError, KeyError, TypeError, ValueError, OverflowError)
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
     "publication-stages.yaml": frozenset({"label", "description"}),
@@ -624,7 +625,7 @@ class MetadataValidator:
                 "error", f"{kind}.yaml", f"Invalid YAML: {exc}.", relative
             )
             return None
-        except (AttributeError, KeyError, TypeError, ValueError, OverflowError) as exc:
+        except YAML_VALUE_ERRORS as exc:
             self.report.add(
                 "error", f"{kind}.yaml", f"Invalid YAML value: {exc}.", relative
             )
@@ -1169,6 +1170,8 @@ def _git_file(root: Path, revision: str, path: str) -> Any | None:
             return None
         documents = list(yaml.load_all(text, Loader=StrictSafeLoader))
     except (UnicodeDecodeError, yaml.YAMLError, RecursionError):
+        return None
+    except YAML_VALUE_ERRORS:
         return None
     return documents[0] if len(documents) == 1 else None
 

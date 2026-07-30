@@ -480,6 +480,25 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("record.nesting_depth", {finding.code for finding in report.errors})
         self.assertEqual([change.kind for change in report.changes], ["modified"])
 
+    def test_git_diff_handles_invalid_yaml_scalar(self) -> None:
+        self.git("init")
+        self.git("config", "user.email", "validator@example.test")
+        self.git("config", "user.name", "Metadata Validator")
+        self.git("add", ".")
+        self.git("commit", "-m", "base")
+        base = self.git("rev-parse", "HEAD").strip()
+
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("publication_year: 2024", "publication_year: !!int nope"),
+        )
+        self.git("add", "--all")
+        self.git("commit", "-m", "add invalid scalar")
+
+        report = validate_repository(self.root, base=base, head="HEAD")
+        self.assertIn("record.yaml", {finding.code for finding in report.errors})
+        self.assertEqual([change.kind for change in report.changes], ["modified"])
+
     def git(self, *arguments: str) -> str:
         completed = subprocess.run(
             ["git", *arguments],
