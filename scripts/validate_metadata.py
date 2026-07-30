@@ -624,7 +624,7 @@ class MetadataValidator:
                 "error", f"{kind}.yaml", f"Invalid YAML: {exc}.", relative
             )
             return None
-        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        except (AttributeError, KeyError, TypeError, ValueError, OverflowError) as exc:
             self.report.add(
                 "error", f"{kind}.yaml", f"Invalid YAML value: {exc}.", relative
             )

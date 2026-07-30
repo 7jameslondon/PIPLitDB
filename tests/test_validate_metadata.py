@@ -123,7 +123,12 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("record.document_count", self.error_codes())
 
     def test_invalid_yaml_timestamp_is_reported_without_crashing(self) -> None:
-        invalid_values = ("2024-13-40", "!!int nope", "!!bool nope")
+        invalid_values = (
+            "2024-13-40",
+            "!!int nope",
+            "!!bool nope",
+            "!!timestamp nope",
+        )
         for value in invalid_values:
             with self.subTest(value=value):
                 self.write_record(
