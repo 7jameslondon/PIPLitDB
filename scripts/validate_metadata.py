@@ -39,7 +39,8 @@ PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"\bfile://", re.IGNORECASE),
     re.compile(r"\b[A-Za-z]:[\\/]"),
     re.compile(r"(?<![\\/])\\\\[^\\/\s]+[\\/][^\\/\s]+"),
-    re.compile(r"(?:^|\s)/(?:home|Users)/[^\s]+"),
+    re.compile(r"(?:^|[\s\"'])~[\\/][^\s]+"),
+    re.compile(r"(?:^|[\s\"'])/(?!/)(?:[^/\s]+/)+[^/\s]+"),
 )
 
 
@@ -496,6 +497,15 @@ class MetadataValidator:
             )
             return None
         node = nodes[0] if nodes else None
+        if _yaml_node_has_cycle(node):
+            self.report.add(
+                "error",
+                f"{kind}.recursive_alias",
+                "Recursive YAML aliases are not supported.",
+                relative,
+                node.start_mark.line + 1 if node is not None else None,
+            )
+            return None
         return ParsedYaml(documents[0], _build_line_map(node))
 
     def _validate_record_schema_and_values(self) -> None:
@@ -862,6 +872,46 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             raise ValueError(f"Duplicate JSON object key {key!r}.")
         result[key] = value
     return result
+
+
+def _yaml_node_has_cycle(
+    node: Node | None,
+    active: set[int] | None = None,
+    complete: set[int] | None = None,
+) -> bool:
+    if node is None:
+        return False
+    if active is None:
+        active = set()
+    if complete is None:
+        complete = set()
+
+    node_id = id(node)
+    if node_id in active:
+        return True
+    if node_id in complete:
+        return False
+
+    active.add(node_id)
+    children: Iterable[Node]
+    if isinstance(node, MappingNode):
+        children = (
+            child
+            for key_node, value_node in node.value
+            for child in (key_node, value_node)
+        )
+    elif isinstance(node, SequenceNode):
+        children = iter(node.value)
+    else:
+        children = ()
+
+    has_cycle = any(
+        _yaml_node_has_cycle(child, active, complete) for child in children
+    )
+    active.remove(node_id)
+    if not has_cycle:
+        complete.add(node_id)
+    return has_cycle
 
 
 def _build_line_map(node: Node | None, path: tuple[Any, ...] = ()) -> dict[tuple[Any, ...], int]:

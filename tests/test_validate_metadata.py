@@ -114,6 +114,16 @@ class MetadataValidationTests(unittest.TestCase):
         self.write_record("00001", VALID_RECORD + "---\ntitle: second document\n")
         self.assertIn("record.document_count", self.error_codes())
 
+    def test_recursive_yaml_alias_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                'authors:\n  - name: "Alex Example"',
+                "authors: &authors [*authors]",
+            ),
+        )
+        self.assertIn("record.recursive_alias", self.error_codes())
+
     def test_yaml_mapping_keys_must_be_json_compatible_strings(self) -> None:
         self.write_record("00001", VALID_RECORD + "1: unsupported key\n")
         self.assertIn("record.non_string_key", self.error_codes())
@@ -242,6 +252,10 @@ class MetadataValidationTests(unittest.TestCase):
             "papers (private)/00001/main.pdf",
             r"D:\Papers\00001\main.pdf",
             r"\\labserver\restricted\00001\main.pdf",
+            "/tmp/00001/main.pdf",
+            "/mnt/restricted/00001/main.pdf",
+            "/Volumes/Papers/00001/main.pdf",
+            "~/papers/00001/main.pdf",
         )
         for reference in references:
             with self.subTest(reference=reference):
@@ -250,6 +264,14 @@ class MetadataValidationTests(unittest.TestCase):
                     VALID_RECORD + f"pip_litdb_notes: '{reference}'\n",
                 )
                 self.assertIn("record.private_reference", self.error_codes())
+
+    def test_web_url_in_notes_is_not_a_private_reference(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + "pip_litdb_notes: 'See https://example.test/private/00001/main.pdf'\n",
+        )
+        self.assertNotIn("record.private_reference", self.error_codes())
 
     def test_blank_notes_are_rejected(self) -> None:
         self.write_record(
