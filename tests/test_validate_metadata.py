@@ -116,6 +116,14 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertTrue(report.passed, report.findings)
         self.assertEqual(report.record_count, 1)
 
+    def test_workflow_runs_validation_after_test_failures(self) -> None:
+        workflow = (
+            REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("id: install", workflow)
+        self.assertEqual(workflow.count("!cancelled()"), 3)
+        self.assertEqual(workflow.count("steps.install.outcome == 'success'"), 3)
+
     def test_duplicate_yaml_key_is_rejected(self) -> None:
         self.write_record("00001", VALID_RECORD + "title: Duplicate key\n")
         self.assertIn("record.yaml", self.error_codes())
@@ -187,6 +195,18 @@ class MetadataValidationTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 self.assertIn("schema.json", self.error_codes())
+
+    def test_duplicate_json_schema_key_is_rejected(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        schema_path.write_text(
+            '{"type": "object", "type": "array"}', encoding="utf-8"
+        )
+        self.assertIn("schema.duplicate_key", self.error_codes())
+
+    def test_invalid_json_schema_is_reported_without_crashing(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        schema_path.write_text('{"type": "not-a-valid-type"}', encoding="utf-8")
+        self.assertIn("schema.invalid", self.error_codes())
 
     def test_deeply_nested_schema_is_reported_without_crashing(self) -> None:
         schema_path = self.root / "database" / "schema" / "paper.schema.json"
