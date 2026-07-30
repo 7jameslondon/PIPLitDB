@@ -97,6 +97,39 @@ Database validation should check:
 
 Search and export tools read the YAML files directly.
 
+## Public Metadata User Interface
+
+The `UI` directory contains a static HTML, CSS, and JavaScript interface for browsing the public metadata database. The published interface is available at:
+
+`https://7jameslondon.github.io/PIPLitDB/`
+
+The interface does not maintain a separate database or generated metadata export. When the page is loaded, it identifies the current commit on the repository's default branch, discovers the YAML files in `database/records`, and reads the records and vocabulary files directly from that commit. PIP LitDB IDs are derived from the record filenames in the same way as the other database tools.
+
+After a record is added, changed, or deleted and the change is pushed to the default branch, refreshing the interface loads the updated database. No separate database synchronization step is required.
+
+The interface is organized as follows:
+
+```text
+UI/
+├── index.html
+├── app.js
+├── config.js
+├── styles.css
+└── README.md
+```
+
+The site is deployed to GitHub Pages by `.github/workflows/deploy-pages.yml`. The deployment contains only the static files in `UI`; the metadata continues to be read from the canonical YAML records in the repository.
+
+To preview the interface locally, start a static web server from the repository root:
+
+```powershell
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/UI/`. The project must be served from the repository root so the interface can discover `database/records` and load the vocabulary files. Opening `UI/index.html` directly with a `file://` URL will not work because web browsers cannot enumerate arbitrary local files.
+
+The interface displays only information from the public metadata database. It does not read, publish, or link to the contents of `papers (private)`.
+
 ## Private Paper Copies and Extractions
 
 Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
