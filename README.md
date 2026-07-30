@@ -85,7 +85,7 @@ Both entries must be added, changed, or removed together.
 
 ### Validation
 
-Database validation should check:
+Automated database validation checks:
 
 - Every record follows `paper.schema.json`.
 - Every `document_type` and `publication_stage` value is defined in its corresponding vocabulary file.
@@ -94,6 +94,35 @@ Database validation should check:
 - Related-paper IDs and relationship types.
 - Every related-paper entry has exactly one corresponding entry in the related record using the inverse relationship type defined in `relationship-types.yaml`.
 - Values governed by the files in `database/vocabularies`.
+
+It also rejects duplicate YAML/JSON keys, malformed vocabulary definitions, blank or padded
+single-line values, duplicate authors within a record, DOI/DOI-URL mismatches, embedded URL
+credentials, local/private filesystem references in public notes, self-relationships, missing
+relationship targets, and relationship vocabulary inverses that are not themselves reciprocal.
+Exact normalized title/year and URL collisions are reported as reviewer warnings because they can
+represent either accidental duplicates or legitimate separate versions.
+
+Run the complete validation locally with Python 3.12 or later:
+
+```powershell
+python -m pip install -r requirements-validation.txt
+python -m unittest discover -s tests -v
+python scripts/validate_metadata.py
+```
+
+To get the same add/remove/modify/rename summary produced for a pull request, include a base Git
+revision:
+
+```powershell
+python scripts/validate_metadata.py --base origin/main --head HEAD
+```
+
+The `Validate metadata` GitHub Actions workflow runs on every pull request so its `Validate metadata
+records` job can safely be made a required branch-protection check. It validates the entire resulting
+database, not only changed files, so removing a referenced record or changing only one side of a
+relationship fails the check. It also adds a job summary with compact ID ranges, field-level
+modifications, errors, and non-blocking human-review warnings. The same validation runs after
+metadata changes reach `main` and can be run manually.
 
 Search and export tools read the YAML files directly.
 
