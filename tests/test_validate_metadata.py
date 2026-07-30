@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -498,6 +500,37 @@ class MetadataValidationTests(unittest.TestCase):
         report = validate_repository(self.root, base=base, head="HEAD")
         self.assertIn("record.yaml", {finding.code for finding in report.errors})
         self.assertEqual([change.kind for change in report.changes], ["modified"])
+
+    def test_cli_prints_non_latin_findings_with_cp1252_stdout(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "document_type: research_article", 'document_type: "研究"'
+            ),
+        )
+        environment = os.environ.copy()
+        environment["PYTHONIOENCODING"] = "cp1252"
+
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(REPOSITORY_ROOT / "scripts" / "validate_metadata.py"),
+                "--root",
+                str(self.root),
+            ],
+            cwd=REPOSITORY_ROOT,
+            env=environment,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("record.unknown_vocabulary_value", completed.stdout)
+        self.assertIn("研究", completed.stdout)
+        self.assertNotIn("Traceback", completed.stderr)
 
     def git(self, *arguments: str) -> str:
         completed = subprocess.run(

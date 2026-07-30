@@ -1435,6 +1435,20 @@ def _annotation_escape(value: str) -> str:
     return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
+def _configure_stdout() -> None:
+    """Keep record-controlled findings printable on narrow Windows encodings."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if not callable(reconfigure):
+        return
+    try:
+        reconfigure(encoding="utf-8", errors="backslashreplace")
+    except (AttributeError, OSError, TypeError, ValueError):
+        try:
+            reconfigure(errors="backslashreplace")
+        except (AttributeError, OSError, TypeError, ValueError):
+            pass
+
+
 def print_report(report: ValidationReport) -> None:
     for finding in report.findings:
         location = finding.path or "repository"
@@ -1499,6 +1513,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    _configure_stdout()
     args = parse_args(argv)
     report = validate_repository(args.root, args.base, args.head)
     print_report(report)
