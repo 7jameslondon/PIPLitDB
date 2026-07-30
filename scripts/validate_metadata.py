@@ -744,7 +744,7 @@ class MetadataValidator:
     def _validate_database_invariants(self) -> None:
         dois: dict[str, list[str]] = defaultdict(list)
         urls: dict[str, list[str]] = defaultdict(list)
-        title_years: dict[tuple[str, Any], list[str]] = defaultdict(list)
+        title_years: dict[tuple[str, int], list[str]] = defaultdict(list)
 
         for record_id, record in self.records.items():
             doi = record.get("doi")
@@ -754,8 +754,14 @@ class MetadataValidator:
             if isinstance(url, str) and url.strip():
                 urls[_normalize_url(url)].append(record_id)
             title = record.get("title")
-            if isinstance(title, str) and title.strip():
-                title_years[(_normalize_title(title), record.get("publication_year"))].append(record_id)
+            publication_year = record.get("publication_year")
+            if (
+                isinstance(title, str)
+                and title.strip()
+                and isinstance(publication_year, int)
+                and not isinstance(publication_year, bool)
+            ):
+                title_years[(_normalize_title(title), publication_year)].append(record_id)
 
         for normalized_doi, record_ids in sorted(dois.items()):
             if len(record_ids) > 1:

@@ -137,6 +137,13 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("schema.type", codes)
         self.assertIn("record.unknown_vocabulary_value", codes)
 
+    def test_unhashable_invalid_year_is_reported_without_crashing(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("publication_year: 2024", "publication_year: []"),
+        )
+        self.assertIn("schema.type", self.error_codes())
+
     def test_duplicate_doi_is_case_insensitive(self) -> None:
         second = (
             VALID_RECORD.replace("A valid paper", "A second paper")
