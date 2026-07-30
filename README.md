@@ -95,10 +95,11 @@ Automated database validation checks:
 - Every related-paper entry has exactly one corresponding entry in the related record using the inverse relationship type defined in `relationship-types.yaml`.
 - Values governed by the files in `database/vocabularies`.
 
-It also rejects duplicate YAML/JSON keys, malformed vocabulary definitions, blank or padded
-single-line values, duplicate authors within a record, DOI/DOI-URL mismatches, embedded URL
-credentials, local/private filesystem references in public notes, self-relationships, missing
-relationship targets, and relationship vocabulary inverses that are not themselves reciprocal.
+It also rejects duplicate YAML/JSON keys, YAML aliases, symlinked database paths, malformed
+vocabulary definitions, blank or padded single-line values, duplicate authors within a record,
+DOI/DOI-URL mismatches, embedded URL credentials, local/private filesystem references in public
+notes, self-relationships, missing relationship targets, and relationship vocabulary inverses that
+are not themselves reciprocal.
 Exact normalized title/year and URL collisions are reported as reviewer warnings because they can
 represent either accidental duplicates or legitimate separate versions.
 

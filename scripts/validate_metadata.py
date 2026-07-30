@@ -184,6 +184,38 @@ class MetadataValidator:
         except ValueError:
             return path.as_posix()
 
+    def _unsafe_path_component(self, path: Path) -> Path | None:
+        """Return a symlink/junction component or a path that escapes the repository."""
+        try:
+            relative_parts = path.relative_to(self.root).parts
+        except ValueError:
+            return path
+
+        current = self.root
+        for part in relative_parts:
+            current /= part
+            is_junction = getattr(current, "is_junction", lambda: False)
+            if current.is_symlink() or is_junction():
+                return current
+
+        try:
+            path.resolve(strict=False).relative_to(self.root)
+        except (OSError, RuntimeError, ValueError):
+            return path
+        return None
+
+    def _reject_unsafe_path(self, path: Path, kind: str, label: str) -> bool:
+        unsafe_component = self._unsafe_path_component(path)
+        if unsafe_component is None:
+            return False
+        self.report.add(
+            "error",
+            f"{kind}.symlink",
+            f"{label} must not use symbolic links, junctions, or paths outside the repository.",
+            self._relative(unsafe_component),
+        )
+        return True
+
     def _line_for(
         self, lines: dict[tuple[Any, ...], int], path: Sequence[Any]
     ) -> int | None:
@@ -197,6 +229,8 @@ class MetadataValidator:
     def _load_schema(self) -> None:
         path = self.root / "database" / "schema" / "paper.schema.json"
         relative = self._relative(path)
+        if self._reject_unsafe_path(path, "schema", "Paper schema path"):
+            return
         if not path.is_file():
             self.report.add("error", "schema.missing", "Paper schema is missing.", relative)
             return
@@ -242,6 +276,10 @@ class MetadataValidator:
 
     def _load_vocabularies(self) -> None:
         directory = self.root / "database" / "vocabularies"
+        if self._reject_unsafe_path(
+            directory, "vocabulary", "Vocabulary directory path"
+        ):
+            return
         if not directory.is_dir():
             self.report.add(
                 "error",
@@ -387,6 +425,8 @@ class MetadataValidator:
     def _load_records(self) -> None:
         directory = self.root / "database" / "records"
         relative_directory = self._relative(directory)
+        if self._reject_unsafe_path(directory, "record", "Record directory path"):
+            return
         if not directory.is_dir():
             self.report.add(
                 "error",
@@ -472,6 +512,8 @@ class MetadataValidator:
 
     def _read_yaml(self, path: Path, kind: str) -> ParsedYaml | None:
         relative = self._relative(path)
+        if self._reject_unsafe_path(path, kind, f"Required {kind} file path"):
+            return None
         if not path.is_file():
             self.report.add(
                 "error", f"{kind}.missing", f"Required {kind} file is missing.", relative
@@ -524,6 +566,15 @@ class MetadataValidator:
                 "error",
                 f"{kind}.recursive_alias",
                 "Recursive YAML aliases are not supported.",
+                relative,
+                node.start_mark.line + 1 if node is not None else None,
+            )
+            return None
+        if node_issue == "alias":
+            self.report.add(
+                "error",
+                f"{kind}.alias",
+                "YAML aliases are not supported.",
                 relative,
                 node.start_mark.line + 1 if node is not None else None,
             )
@@ -911,6 +962,7 @@ def _yaml_node_graph_issue(node: Node | None) -> str | None:
         return None
 
     active: set[int] = set()
+    seen: set[int] = set()
     stack: list[tuple[Node, int, bool]] = [(node, 0, False)]
     while stack:
         current, depth, exiting = stack.pop()
@@ -922,8 +974,11 @@ def _yaml_node_graph_issue(node: Node | None) -> str | None:
             return "depth"
         if node_id in active:
             return "cycle"
+        if node_id in seen:
+            return "alias"
 
         active.add(node_id)
+        seen.add(node_id)
         stack.append((current, depth, True))
         if isinstance(current, MappingNode):
             children = [

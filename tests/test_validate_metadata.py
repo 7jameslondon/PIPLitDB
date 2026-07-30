@@ -101,6 +101,14 @@ class MetadataValidationTests(unittest.TestCase):
     def error_codes(self) -> set[str]:
         return {finding.code for finding in validate_repository(self.root).errors}
 
+    def create_symlink(
+        self, link: Path, target: Path, *, target_is_directory: bool = False
+    ) -> None:
+        try:
+            link.symlink_to(target, target_is_directory=target_is_directory)
+        except (NotImplementedError, OSError) as exc:
+            self.skipTest(f"Symbolic links are unavailable in this environment: {exc}")
+
     def test_valid_database_passes(self) -> None:
         report = validate_repository(self.root)
         self.assertTrue(report.passed, report.findings)
@@ -124,6 +132,14 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn("record.recursive_alias", self.error_codes())
 
+    def test_yaml_alias_fanout_is_rejected_without_expansion(self) -> None:
+        lines = [VALID_RECORD.rstrip(), 'alias_0: &alias_0 ["seed"]']
+        for depth in range(1, 13):
+            references = ", ".join([f"*alias_{depth - 1}"] * 10)
+            lines.append(f"alias_{depth}: &alias_{depth} [{references}]")
+        self.write_record("00001", "\n".join(lines) + "\n")
+        self.assertIn("record.alias", self.error_codes())
+
     def test_excessive_yaml_nesting_is_rejected(self) -> None:
         nested_title = "[" * 150 + '"A valid paper"' + "]" * 150
         self.write_record(
@@ -142,6 +158,36 @@ class MetadataValidationTests(unittest.TestCase):
             with self.subTest(root=root):
                 schema_path.write_text(root, encoding="utf-8")
                 self.assertIn("schema.root", self.error_codes())
+
+    def test_schema_file_symlink_is_rejected(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        target = schema_path.with_name("paper.schema.target.json")
+        schema_path.rename(target)
+        self.create_symlink(schema_path, target)
+        self.assertIn("schema.symlink", self.error_codes())
+
+    def test_vocabulary_file_symlink_is_rejected(self) -> None:
+        vocabulary_path = (
+            self.root / "database" / "vocabularies" / "document-types.yaml"
+        )
+        target = vocabulary_path.with_name("document-types.target.yaml")
+        vocabulary_path.rename(target)
+        self.create_symlink(vocabulary_path, target)
+        self.assertIn("vocabulary.symlink", self.error_codes())
+
+    def test_records_directory_symlink_is_rejected(self) -> None:
+        records = self.root / "database" / "records"
+        target = self.root / "records-target"
+        records.rename(target)
+        self.create_symlink(records, target, target_is_directory=True)
+        self.assertIn("record.symlink", self.error_codes())
+
+    def test_vocabulary_directory_symlink_is_rejected(self) -> None:
+        vocabularies = self.root / "database" / "vocabularies"
+        target = self.root / "vocabularies-target"
+        vocabularies.rename(target)
+        self.create_symlink(vocabularies, target, target_is_directory=True)
+        self.assertIn("vocabulary.symlink", self.error_codes())
 
     def test_record_filename_and_id_range_are_enforced(self) -> None:
         valid_path = self.root / "database" / "records" / "00001.yaml"
