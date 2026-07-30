@@ -124,9 +124,24 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn("record.recursive_alias", self.error_codes())
 
+    def test_excessive_yaml_nesting_is_rejected(self) -> None:
+        nested_title = "[" * 150 + '"A valid paper"' + "]" * 150
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace('title: "A valid paper"', f"title: {nested_title}"),
+        )
+        self.assertIn("record.nesting_depth", self.error_codes())
+
     def test_yaml_mapping_keys_must_be_json_compatible_strings(self) -> None:
         self.write_record("00001", VALID_RECORD + "1: unsupported key\n")
         self.assertIn("record.non_string_key", self.error_codes())
+
+    def test_schema_root_must_be_an_object(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        for root in ("true", "false", "null", "1", "[]"):
+            with self.subTest(root=root):
+                schema_path.write_text(root, encoding="utf-8")
+                self.assertIn("schema.root", self.error_codes())
 
     def test_record_filename_and_id_range_are_enforced(self) -> None:
         valid_path = self.root / "database" / "records" / "00001.yaml"
@@ -252,10 +267,19 @@ class MetadataValidationTests(unittest.TestCase):
             "papers (private)/00001/main.pdf",
             r"D:\Papers\00001\main.pdf",
             r"\\labserver\restricted\00001\main.pdf",
+            "//labserver/restricted/00001/main.pdf",
             "/tmp/00001/main.pdf",
+            "`/tmp/private/00001/main.pdf`",
             "/mnt/restricted/00001/main.pdf",
             "/Volumes/Papers/00001/main.pdf",
             "~/papers/00001/main.pdf",
+            "./paper.pdf",
+            "../paper.pdf",
+            "../restricted/00001/main.pdf",
+            r".\restricted\00001\main.pdf",
+            "/secret.pdf",
+            "C:private.pdf",
+            "file:/tmp/00001/main.pdf",
         )
         for reference in references:
             with self.subTest(reference=reference):
@@ -266,12 +290,17 @@ class MetadataValidationTests(unittest.TestCase):
                 self.assertIn("record.private_reference", self.error_codes())
 
     def test_web_url_in_notes_is_not_a_private_reference(self) -> None:
-        self.write_record(
-            "00001",
-            VALID_RECORD
-            + "pip_litdb_notes: 'See https://example.test/private/00001/main.pdf'\n",
+        urls = (
+            "https://example.test/private/00001/main.pdf",
+            "https://example.test/?download=/tmp/00001/main.pdf",
         )
-        self.assertNotIn("record.private_reference", self.error_codes())
+        for url in urls:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
+                )
+                self.assertNotIn("record.private_reference", self.error_codes())
 
     def test_blank_notes_are_rejected(self) -> None:
         self.write_record(

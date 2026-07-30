@@ -28,19 +28,23 @@ RECORD_NAME_RE = re.compile(r"^(?P<id>[0-9]{5})\.yaml$")
 VOCABULARY_KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 IDENTITY_FIELDS = frozenset({"title", "authors", "doi"})
 ALLOWED_RECORD_DIRECTORY_FILES = frozenset({".gitkeep"})
+MAX_YAML_NESTING_DEPTH = 100
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
     "publication-stages.yaml": frozenset({"label", "description"}),
     "record-statuses.yaml": frozenset({"label", "description"}),
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
+PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\s<>\"']+", re.IGNORECASE)
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
-    re.compile(r"\bfile://", re.IGNORECASE),
-    re.compile(r"\b[A-Za-z]:[\\/]"),
+    re.compile(r"\bfile:(?:[\\/]+|[A-Za-z]:[\\/])", re.IGNORECASE),
+    re.compile(r"\b[A-Za-z]:(?![\\/]{2})(?:[\\/]|(?=[^\\/\s]))[^\s]*"),
     re.compile(r"(?<![\\/])\\\\[^\\/\s]+[\\/][^\\/\s]+"),
-    re.compile(r"(?:^|[\s\"'])~[\\/][^\s]+"),
-    re.compile(r"(?:^|[\s\"'])/(?!/)(?:[^/\s]+/)+[^/\s]+"),
+    re.compile(r"(?<![:/])//[^/\s]+/[^/\s]+"),
+    re.compile(r"(?<![A-Za-z0-9_])~[\\/][^\s]+"),
+    re.compile(r"(?<![A-Za-z0-9_])\.\.?[\\/][^\\/\s]+(?:[\\/][^\\/\s]+)*"),
+    re.compile(r"(?<![A-Za-z0-9_:/])/(?!/)[^/\s]+(?:/[^/\s]+)*"),
 )
 
 
@@ -198,11 +202,20 @@ class MetadataValidator:
             return
         try:
             text = path.read_text(encoding="utf-8")
-            self.schema = json.loads(text, object_pairs_hook=_unique_json_object)
-            validator_class = validator_for(self.schema)
-            validator_class.check_schema(self.schema)
+            schema = json.loads(text, object_pairs_hook=_unique_json_object)
+            if not isinstance(schema, dict):
+                self.report.add(
+                    "error",
+                    "schema.root",
+                    "Paper schema must be a JSON object.",
+                    relative,
+                )
+                return
+            self.schema = schema
+            validator_class = validator_for(schema)
+            validator_class.check_schema(schema)
             self.schema_validator = validator_class(
-                self.schema,
+                schema,
                 format_checker=FormatChecker(),
             )
         except UnicodeDecodeError as exc:
@@ -475,6 +488,14 @@ class MetadataValidator:
         try:
             documents = list(yaml.load_all(text, Loader=StrictSafeLoader))
             nodes = list(yaml.compose_all(text, Loader=yaml.SafeLoader))
+        except RecursionError:
+            self.report.add(
+                "error",
+                f"{kind}.nesting_depth",
+                f"YAML nesting exceeds the supported depth of {MAX_YAML_NESTING_DEPTH}.",
+                relative,
+            )
+            return None
         except yaml.MarkedYAMLError as exc:
             line = exc.problem_mark.line + 1 if exc.problem_mark else None
             problem = exc.problem or str(exc).splitlines()[0]
@@ -497,11 +518,21 @@ class MetadataValidator:
             )
             return None
         node = nodes[0] if nodes else None
-        if _yaml_node_has_cycle(node):
+        node_issue = _yaml_node_graph_issue(node)
+        if node_issue == "cycle":
             self.report.add(
                 "error",
                 f"{kind}.recursive_alias",
                 "Recursive YAML aliases are not supported.",
+                relative,
+                node.start_mark.line + 1 if node is not None else None,
+            )
+            return None
+        if node_issue == "depth":
+            self.report.add(
+                "error",
+                f"{kind}.nesting_depth",
+                f"YAML nesting exceeds the supported depth of {MAX_YAML_NESTING_DEPTH}.",
                 relative,
                 node.start_mark.line + 1 if node is not None else None,
             )
@@ -684,8 +715,9 @@ class MetadataValidator:
                         relative,
                         self._line_for(lines, ("pip_litdb_notes",)),
                     )
+                searchable_notes = PUBLIC_URL_RE.sub("", notes)
                 for pattern in PRIVATE_REFERENCE_PATTERNS:
-                    if pattern.search(notes):
+                    if pattern.search(searchable_notes):
                         self.report.add(
                             "error",
                             "record.private_reference",
@@ -874,44 +906,37 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _yaml_node_has_cycle(
-    node: Node | None,
-    active: set[int] | None = None,
-    complete: set[int] | None = None,
-) -> bool:
+def _yaml_node_graph_issue(node: Node | None) -> str | None:
     if node is None:
-        return False
-    if active is None:
-        active = set()
-    if complete is None:
-        complete = set()
+        return None
 
-    node_id = id(node)
-    if node_id in active:
-        return True
-    if node_id in complete:
-        return False
+    active: set[int] = set()
+    stack: list[tuple[Node, int, bool]] = [(node, 0, False)]
+    while stack:
+        current, depth, exiting = stack.pop()
+        node_id = id(current)
+        if exiting:
+            active.remove(node_id)
+            continue
+        if depth > MAX_YAML_NESTING_DEPTH:
+            return "depth"
+        if node_id in active:
+            return "cycle"
 
-    active.add(node_id)
-    children: Iterable[Node]
-    if isinstance(node, MappingNode):
-        children = (
-            child
-            for key_node, value_node in node.value
-            for child in (key_node, value_node)
-        )
-    elif isinstance(node, SequenceNode):
-        children = iter(node.value)
-    else:
-        children = ()
-
-    has_cycle = any(
-        _yaml_node_has_cycle(child, active, complete) for child in children
-    )
-    active.remove(node_id)
-    if not has_cycle:
-        complete.add(node_id)
-    return has_cycle
+        active.add(node_id)
+        stack.append((current, depth, True))
+        if isinstance(current, MappingNode):
+            children = [
+                child
+                for key_node, value_node in current.value
+                for child in (key_node, value_node)
+            ]
+        elif isinstance(current, SequenceNode):
+            children = list(current.value)
+        else:
+            children = []
+        stack.extend((child, depth + 1, False) for child in reversed(children))
+    return None
 
 
 def _build_line_map(node: Node | None, path: tuple[Any, ...] = ()) -> dict[tuple[Any, ...], int]:
