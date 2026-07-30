@@ -31,6 +31,7 @@ VOCABULARY_KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 IDENTITY_FIELDS = frozenset({"title", "authors", "doi"})
 ALLOWED_RECORD_DIRECTORY_FILES = frozenset({".gitkeep"})
 MAX_YAML_NESTING_DEPTH = 100
+MAX_SCHEMA_NESTING_DEPTH = 100
 YAML_VALUE_ERRORS = (AttributeError, KeyError, TypeError, ValueError, OverflowError)
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
@@ -53,6 +54,14 @@ PRIVATE_REFERENCE_PATTERNS = (
 
 class StrictSafeLoader(yaml.SafeLoader):
     """Safe YAML loader that rejects duplicate mapping keys and merge keys."""
+
+
+class DuplicateJsonKeyError(ValueError):
+    """Raised when a JSON object repeats a key."""
+
+
+class InvalidJsonConstantError(ValueError):
+    """Raised for non-standard JSON constants such as NaN and Infinity."""
 
 
 def _construct_unique_mapping(
@@ -239,7 +248,11 @@ class MetadataValidator:
             return
         try:
             text = path.read_text(encoding="utf-8")
-            schema = json.loads(text, object_pairs_hook=_unique_json_object)
+            schema = json.loads(
+                text,
+                object_pairs_hook=_unique_json_object,
+                parse_constant=_reject_json_constant,
+            )
             if not isinstance(schema, dict):
                 self.report.add(
                     "error",
@@ -248,9 +261,16 @@ class MetadataValidator:
                     relative,
                 )
                 return
+            if _json_nesting_exceeds(schema, MAX_SCHEMA_NESTING_DEPTH):
+                self.report.add(
+                    "error",
+                    "schema.nesting_depth",
+                    "Schema nesting exceeds the supported depth of "
+                    f"{MAX_SCHEMA_NESTING_DEPTH}.",
+                    relative,
+                )
+                return
             self.schema = schema
-            validator_class = validator_for(schema)
-            validator_class.check_schema(schema)
             external_references = list(_find_external_schema_references(schema))
             if external_references:
                 references = ", ".join(repr(value) for value in external_references)
@@ -262,6 +282,8 @@ class MetadataValidator:
                     relative,
                 )
                 return
+            validator_class = validator_for(schema)
+            validator_class.check_schema(schema)
             self.schema_validator = validator_class(
                 schema,
                 format_checker=FormatChecker(),
@@ -279,8 +301,20 @@ class MetadataValidator:
                 relative,
                 exc.lineno,
             )
-        except ValueError as exc:
+        except DuplicateJsonKeyError as exc:
             self.report.add("error", "schema.duplicate_key", str(exc), relative)
+        except InvalidJsonConstantError as exc:
+            self.report.add("error", "schema.json", str(exc), relative)
+        except ValueError as exc:
+            self.report.add("error", "schema.json", f"Invalid JSON value: {exc}.", relative)
+        except RecursionError:
+            self.report.add(
+                "error",
+                "schema.nesting_depth",
+                "Schema nesting exceeds the supported depth of "
+                f"{MAX_SCHEMA_NESTING_DEPTH}.",
+                relative,
+            )
         except SchemaError as exc:
             self.report.add(
                 "error",
@@ -1013,24 +1047,45 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
         if key in result:
-            raise ValueError(f"Duplicate JSON object key {key!r}.")
+            raise DuplicateJsonKeyError(f"Duplicate JSON object key {key!r}.")
         result[key] = value
     return result
 
 
+def _reject_json_constant(value: str) -> Any:
+    raise InvalidJsonConstantError(
+        f"Non-standard JSON numeric constant {value!r} is not allowed."
+    )
+
+
+def _json_nesting_exceeds(value: Any, maximum_depth: int) -> bool:
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    while stack:
+        current, depth = stack.pop()
+        if depth > maximum_depth:
+            return True
+        if isinstance(current, dict):
+            stack.extend((child, depth + 1) for child in current.values())
+        elif isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+    return False
+
+
 def _find_external_schema_references(value: Any) -> Iterable[str]:
-    if isinstance(value, dict):
-        for key, child in value.items():
-            if (
-                key in {"$ref", "$dynamicRef", "$recursiveRef"}
-                and isinstance(child, str)
-                and not child.startswith("#")
-            ):
-                yield child
-            yield from _find_external_schema_references(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from _find_external_schema_references(child)
+    stack = [value]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            for key, child in current.items():
+                if (
+                    key in {"$ref", "$dynamicRef", "$recursiveRef"}
+                    and isinstance(child, str)
+                    and not child.startswith("#")
+                ):
+                    yield child
+                stack.append(child)
+        elif isinstance(current, list):
+            stack.extend(current)
 
 
 def _yaml_node_graph_issue(node: Node | None) -> str | None:

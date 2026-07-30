@@ -178,6 +178,45 @@ class MetadataValidationTests(unittest.TestCase):
                 schema_path.write_text(root, encoding="utf-8")
                 self.assertIn("schema.root", self.error_codes())
 
+    def test_schema_rejects_non_standard_json_numeric_constants(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        for constant in ("NaN", "Infinity", "-Infinity"):
+            with self.subTest(constant=constant):
+                schema_path.write_text(
+                    f'{{"type": "number", "const": {constant}}}',
+                    encoding="utf-8",
+                )
+                self.assertIn("schema.json", self.error_codes())
+
+    def test_deeply_nested_schema_is_reported_without_crashing(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        depths = (150, sys.getrecursionlimit() + 100)
+        for depth in depths:
+            with self.subTest(depth=depth):
+                schema_path.write_text(
+                    '{"nested": ' + "[" * depth + "null" + "]" * depth + "}",
+                    encoding="utf-8",
+                )
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(REPOSITORY_ROOT / "scripts" / "validate_metadata.py"),
+                        "--root",
+                        str(self.root),
+                    ],
+                    cwd=REPOSITORY_ROOT,
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding="utf-8",
+                )
+
+                output = completed.stdout + completed.stderr
+                self.assertEqual(completed.returncode, 1, output)
+                self.assertIn("schema.nesting_depth", completed.stdout)
+                self.assertNotIn("Traceback", output)
+
     def test_unresolved_schema_reference_is_reported_without_crashing(self) -> None:
         schema_path = self.root / "database" / "schema" / "paper.schema.json"
         schema_path.write_text(
