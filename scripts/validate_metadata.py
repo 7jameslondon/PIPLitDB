@@ -20,6 +20,8 @@ import yaml
 from jsonschema import FormatChecker
 from jsonschema.exceptions import SchemaError
 from jsonschema.validators import validator_for
+from referencing import Registry
+from referencing.exceptions import Unresolvable
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
@@ -248,9 +250,21 @@ class MetadataValidator:
             self.schema = schema
             validator_class = validator_for(schema)
             validator_class.check_schema(schema)
+            external_references = list(_find_external_schema_references(schema))
+            if external_references:
+                references = ", ".join(repr(value) for value in external_references)
+                self.report.add(
+                    "error",
+                    "schema.reference",
+                    "Schema references must be local fragments; external or ambient "
+                    f"references are not allowed: {references}.",
+                    relative,
+                )
+                return
             self.schema_validator = validator_class(
                 schema,
                 format_checker=FormatChecker(),
+                registry=Registry(),
             )
         except UnicodeDecodeError as exc:
             self.report.add(
@@ -528,7 +542,6 @@ class MetadataValidator:
             return None
 
         try:
-            documents = list(yaml.load_all(text, Loader=StrictSafeLoader))
             nodes = list(yaml.compose_all(text, Loader=yaml.SafeLoader))
         except RecursionError:
             self.report.add(
@@ -551,15 +564,15 @@ class MetadataValidator:
             )
             return None
 
-        if len(documents) != 1:
+        if len(nodes) != 1:
             self.report.add(
                 "error",
                 f"{kind}.document_count",
-                f"Expected exactly one YAML document, found {len(documents)}.",
+                f"Expected exactly one YAML document, found {len(nodes)}.",
                 relative,
             )
             return None
-        node = nodes[0] if nodes else None
+        node = nodes[0]
         node_issue = _yaml_node_graph_issue(node)
         if node_issue == "cycle":
             self.report.add(
@@ -588,6 +601,43 @@ class MetadataValidator:
                 node.start_mark.line + 1 if node is not None else None,
             )
             return None
+
+        try:
+            documents = list(yaml.load_all(text, Loader=StrictSafeLoader))
+        except RecursionError:
+            self.report.add(
+                "error",
+                f"{kind}.nesting_depth",
+                f"YAML nesting exceeds the supported depth of {MAX_YAML_NESTING_DEPTH}.",
+                relative,
+            )
+            return None
+        except yaml.MarkedYAMLError as exc:
+            line = exc.problem_mark.line + 1 if exc.problem_mark else None
+            problem = exc.problem or str(exc).splitlines()[0]
+            self.report.add(
+                "error", f"{kind}.yaml", f"Invalid YAML: {problem}.", relative, line
+            )
+            return None
+        except yaml.YAMLError as exc:
+            self.report.add(
+                "error", f"{kind}.yaml", f"Invalid YAML: {exc}.", relative
+            )
+            return None
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            self.report.add(
+                "error", f"{kind}.yaml", f"Invalid YAML value: {exc}.", relative
+            )
+            return None
+
+        if len(documents) != 1:
+            self.report.add(
+                "error",
+                f"{kind}.document_count",
+                f"Expected exactly one YAML document, found {len(documents)}.",
+                relative,
+            )
+            return None
         return ParsedYaml(documents[0], _build_line_map(node))
 
     def _validate_record_schema_and_values(self) -> None:
@@ -609,22 +659,32 @@ class MetadataValidator:
                     self._line_for(lines, parent_path),
                 )
             if self.schema_validator is not None and not non_string_keys:
-                errors = sorted(
-                    self.schema_validator.iter_errors(record),
-                    key=lambda error: (
-                        [str(component) for component in error.absolute_path],
-                        error.message,
-                    ),
-                )
-                for error in errors:
-                    value_path = tuple(error.absolute_path)
+                try:
+                    errors = sorted(
+                        self.schema_validator.iter_errors(record),
+                        key=lambda error: (
+                            [str(component) for component in error.absolute_path],
+                            error.message,
+                        ),
+                    )
+                except Unresolvable as exc:
                     self.report.add(
                         "error",
-                        f"schema.{error.validator}",
-                        f"{_format_value_path(value_path)}: {error.message}.",
-                        relative,
-                        self._line_for(lines, value_path),
+                        "schema.reference",
+                        f"Schema reference could not be resolved: {exc}.",
+                        "database/schema/paper.schema.json",
                     )
+                    self.schema_validator = None
+                else:
+                    for error in errors:
+                        value_path = tuple(error.absolute_path)
+                        self.report.add(
+                            "error",
+                            f"schema.{error.validator}",
+                            f"{_format_value_path(value_path)}: {error.message}.",
+                            relative,
+                            self._line_for(lines, value_path),
+                        )
 
             self._check_vocab_value(
                 record, "document_type", document_types, relative, lines
@@ -955,6 +1015,21 @@ def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             raise ValueError(f"Duplicate JSON object key {key!r}.")
         result[key] = value
     return result
+
+
+def _find_external_schema_references(value: Any) -> Iterable[str]:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if (
+                key in {"$ref", "$dynamicRef", "$recursiveRef"}
+                and isinstance(child, str)
+                and not child.startswith("#")
+            ):
+                yield child
+            yield from _find_external_schema_references(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _find_external_schema_references(child)
 
 
 def _yaml_node_graph_issue(node: Node | None) -> str | None:

@@ -122,6 +122,18 @@ class MetadataValidationTests(unittest.TestCase):
         self.write_record("00001", VALID_RECORD + "---\ntitle: second document\n")
         self.assertIn("record.document_count", self.error_codes())
 
+    def test_invalid_yaml_timestamp_is_reported_without_crashing(self) -> None:
+        invalid_values = ("2024-13-40", "!!int nope", "!!bool nope")
+        for value in invalid_values:
+            with self.subTest(value=value):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        "publication_year: 2024", f"publication_year: {value}"
+                    ),
+                )
+                self.assertIn("record.yaml", self.error_codes())
+
     def test_recursive_yaml_alias_is_rejected(self) -> None:
         self.write_record(
             "00001",
@@ -158,6 +170,33 @@ class MetadataValidationTests(unittest.TestCase):
             with self.subTest(root=root):
                 schema_path.write_text(root, encoding="utf-8")
                 self.assertIn("schema.root", self.error_codes())
+
+    def test_unresolved_schema_reference_is_reported_without_crashing(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        schema_path.write_text(
+            schema_path.read_text(encoding="utf-8").replace(
+                '"$ref": "#/$defs/author"',
+                '"$ref": "#/$defs/missing-author"',
+            ),
+            encoding="utf-8",
+        )
+        self.assertIn("schema.reference", self.error_codes())
+
+    def test_external_schema_references_are_rejected_without_retrieval(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        references = (
+            "missing.json",
+            "file:///definitely/missing/private-schema.json",
+            "https://example.test/private-schema.json",
+        )
+        for reference in references:
+            with self.subTest(reference=reference):
+                schema_path.write_text(
+                    '{"$schema": "https://json-schema.org/draft/2020-12/schema", '
+                    f'"$ref": "{reference}"}}',
+                    encoding="utf-8",
+                )
+                self.assertIn("schema.reference", self.error_codes())
 
     def test_schema_file_symlink_is_rejected(self) -> None:
         schema_path = self.root / "database" / "schema" / "paper.schema.json"
