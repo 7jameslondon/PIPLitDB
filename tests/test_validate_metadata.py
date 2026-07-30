@@ -278,6 +278,33 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn("schema.reference", self.error_codes())
 
+    def test_cyclic_schema_reference_is_reported_without_crashing(self) -> None:
+        schema_path = self.root / "database" / "schema" / "paper.schema.json"
+        schema_path.write_text(
+            '{"$schema": "https://json-schema.org/draft/2020-12/schema", '
+            '"$ref": "#"}',
+            encoding="utf-8",
+        )
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(REPOSITORY_ROOT / "scripts" / "validate_metadata.py"),
+                "--root",
+                str(self.root),
+            ],
+            cwd=REPOSITORY_ROOT,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+
+        output = completed.stdout + completed.stderr
+        self.assertEqual(completed.returncode, 1, output)
+        self.assertIn("schema.reference_cycle", completed.stdout)
+        self.assertNotIn("Traceback", output)
+
     def test_external_schema_references_are_rejected_without_retrieval(self) -> None:
         schema_path = self.root / "database" / "schema" / "paper.schema.json"
         references = (

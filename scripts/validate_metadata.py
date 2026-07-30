@@ -710,6 +710,15 @@ class MetadataValidator:
                         "database/schema/paper.schema.json",
                     )
                     self.schema_validator = None
+                except RecursionError:
+                    self.report.add(
+                        "error",
+                        "schema.reference_cycle",
+                        "Schema validation exceeded the supported recursion depth; "
+                        "check for cyclic local references.",
+                        "database/schema/paper.schema.json",
+                    )
+                    self.schema_validator = None
                 else:
                     for error in errors:
                         value_path = tuple(error.absolute_path)
