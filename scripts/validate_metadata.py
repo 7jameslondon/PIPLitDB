@@ -37,7 +37,8 @@ VOCABULARY_SPECS = {
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
     re.compile(r"\bfile://", re.IGNORECASE),
-    re.compile(r"\b[A-Za-z]:[\\/](?:Users|Documents)[\\/]", re.IGNORECASE),
+    re.compile(r"\b[A-Za-z]:[\\/]"),
+    re.compile(r"(?<![\\/])\\\\[^\\/\s]+[\\/][^\\/\s]+"),
     re.compile(r"(?:^|\s)/(?:home|Users)/[^\s]+"),
 )
 
@@ -665,6 +666,14 @@ class MetadataValidator:
 
             notes = record.get("pip_litdb_notes")
             if isinstance(notes, str):
+                if not notes.strip():
+                    self.report.add(
+                        "error",
+                        "record.blank_string",
+                        "$.pip_litdb_notes must not be blank.",
+                        relative,
+                        self._line_for(lines, ("pip_litdb_notes",)),
+                    )
                 for pattern in PRIVATE_REFERENCE_PATTERNS:
                     if pattern.search(notes):
                         self.report.add(
@@ -980,6 +989,8 @@ def detect_record_changes(
         # A high threshold avoids misclassifying deletion + addition of two
         # structurally similar YAML records as an ID rename.
         "--find-renames=90%",
+        "--find-copies=90%",
+        "--find-copies-harder",
         f"{base}...{head}",
         "--",
         "database/records",

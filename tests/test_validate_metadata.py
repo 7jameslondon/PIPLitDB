@@ -230,14 +230,28 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn("relationship.inverse_not_reciprocal", self.error_codes())
 
-    def test_private_filesystem_reference_is_rejected(self) -> None:
+    def test_private_filesystem_references_are_rejected(self) -> None:
+        references = (
+            "papers (private)/00001/main.pdf",
+            r"D:\Papers\00001\main.pdf",
+            r"\\labserver\restricted\00001\main.pdf",
+        )
+        for reference in references:
+            with self.subTest(reference=reference):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: '{reference}'\n",
+                )
+                self.assertIn("record.private_reference", self.error_codes())
+
+    def test_blank_notes_are_rejected(self) -> None:
         self.write_record(
             "00001",
-            VALID_RECORD + 'pip_litdb_notes: "See papers (private)/00001/main.pdf"\n',
+            VALID_RECORD + 'pip_litdb_notes: "   "\n',
         )
-        self.assertIn("record.private_reference", self.error_codes())
+        self.assertIn("record.blank_string", self.error_codes())
 
-    def test_git_diff_classifies_add_remove_modify_and_rename(self) -> None:
+    def test_git_diff_classifies_add_remove_modify_copy_and_rename(self) -> None:
         self.write_record(
             "00002",
             VALID_RECORD.replace("A valid paper", "Paper to remove").replace(
@@ -278,19 +292,22 @@ class MetadataValidationTests(unittest.TestCase):
                 "10.1234/example.1", "10.1234/example.5"
             ),
         )
+        self.write_record("00007", VALID_RECORD)
         self.git("add", "--all")
         self.git("commit", "-m", "change records")
 
         report = validate_repository(self.root, base=base, head="HEAD")
         self.assertEqual(
             {change.kind for change in report.changes},
-            {"added", "removed", "modified", "renamed"},
+            {"added", "removed", "modified", "copied", "renamed"},
         )
         modified = next(change for change in report.changes if change.kind == "modified")
         self.assertEqual(modified.new_id, "00003")
         self.assertEqual(modified.changed_fields, ("title",))
         renamed = next(change for change in report.changes if change.kind == "renamed")
         self.assertEqual((renamed.old_id, renamed.new_id), ("00004", "00006"))
+        copied = next(change for change in report.changes if change.kind == "copied")
+        self.assertEqual((copied.old_id, copied.new_id), ("00001", "00007"))
         warning_codes = {finding.code for finding in report.warnings}
         self.assertIn("change.record_removed", warning_codes)
         self.assertIn("change.id_changed", warning_codes)
