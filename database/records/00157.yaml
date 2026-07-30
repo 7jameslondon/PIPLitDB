@@ -1,0 +1,25 @@
+document_type: research_article
+publication_stage: publication
+title: "Hx-amides: DNA sequence recognition by the fluorescent Hx (p-anisylbenzimidazole)•pyrrole and Hx•imidazole pairings"
+authors:
+  - name: "Vijay Satam"
+  - name: "Pravin Patil"
+  - name: "Balaji Babu"
+  - name: "Matthew Gregory"
+  - name: "Michael Bowerman"
+  - name: "Mia Savagian"
+  - name: "Megan Lee"
+  - name: "Samuel Tzou"
+  - name: "Kevin Olson"
+  - name: "Yang Liu"
+  - name: "Joseph Ramos"
+  - name: "W. David Wilson"
+  - name: "John P. Bingham"
+  - name: "Kostantinos Kiakos"
+  - name: "John A. Hartley"
+  - name: "Moses Lee"
+doi: "10.1016/j.bmcl.2013.01.075"
+url: "https://doi.org/10.1016/j.bmcl.2013.01.075"
+publication_year: 2013
+journal: "Bioorganic & Medicinal Chemistry Letters"
+pip_litdb_status: needs_review

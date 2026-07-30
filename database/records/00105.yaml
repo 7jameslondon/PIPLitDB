@@ -1,0 +1,15 @@
+document_type: research_article
+publication_stage: publication
+title: "Genome-wide Mapping of Drug-DNA Interactions in Cells with COSMIC (Crosslinking of Small Molecules to Isolate Chromatin)"
+authors:
+  - name: "Graham S. Erwin"
+  - name: "Matthew P. Grieshop"
+  - name: "Devesh Bhimsaria"
+  - name: "Asuka Eguchi"
+  - name: "José A. Rodríguez-Martínez"
+  - name: "Aseem Z. Ansari"
+doi: "10.3791/53510"
+url: "https://doi.org/10.3791/53510"
+publication_year: 2016
+journal: "Journal of Visualized Experiments"
+pip_litdb_status: needs_review

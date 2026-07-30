@@ -1,0 +1,26 @@
+document_type: research_article
+publication_stage: publication
+title: "Design, synthesis, and DNA binding characteristics of a group of orthogonally positioned diamino, N-formamido, pyrrole- and imidazole-containing polyamides"
+authors:
+  - name: "Sameer Chavda"
+  - name: "Balaji Babu"
+  - name: "Pravin Patil"
+  - name: "Adam Plaunt"
+  - name: "Amanda Ferguson"
+  - name: "Megan Lee"
+  - name: "Samuel Tzou"
+  - name: "Robert Sjoholm"
+  - name: "Toni Rice"
+  - name: "Hilary Mackay"
+  - name: "Joseph Ramos"
+  - name: "Shuo Wang"
+  - name: "Shicai Lin"
+  - name: "Konstantinos Kiakos"
+  - name: "W. David Wilson"
+  - name: "John A. Hartley"
+  - name: "Moses Lee"
+doi: "10.1016/j.bmc.2013.04.001"
+url: "https://doi.org/10.1016/j.bmc.2013.04.001"
+publication_year: 2013
+journal: "Bioorganic & Medicinal Chemistry"
+pip_litdb_status: needs_review

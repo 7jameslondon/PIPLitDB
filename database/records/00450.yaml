@@ -1,0 +1,21 @@
+document_type: research_article
+publication_stage: publication
+title: "Synthetic genome readers target clustered binding sites across diverse chromatin states"
+authors:
+  - name: "Erwin GS"
+  - name: "Grieshop MP"
+  - name: "Bhimsaria D"
+  - name: "Do TJ"
+  - name: "Rodríguez-Martínez JA"
+  - name: "Mehta C"
+  - name: "Khanna K"
+  - name: "Swanson SA"
+  - name: "Stewart R"
+  - name: "Thomson JA"
+  - name: "Ramanathan P"
+  - name: "Ansari AZ"
+doi: "10.1073/pnas.1604847113"
+url: "https://doi.org/10.1073/pnas.1604847113"
+publication_year: 2016
+journal: "Proceedings of the National Academy of Sciences"
+pip_litdb_status: needs_review

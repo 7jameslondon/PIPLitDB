@@ -1,0 +1,23 @@
+document_type: research_article
+publication_stage: publication
+title: "Modulation of topoisomerase IIα expression and chemosensitivity through targeted inhibition of NF-Y:DNA binding by a diamino p-anisyl-benzimidazole (Hx) polyamide"
+authors:
+  - name: "Luke Pett"
+  - name: "Konstantinos Kiakos"
+  - name: "Vijay Satam"
+  - name: "Pravin Patil"
+  - name: "Sarah Laughlin-Toth"
+  - name: "Matthew Gregory"
+  - name: "Michael Bowerman"
+  - name: "Kevin Olson"
+  - name: "Mia Savagian"
+  - name: "Megan Lee"
+  - name: "Moses Lee"
+  - name: "W. David Wilson"
+  - name: "Daniel Hochhauser"
+  - name: "John A. Hartley"
+doi: "10.1016/j.bbagrm.2016.10.005"
+url: "https://doi.org/10.1016/j.bbagrm.2016.10.005"
+publication_year: 2016
+journal: "Biochimica et Biophysica Acta (BBA) - Gene Regulatory Mechanisms"
+pip_litdb_status: needs_review

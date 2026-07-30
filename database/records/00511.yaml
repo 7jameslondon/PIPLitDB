@@ -1,0 +1,19 @@
+document_type: research_article
+publication_stage: publication
+title: "Controlling Nuclease Degradation of Wireframe DNA Origami with Minor Groove Binders."
+authors:
+  - name: "Eike-Christian Wamhoff"
+  - name: "Anna Romanov"
+  - name: "Hellen Huang"
+  - name: "Benjamin J. Read"
+  - name: "Eric Ginsburg"
+  - name: "Grant A. Knappe"
+  - name: "Hyun Min Kim"
+  - name: "Nicholas P. Farrell"
+  - name: "Darrell J. Irvine"
+  - name: "Mark Bathe"
+doi: "10.1021/acsnano.1c11575"
+url: "https://doi.org/10.1021/acsnano.1c11575"
+publication_year: 2022
+journal: "ACS Nano"
+pip_litdb_status: needs_review

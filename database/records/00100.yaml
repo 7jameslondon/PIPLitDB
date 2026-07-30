@@ -1,0 +1,21 @@
+document_type: research_article
+publication_stage: publication
+title: "Telomere Visualization in Tissue Sections using Pyrrole–Imidazole Polyamide Probes"
+authors:
+  - name: "Asuka Sasaki"
+  - name: "Satoru Ide"
+  - name: "Yusuke Kawamoto"
+  - name: "Toshikazu Bando"
+  - name: "Yukinori Murata"
+  - name: "Mari Shimura"
+  - name: "Kazuhiko Yamada"
+  - name: "Akiyoshi Hirata"
+  - name: "Kiyoshi Nokihara"
+  - name: "Tatsumi Hirata"
+  - name: "Hiroshi Sugiyama"
+  - name: "Kazuhiro Maeshima"
+doi: "10.1038/srep29261"
+url: "https://doi.org/10.1038/srep29261"
+publication_year: 2016
+journal: "Scientific Reports"
+pip_litdb_status: needs_review

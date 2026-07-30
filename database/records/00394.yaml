@@ -1,0 +1,13 @@
+document_type: research_article
+publication_stage: publication
+title: "Activation of gene expression by small molecule transcription factors"
+authors:
+  - name: "Mapp AK"
+  - name: "Ansari AZ"
+  - name: "Ptashne M"
+  - name: "Dervan PB"
+doi: "10.1073/pnas.97.8.3930"
+url: "https://doi.org/10.1073/pnas.97.8.3930"
+publication_year: 2000
+journal: "Proceedings of the National Academy of Sciences"
+pip_litdb_status: needs_review
