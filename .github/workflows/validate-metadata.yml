@@ -60,6 +60,7 @@ jobs:
           python scripts/validate_metadata.py
           --base "${{ github.event.before }}"
           --head "${{ github.sha }}"
+          --comparison direct
 
       - name: Validate complete database
         if: ${{ !cancelled() && steps.install.outcome == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')) }}

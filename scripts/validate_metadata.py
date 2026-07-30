@@ -1248,8 +1248,20 @@ def _record_id_from_path(path: str | None) -> str | None:
 
 
 def detect_record_changes(
-    root: Path, base: str, head: str, report: ValidationReport
+    root: Path,
+    base: str,
+    head: str,
+    report: ValidationReport,
+    comparison: str = "merge-base",
 ) -> list[RecordChange]:
+    if comparison not in {"merge-base", "direct"}:
+        report.add(
+            "error",
+            "diff.comparison",
+            f"Unsupported Git comparison mode {comparison!r}.",
+        )
+        return []
+
     for name, revision in (("base", base), ("head", head)):
         result = _git_command(root, "rev-parse", "--verify", f"{revision}^{{commit}}")
         if result.returncode != 0:
@@ -1271,7 +1283,7 @@ def detect_record_changes(
         "--find-renames=90%",
         "--find-copies=90%",
         "--find-copies-harder",
-        f"{base}...{head}",
+        f"{base}...{head}" if comparison == "merge-base" else f"{base}..{head}",
         "--",
         "database/records",
     )
@@ -1341,6 +1353,34 @@ def detect_record_changes(
                 changed_fields=changed_fields,
             )
         )
+
+        if code in {"A", "C", "R"} and new_path is not None:
+            history = _git_command(
+                root,
+                "log",
+                "-n",
+                "1",
+                "--format=%H",
+                base,
+                "--",
+                new_path,
+            )
+            if history.returncode != 0:
+                message = history.stderr.decode("utf-8", errors="replace").strip()
+                report.add(
+                    "error",
+                    "diff.history_failed",
+                    f"Could not inspect record history for {new_path}: {message}.",
+                    new_path,
+                )
+            elif history.stdout.strip():
+                report.add(
+                    "error",
+                    "change.id_reused",
+                    f"Record ID {_record_id_from_path(new_path) or new_path} existed "
+                    "before the base revision and must not be reused.",
+                    new_path,
+                )
     return changes
 
 
@@ -1376,12 +1416,15 @@ def validate_repository(
     root: Path | str,
     base: str | None = None,
     head: str = "HEAD",
+    comparison: str = "merge-base",
 ) -> ValidationReport:
     root_path = Path(root).resolve()
     report = ValidationReport(root=root_path, compared_base=base, compared_head=head if base else None)
     MetadataValidator(root_path, report).validate()
     if base:
-        report.changes = detect_record_changes(root_path, base, head, report)
+        report.changes = detect_record_changes(
+            root_path, base, head, report, comparison=comparison
+        )
         _add_change_warnings(report)
     report.findings.sort(key=Finding.sort_key)
     return report
@@ -1569,6 +1612,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Head Git revision used with --base (default: HEAD).",
     )
     parser.add_argument(
+        "--comparison",
+        choices=("merge-base", "direct"),
+        default="merge-base",
+        help=(
+            "How to compare --base and --head: merge-base for pull-request branch "
+            "changes (default), or direct for an exact before-to-after transition."
+        ),
+    )
+    parser.add_argument(
         "--summary-file",
         type=Path,
         help="Write a Markdown summary here (defaults to GITHUB_STEP_SUMMARY in GitHub Actions).",
@@ -1579,7 +1631,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     _configure_stdout()
     args = parse_args(argv)
-    report = validate_repository(args.root, args.base, args.head)
+    report = validate_repository(args.root, args.base, args.head, args.comparison)
     print_report(report)
     summary_file = args.summary_file
     if summary_file is None and os.environ.get("GITHUB_STEP_SUMMARY"):

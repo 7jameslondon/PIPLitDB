@@ -98,8 +98,8 @@ Automated database validation checks:
 It also rejects duplicate YAML/JSON keys, YAML aliases, symlinked database paths, malformed
 vocabulary definitions, blank or padded single-line values, duplicate authors within a record,
 DOI/DOI-URL mismatches, embedded URL credentials, local/private filesystem references in public
-notes, self-relationships, missing relationship targets, and relationship vocabulary inverses that
-are not themselves reciprocal.
+notes, self-relationships, missing relationship targets, reuse of a record ID found in base-branch
+history, and relationship vocabulary inverses that are not themselves reciprocal.
 Exact normalized title/year and URL collisions are reported as reviewer warnings because they can
 represent either accidental duplicates or legitimate separate versions.
 
@@ -117,6 +117,9 @@ revision:
 ```powershell
 python scripts/validate_metadata.py --base origin/main --head HEAD
 ```
+
+That default uses merge-base semantics to summarize a pull-request branch. For an exact transition,
+such as a pushed branch's before and after commits, add `--comparison direct`.
 
 The `Validate metadata` GitHub Actions workflow runs on every pull request so its `Validate metadata
 records` job can safely be made a required branch-protection check. It validates the entire resulting

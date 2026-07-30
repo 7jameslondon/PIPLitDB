@@ -153,6 +153,12 @@ class MetadataValidationTests(unittest.TestCase):
                 self.assertEqual(
                     steps_by_name[step_name].get("if"), expected_condition
                 )
+        self.assertIn(
+            "--comparison direct",
+            steps_by_name[
+                "Validate pushed result and summarize record changes"
+            ]["run"],
+        )
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:
         self.write_record("00001", VALID_RECORD + "title: Duplicate key\n")
@@ -616,6 +622,80 @@ class MetadataValidationTests(unittest.TestCase):
         report = validate_repository(self.root, base=base, head="HEAD")
         self.assertIn("record.yaml", {finding.code for finding in report.errors})
         self.assertEqual([change.kind for change in report.changes], ["modified"])
+
+    def test_git_diff_rejects_reuse_of_removed_record_id(self) -> None:
+        self.git("init")
+        self.git("config", "user.email", "validator@example.test")
+        self.git("config", "user.name", "Metadata Validator")
+        self.git("add", ".")
+        self.git("commit", "-m", "initial record")
+
+        self.write_record(
+            "00002",
+            VALID_RECORD.replace("A valid paper", "Original second paper").replace(
+                "10.1234/example.1", "10.1234/example.2"
+            ),
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "add second record")
+        (self.root / "database" / "records" / "00002.yaml").unlink()
+        self.git("add", "--all")
+        self.git("commit", "-m", "remove second record")
+        base = self.git("rev-parse", "HEAD").strip()
+
+        self.write_record(
+            "00002",
+            VALID_RECORD.replace("A valid paper", "Unrelated replacement paper").replace(
+                "10.1234/example.1", "10.1234/replacement.2"
+            ),
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "reuse second record id")
+
+        report = validate_repository(self.root, base=base, head="HEAD")
+        self.assertIn("change.id_reused", {finding.code for finding in report.errors})
+
+    def test_direct_git_diff_reports_force_push_removals(self) -> None:
+        self.git("init")
+        self.git("config", "user.email", "validator@example.test")
+        self.git("config", "user.name", "Metadata Validator")
+        self.git("add", ".")
+        self.git("commit", "-m", "initial record")
+        common_ancestor = self.git("rev-parse", "HEAD").strip()
+
+        self.write_record(
+            "00002",
+            VALID_RECORD.replace("A valid paper", "Discarded second paper").replace(
+                "10.1234/example.1", "10.1234/example.2"
+            ),
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "old pushed tip")
+        old_tip = self.git("rev-parse", "HEAD").strip()
+
+        self.git("switch", "-c", "rewritten", common_ancestor)
+        path = self.root / "database" / "records" / "00001.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("A valid paper", "Rewritten paper"),
+            encoding="utf-8",
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "rewritten pushed tip")
+
+        report = validate_repository(
+            self.root,
+            base=old_tip,
+            head="HEAD",
+            comparison="direct",
+        )
+        changes = {
+            (change.kind, change.old_id or change.new_id) for change in report.changes
+        }
+        self.assertIn(("removed", "00002"), changes)
+        self.assertIn(("modified", "00001"), changes)
+        self.assertIn(
+            "change.record_removed", {finding.code for finding in report.warnings}
+        )
 
     def test_cli_prints_non_latin_findings_with_cp1252_stdout(self) -> None:
         self.write_record(
