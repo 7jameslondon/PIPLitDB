@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pip-litdb.org/schema/paper.schema.json",
+  "title": "PIP LitDB paper record",
+  "description": "Metadata for one paper. The PIP LitDB ID is the five-digit YAML filename and is intentionally not stored in the record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_type",
+    "publication_stage",
+    "title",
+    "authors",
+    "publication_year",
+    "journal"
+  ],
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A value defined in database/vocabularies/document-types.yaml."
+    },
+    "publication_stage": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A value defined in database/vocabularies/publication-stages.yaml."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/author"
+      }
+    },
+    "doi": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^10\\.[0-9]{4,9}/\\S+$",
+      "description": "A DOI without a https://doi.org/ prefix."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "publication_year": {
+      "type": "integer",
+      "minimum": 1800,
+      "maximum": 3000
+    },
+    "journal": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The full journal name or, for a preprint, the server name."
+    },
+    "related_papers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/relatedPaper"
+      }
+    },
+    "pip_litdb_status": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A value defined in database/vocabularies/record-statuses.yaml."
+    },
+    "pip_litdb_notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "relatedPaper": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pip_litdb_id",
+        "relationship_type"
+      ],
+      "properties": {
+        "pip_litdb_id": {
+          "type": "string",
+          "pattern": "^[0-9]{5}$"
+        },
+        "relationship_type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A value defined in database/vocabularies/relationship-types.yaml."
+        }
+      }
+    }
+  }
+}

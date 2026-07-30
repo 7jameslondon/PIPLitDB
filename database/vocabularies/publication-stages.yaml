@@ -1,0 +1,7 @@
+preprint:
+  label: Preprint
+  description: A manuscript made public before formal journal publication.
+
+publication:
+  label: Publication
+  description: A formally published document, including versions of record.

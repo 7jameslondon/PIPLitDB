@@ -1,0 +1,11 @@
+research_article:
+  label: Research article
+  description: A document reporting original research.
+
+review:
+  label: Review
+  description: A document synthesizing or evaluating previously published research.
+
+correction:
+  label: Correction
+  description: A document that corrects or clarifies another document.

@@ -1,0 +1,11 @@
+needs_review:
+  label: Needs review
+  description: The record needs human review or additional metadata work.
+
+metadata_complete:
+  label: Metadata complete
+  description: The required metadata is complete but has not yet been independently verified.
+
+verified:
+  label: Verified
+  description: The record metadata has been checked against an authoritative source.

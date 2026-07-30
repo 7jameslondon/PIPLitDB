@@ -1,0 +1,24 @@
+is_preprint_of:
+  label: Is preprint of
+  description: This document is a preprint of the related publication.
+  inverse: has_preprint
+
+has_preprint:
+  label: Has preprint
+  description: This publication has the related preprint.
+  inverse: is_preprint_of
+
+corrects:
+  label: Corrects
+  description: This document corrects the related document.
+  inverse: is_corrected_by
+
+is_corrected_by:
+  label: Is corrected by
+  description: This document is corrected by the related document.
+  inverse: corrects
+
+is_version_of:
+  label: Is version of
+  description: This document is another version of the related document.
+  inverse: is_version_of
