@@ -46,6 +46,8 @@
     ui.records = document.querySelector("#records");
     ui.loading = document.querySelector("#loading-state");
     ui.empty = document.querySelector("#empty-state");
+    ui.emptyTitle = document.querySelector("#empty-title");
+    ui.emptyDetail = document.querySelector("#empty-detail");
     ui.error = document.querySelector("#error-state");
     ui.errorTitle = document.querySelector("#error-title");
     ui.errorDetail = document.querySelector("#error-detail");
@@ -179,10 +181,6 @@
           .map((entry) => entry.path)
           .sort();
 
-        if (recordPaths.length === 0) {
-          throw new Error(`No YAML records were found in ${config.paths.records}.`);
-        }
-
         const rawBase = `https://raw.githubusercontent.com/${encodeURIComponent(github.owner)}/${encodeURIComponent(github.repository)}/${commit.sha}`;
         const [records, vocabularies] = await Promise.all([
           loadRecords(recordPaths, (path) => fetchText(`${rawBase}/${path}`, "force-cache")),
@@ -224,12 +222,6 @@
           .map((anchor) => new URL(anchor.getAttribute("href"), directoryUrl))
           .filter((url) => /^\d{5}\.ya?ml$/i.test(decodeURIComponent(url.pathname.split("/").pop())))
           .sort((a, b) => a.href.localeCompare(b.href));
-
-        if (recordUrls.length === 0) {
-          throw new Error(
-            "No record files were found. The local server must expose a directory listing for database/records.",
-          );
-        }
 
         const vocabulariesUrl = new URL(
           ensureTrailingSlash(config.localPaths.vocabularies),
@@ -405,15 +397,21 @@
   }
 
   function renderCatalog() {
-    if (state.isLoading || state.records.length === 0) return;
+    if (state.isLoading) return;
 
     const visibleRecords = getVisibleRecords();
+    const total = state.records.length;
+    const databaseIsEmpty = total === 0;
     ui.records.replaceChildren(...visibleRecords.map(createRecordCard));
     ui.records.setAttribute("aria-busy", "false");
     ui.empty.hidden = visibleRecords.length !== 0;
     ui.records.hidden = visibleRecords.length === 0;
+    ui.emptyTitle.textContent = databaseIsEmpty ? "No records yet" : "No matching records";
+    ui.emptyDetail.textContent = databaseIsEmpty
+      ? "The public database is ready for its first YAML record. Refresh after a record is added."
+      : "Try a broader search or clear the active filters.";
+    ui.emptyClearFilters.hidden = databaseIsEmpty;
 
-    const total = state.records.length;
     ui.recordCount.textContent =
       visibleRecords.length === total
         ? `${formatNumber(total)} ${pluralize(total, "record")}`
@@ -492,14 +490,13 @@
   }
 
   function createRecordCard(record) {
-    const card = element("button", {
+    const titleId = `record-title-${record.pip_litdb_id}`;
+    const card = element("article", {
       className: "record-card",
       attributes: {
-        type: "button",
-        "aria-label": `View ${record.title || `record ${record.pip_litdb_id}`}`,
+        "aria-labelledby": titleId,
       },
     });
-    card.addEventListener("click", () => openRecord(record.pip_litdb_id));
 
     const top = element("div", { className: "record-card-top" }, [
       element("span", { className: "record-id", text: `PIP ${record.pip_litdb_id}` }),
@@ -509,7 +506,10 @@
       }),
     ]);
 
-    const title = element("h3", { text: record.title || "Untitled record" });
+    const title = element("h3", {
+      id: titleId,
+      text: record.title || "Untitled record",
+    });
     const authors = element("p", {
       className: "authors",
       text: formatAuthors(record.authors),
@@ -538,14 +538,29 @@
     }
 
     const relationshipCount = Array.isArray(record.related_papers) ? record.related_papers.length : 0;
+    const cardActions = element("div", { className: "record-card-actions" });
+    if (relationshipCount > 0) {
+      cardActions.append(
+        element("span", {
+          className: "relationship-count",
+          text: `${relationshipCount} related ${pluralize(relationshipCount, "record")}`,
+        }),
+      );
+    }
+    const detailsButton = element("button", {
+      className: "record-details-button",
+      text: "View details →",
+      attributes: {
+        type: "button",
+        "aria-label": `View details for ${record.title || `record ${record.pip_litdb_id}`}`,
+      },
+    });
+    detailsButton.addEventListener("click", () => openRecord(record.pip_litdb_id));
+    cardActions.append(detailsButton);
+
     const bottom = element("div", { className: "record-card-bottom" }, [
       tags,
-      element("span", {
-        className: "relationship-count",
-        text: relationshipCount
-          ? `${relationshipCount} related ${pluralize(relationshipCount, "record")}`
-          : "View details →",
-      }),
+      cardActions,
     ]);
 
     card.append(top, title, authors, journal, bottom);
@@ -752,7 +767,11 @@
 
   function openRecordFromHash() {
     const match = window.location.hash.match(/^#record-(\d{5})$/);
-    if (match && state.recordById.has(match[1])) openRecord(match[1], false);
+    if (match && state.recordById.has(match[1])) {
+      openRecord(match[1], false);
+      return;
+    }
+    if (ui.dialog.open) ui.dialog.close();
   }
 
   function clearRecordHash() {

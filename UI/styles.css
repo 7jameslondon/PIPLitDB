@@ -371,7 +371,6 @@ input:focus-visible {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  color: inherit;
   text-align: left;
   background: var(--surface);
   box-shadow: 0 7px 25px rgba(20, 42, 43, 0.035);
@@ -395,7 +394,7 @@ input:focus-visible {
 }
 
 .record-card:hover::before,
-.record-card:focus-visible::before {
+.record-card:focus-within::before {
   opacity: 1;
 }
 
@@ -487,6 +486,27 @@ input:focus-visible {
 .relationship-count {
   color: var(--ink-soft);
   font-size: 0.75rem;
+}
+
+.record-card-actions {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: end;
+  margin-left: auto;
+}
+
+.record-details-button {
+  padding: 0.52rem 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  background: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.record-details-button:hover {
+  background: var(--accent-deep);
 }
 
 .skeleton-card {
