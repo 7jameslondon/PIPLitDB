@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Browse the public PIP LitDB metadata records."
+    />
+    <title>PIP LitDB — Public metadata catalog</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#records">Skip to records</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand-block">
+          <p class="eyebrow">Public metadata catalog</p>
+          <h1>PIP LitDB</h1>
+          <p class="intro">
+            Literature about pyrrole–imidazole polyamides, collected as an open,
+            version-controlled database.
+          </p>
+        </div>
+
+        <div class="source-card" aria-live="polite">
+          <span id="source-dot" class="source-dot" aria-hidden="true"></span>
+          <div>
+            <span class="source-label">Data source</span>
+            <strong id="source-name">Connecting…</strong>
+            <a id="source-link" class="source-link" hidden></a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="catalog-shell" aria-labelledby="catalog-heading">
+        <div class="catalog-heading-row">
+          <div>
+            <p class="section-kicker">Database records</p>
+            <h2 id="catalog-heading">Explore the literature</h2>
+          </div>
+          <p id="record-count" class="record-count">Loading records…</p>
+        </div>
+
+        <section class="controls" aria-label="Search and filter records">
+          <div class="search-field">
+            <label for="search">Search the catalog</label>
+            <div class="search-input-wrap">
+              <span aria-hidden="true">⌕</span>
+              <input
+                id="search"
+                type="search"
+                placeholder="Title, author, journal, DOI, ID…"
+                autocomplete="off"
+                disabled
+              />
+            </div>
+          </div>
+
+          <div class="filter-grid">
+            <label>
+              <span>Document type</span>
+              <select id="document-type-filter" disabled>
+                <option value="">All types</option>
+              </select>
+            </label>
+            <label>
+              <span>Publication stage</span>
+              <select id="publication-stage-filter" disabled>
+                <option value="">All stages</option>
+              </select>
+            </label>
+            <label>
+              <span>Year</span>
+              <select id="year-filter" disabled>
+                <option value="">All years</option>
+              </select>
+            </label>
+            <label>
+              <span>Record status</span>
+              <select id="status-filter" disabled>
+                <option value="">All statuses</option>
+              </select>
+            </label>
+            <label>
+              <span>Sort by</span>
+              <select id="sort" disabled>
+                <option value="year-desc">Newest first</option>
+                <option value="year-asc">Oldest first</option>
+                <option value="title-asc">Title A–Z</option>
+                <option value="id-asc">PIP LitDB ID</option>
+              </select>
+            </label>
+            <button id="clear-filters" class="clear-button" type="button" disabled>
+              Clear filters
+            </button>
+          </div>
+        </section>
+
+        <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+
+        <div id="loading-state" class="loading-grid" aria-label="Loading records">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+
+        <section id="records" class="record-grid" aria-busy="true" aria-label="Literature records"></section>
+
+        <section id="empty-state" class="empty-state" hidden>
+          <p class="empty-mark" aria-hidden="true">∅</p>
+          <h3>No matching records</h3>
+          <p>Try a broader search or clear the active filters.</p>
+          <button id="empty-clear-filters" class="primary-button" type="button">
+            Show all records
+          </button>
+        </section>
+
+        <section id="error-state" class="error-state" hidden>
+          <p class="section-kicker">Could not load the database</p>
+          <h3 id="error-title">The records are unavailable.</h3>
+          <p id="error-detail"></p>
+          <button id="retry-load" class="primary-button" type="button">Try again</button>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Metadata is read directly from the canonical YAML records. The interface
+        does not maintain a separate database.
+      </p>
+    </footer>
+
+    <dialog id="record-dialog" class="record-dialog" aria-labelledby="dialog-title">
+      <div class="dialog-frame">
+        <div class="dialog-toolbar">
+          <span id="dialog-id" class="record-id"></span>
+          <button id="dialog-close" class="icon-button" type="button" aria-label="Close record details">
+            ×
+          </button>
+        </div>
+        <div id="dialog-content" class="dialog-content"></div>
+      </div>
+    </dialog>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script defer src="./config.js"></script>
+    <script defer src="./app.js"></script>
+  </body>
+</html>
