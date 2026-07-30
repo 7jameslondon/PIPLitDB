@@ -1033,10 +1033,12 @@ def _git_file(root: Path, revision: str, path: str) -> Any | None:
     if result.returncode != 0:
         return None
     try:
-        documents = list(
-            yaml.load_all(result.stdout.decode("utf-8"), Loader=StrictSafeLoader)
-        )
-    except (UnicodeDecodeError, yaml.YAMLError):
+        text = result.stdout.decode("utf-8")
+        nodes = list(yaml.compose_all(text, Loader=yaml.SafeLoader))
+        if len(nodes) != 1 or _yaml_node_graph_issue(nodes[0]) is not None:
+            return None
+        documents = list(yaml.load_all(text, Loader=StrictSafeLoader))
+    except (UnicodeDecodeError, yaml.YAMLError, RecursionError):
         return None
     return documents[0] if len(documents) == 1 else None
 

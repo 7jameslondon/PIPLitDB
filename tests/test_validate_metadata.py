@@ -370,6 +370,26 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("change.record_removed", warning_codes)
         self.assertIn("change.id_changed", warning_codes)
 
+    def test_git_diff_handles_excessively_nested_record(self) -> None:
+        self.git("init")
+        self.git("config", "user.email", "validator@example.test")
+        self.git("config", "user.name", "Metadata Validator")
+        self.git("add", ".")
+        self.git("commit", "-m", "base")
+        base = self.git("rev-parse", "HEAD").strip()
+
+        nested_title = "[" * 1500 + '"A valid paper"' + "]" * 1500
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace('title: "A valid paper"', f"title: {nested_title}"),
+        )
+        self.git("add", "--all")
+        self.git("commit", "-m", "add excessive nesting")
+
+        report = validate_repository(self.root, base=base, head="HEAD")
+        self.assertIn("record.nesting_depth", {finding.code for finding in report.errors})
+        self.assertEqual([change.kind for change in report.changes], ["modified"])
+
     def git(self, *arguments: str) -> str:
         completed = subprocess.run(
             ["git", *arguments],
