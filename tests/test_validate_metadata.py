@@ -9,6 +9,8 @@ import textwrap
 import unittest
 from pathlib import Path
 
+import yaml
+
 from scripts.validate_metadata import validate_repository
 
 
@@ -117,12 +119,40 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertEqual(report.record_count, 1)
 
     def test_workflow_runs_validation_after_test_failures(self) -> None:
-        workflow = (
+        workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
-        ).read_text(encoding="utf-8")
-        self.assertIn("id: install", workflow)
-        self.assertEqual(workflow.count("!cancelled()"), 3)
-        self.assertEqual(workflow.count("steps.install.outcome == 'success'"), 3)
+        )
+        workflow = yaml.load(
+            workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader
+        )
+        steps = workflow["jobs"]["validate"]["steps"]
+        steps_by_name = {step["name"]: step for step in steps}
+        self.assertEqual(
+            steps_by_name["Install validation dependencies"].get("id"), "install"
+        )
+
+        expected_conditions = {
+            "Validate pull request result and summarize record changes": (
+                "${{ !cancelled() && steps.install.outcome == 'success' && "
+                "github.event_name == 'pull_request' }}"
+            ),
+            "Validate pushed result and summarize record changes": (
+                "${{ !cancelled() && steps.install.outcome == 'success' && "
+                "github.event_name == 'push' && github.event.before != "
+                "'0000000000000000000000000000000000000000' }}"
+            ),
+            "Validate complete database": (
+                "${{ !cancelled() && steps.install.outcome == 'success' && "
+                "(github.event_name == 'workflow_dispatch' || "
+                "(github.event_name == 'push' && github.event.before == "
+                "'0000000000000000000000000000000000000000')) }}"
+            ),
+        }
+        for step_name, expected_condition in expected_conditions.items():
+            with self.subTest(step=step_name):
+                self.assertEqual(
+                    steps_by_name[step_name].get("if"), expected_condition
+                )
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:
         self.write_record("00001", VALID_RECORD + "title: Duplicate key\n")
