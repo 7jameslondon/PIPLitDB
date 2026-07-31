@@ -1001,13 +1001,24 @@ class MetadataValidator:
                 urls[_normalize_url(url)].append(record_id)
             title = record.get("title")
             publication_year = record.get("publication_year")
+            normalized_year: int | None = None
+            if isinstance(publication_year, int) and not isinstance(
+                publication_year, bool
+            ):
+                normalized_year = publication_year
+            elif (
+                isinstance(publication_year, float)
+                and publication_year.is_integer()
+            ):
+                normalized_year = int(publication_year)
             if (
                 isinstance(title, str)
                 and title.strip()
-                and isinstance(publication_year, int)
-                and not isinstance(publication_year, bool)
+                and normalized_year is not None
             ):
-                title_years[(_normalize_title(title), publication_year)].append(record_id)
+                title_years[(_normalize_title(title), normalized_year)].append(
+                    record_id
+                )
 
         for normalized_doi, record_ids in sorted(dois.items()):
             if len(record_ids) > 1:
@@ -1531,7 +1542,7 @@ def render_markdown_summary(report: ValidationReport) -> str:
         lines.extend(
             [
                 "",
-                "### Pull request record changes",
+                "### Record changes",
                 "",
                 "| Added | Modified | Removed | Renamed | Copied |",
                 "| ---: | ---: | ---: | ---: | ---: |",

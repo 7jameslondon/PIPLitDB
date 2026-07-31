@@ -14,7 +14,13 @@ from unittest.mock import patch
 
 import yaml
 
-from scripts.validate_metadata import Finding, ValidationReport, print_report, validate_repository
+from scripts.validate_metadata import (
+    Finding,
+    ValidationReport,
+    print_report,
+    render_markdown_summary,
+    validate_repository,
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -121,7 +127,7 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertTrue(report.passed, report.findings)
         self.assertEqual(report.record_count, 1)
 
-    def test_workflow_runs_validation_after_test_failures(self) -> None:
+    def test_workflow_validates_before_running_pr_supplied_tests(self) -> None:
         workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
         )
@@ -133,6 +139,7 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertEqual(
             steps_by_name["Install validation dependencies"].get("id"), "install"
         )
+        test_step_name = "Test metadata validator"
         fetch_step_name = "Fetch pushed branch's previous tip"
         push_validation_step_name = (
             "Validate pushed result and summarize record changes"
@@ -177,6 +184,14 @@ class MetadataValidationTests(unittest.TestCase):
                 self.assertEqual(
                     steps_by_name[step_name].get("if"), expected_condition
                 )
+                self.assertLess(
+                    steps.index(steps_by_name[step_name]),
+                    steps.index(steps_by_name[test_step_name]),
+                )
+        self.assertEqual(
+            steps_by_name[test_step_name].get("if"),
+            "${{ !cancelled() && steps.install.outcome == 'success' }}",
+        )
         self.assertIn(
             "--comparison direct",
             steps_by_name[push_validation_step_name]["run"],
@@ -420,6 +435,28 @@ class MetadataValidationTests(unittest.TestCase):
         warning_codes = {finding.code for finding in report.warnings}
         self.assertTrue(report.passed)
         self.assertIn("database.possible_duplicate", warning_codes)
+
+    def test_integral_float_year_participates_in_duplicate_detection(self) -> None:
+        second = VALID_RECORD.replace(
+            "10.1234/example.1", "10.1234/example.2"
+        ).replace("publication_year: 2024", "publication_year: 2024.0")
+        self.write_record("00002", second)
+
+        report = validate_repository(self.root)
+
+        self.assertTrue(report.passed, report.findings)
+        self.assertIn(
+            "database.possible_duplicate",
+            {finding.code for finding in report.warnings},
+        )
+
+    def test_change_summary_heading_is_event_neutral(self) -> None:
+        report = ValidationReport(root=self.root, compared_base="base")
+
+        summary = render_markdown_summary(report)
+
+        self.assertIn("### Record changes", summary)
+        self.assertNotIn("Pull request record changes", summary)
 
     def test_duplicate_author_and_padding_are_rejected(self) -> None:
         self.write_record(
