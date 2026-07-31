@@ -495,7 +495,8 @@ input:focus-visible {
   min-width: 0;
   flex: 0 1 auto;
   overflow: hidden;
-  font-weight: 700;
+  color: inherit;
+  font-weight: inherit;
   text-overflow: ellipsis;
   text-underline-offset: 0.16rem;
   white-space: nowrap;
@@ -532,12 +533,6 @@ input:focus-visible {
 }
 
 .record-year-inline {
-  color: var(--ink-soft);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
