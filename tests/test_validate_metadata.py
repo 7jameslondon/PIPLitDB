@@ -537,15 +537,21 @@ class MetadataValidationTests(unittest.TestCase):
             r"%HOMEDRIVE%%HOMEPATH%\private\paper.pdf",
             "prefix%USERPROFILE%",
             "%USERPROFILE%suffix",
+            r"%USERPROFILE:~0,3%\private\paper.pdf",
+            r"%USERPROFILE:\=/%",
             r"prefix$env:USERPROFILE",
             r"${env:USERPROFILE}suffix",
             "prefix${HOME}suffix",
+            "prefix$HOME/private/paper.pdf",
             "$PWD",
             "$OLDPWD",
             "$XDG_RUNTIME_DIR",
             "%CD%",
             r"$env:PUBLIC",
             r"$env:ALLUSERSPROFILE",
+            "~alice/private/paper.pdf",
+            "~+/private/paper.pdf",
+            "~-/private/paper.pdf",
         )
         for reference in references:
             with self.subTest(reference=reference):

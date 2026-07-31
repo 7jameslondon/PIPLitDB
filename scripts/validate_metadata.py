@@ -49,12 +49,13 @@ PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
     r"XDG_(?:CACHE|CONFIG|DATA|STATE)_HOME|XDG_RUNTIME_DIR)"
 )
 EXPLICIT_ENVIRONMENT_REFERENCE_RE = re.compile(
-    r"(?:%[A-Za-z_][A-Za-z0-9_()]*%|\$env:[A-Za-z_][A-Za-z0-9_()]*|"
+    r"(?:%[A-Za-z_][A-Za-z0-9_()]*(?::[^%\r\n]*)?%|"
+    r"\$env:[A-Za-z_][A-Za-z0-9_()]*|"
     r"\$\{env:[^}=\r\n]+\})",
     re.IGNORECASE,
 )
 BARE_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
-    r"(?<![A-Za-z0-9_$%])\$"
+    r"(?<!\$)\$"
     + PATH_ENVIRONMENT_VARIABLE_NAME_RE
     + r"(?![A-Za-z0-9_$%])",
     re.IGNORECASE,
@@ -83,7 +84,7 @@ PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"\b[A-Za-z]:(?![\\/]{2})(?:[\\/]|(?=[^\\/\s]))[^\s]*"),
     re.compile(r"(?<![\\/])\\\\[^\\/\s]+[\\/][^\\/\s]+"),
     re.compile(r"(?<![:/])//[^/\s]+/[^/\s]+"),
-    re.compile(r"(?<![A-Za-z0-9_])~[\\/][^\s]+"),
+    re.compile(r"(?<![A-Za-z0-9_])~(?:[A-Za-z0-9_.+-]+)?[\\/][^\s]+"),
     re.compile(r"(?<![A-Za-z0-9_])\.\.?[\\/][^\\/\s]+(?:[\\/][^\\/\s]+)*"),
     re.compile(r"(?<![A-Za-z0-9_:/%])/(?!/)[^/\s]+(?:/[^/\s]+)*"),
 )
