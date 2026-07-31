@@ -539,11 +539,12 @@
         }),
         element("a", {
           className: "record-doi-link",
-          text: "DOI",
+          text: record.doi,
           attributes: {
             href: doiUrl,
             target: "_blank",
             rel: "noreferrer",
+            title: record.doi,
             "aria-label": `Open DOI ${record.doi}`,
           },
         }),

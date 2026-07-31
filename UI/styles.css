@@ -491,8 +491,7 @@ input:focus-visible {
 }
 
 .journal-separator,
-.record-year-inline,
-.record-doi-link {
+.record-year-inline {
   flex: 0 0 auto;
 }
 
@@ -502,8 +501,13 @@ input:focus-visible {
 }
 
 .record-doi-link {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
   font-weight: 700;
+  text-overflow: ellipsis;
   text-underline-offset: 0.16rem;
+  white-space: nowrap;
 }
 
 .record-card-bottom {
