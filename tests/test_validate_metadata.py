@@ -584,6 +584,46 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("change.record_removed", warning_codes)
         self.assertIn("change.id_changed", warning_codes)
 
+    def test_merge_base_diff_ignores_changes_made_later_on_base_branch(self) -> None:
+        self.git("init")
+        self.git("config", "user.email", "validator@example.test")
+        self.git("config", "user.name", "Metadata Validator")
+        self.git("add", ".")
+        self.git("commit", "-m", "common ancestor")
+        base_branch = self.git("branch", "--show-current").strip()
+
+        self.git("switch", "-c", "feature")
+        path = self.root / "database" / "records" / "00001.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                'journal: "Example Journal"', 'journal: "Feature Journal"'
+            ),
+            encoding="utf-8",
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "change journal on feature")
+        feature_head = self.git("rev-parse", "HEAD").strip()
+
+        self.git("switch", base_branch)
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                'title: "A valid paper"', 'title: "Main branch title"'
+            ),
+            encoding="utf-8",
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "change title on base")
+        base_tip = self.git("rev-parse", "HEAD").strip()
+
+        report = validate_repository(self.root, base=base_tip, head=feature_head)
+        self.assertTrue(report.passed, report.findings)
+        self.assertEqual(len(report.changes), 1)
+        self.assertEqual(report.changes[0].kind, "modified")
+        self.assertEqual(report.changes[0].changed_fields, ("journal",))
+        self.assertNotIn(
+            "change.identity_modified", {finding.code for finding in report.warnings}
+        )
+
     def test_git_diff_handles_excessively_nested_record(self) -> None:
         self.git("init")
         self.git("config", "user.email", "validator@example.test")

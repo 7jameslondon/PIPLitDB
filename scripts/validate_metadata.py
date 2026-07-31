@@ -1273,6 +1273,20 @@ def detect_record_changes(
             )
             return []
 
+    comparison_base = base
+    if comparison == "merge-base":
+        result = _git_command(root, "merge-base", base, head)
+        if result.returncode != 0 or not result.stdout.strip():
+            message = result.stderr.decode("utf-8", errors="replace").strip()
+            detail = message or "the revisions do not share a merge base"
+            report.add(
+                "error",
+                "diff.merge_base",
+                f"Could not resolve the merge base for {base!r} and {head!r}: {detail}.",
+            )
+            return []
+        comparison_base = result.stdout.decode("ascii").strip()
+
     result = _git_command(
         root,
         "diff",
@@ -1283,7 +1297,7 @@ def detect_record_changes(
         "--find-renames=90%",
         "--find-copies=90%",
         "--find-copies-harder",
-        f"{base}...{head}" if comparison == "merge-base" else f"{base}..{head}",
+        f"{comparison_base}..{head}",
         "--",
         "database/records",
     )
@@ -1332,7 +1346,7 @@ def detect_record_changes(
         }.get(code, "modified")
         old_value = new_value = None
         if old_path and new_path:
-            old_value = _git_file(root, base, old_path)
+            old_value = _git_file(root, comparison_base, old_path)
             new_value = _git_file(root, head, new_path)
         changed_fields: tuple[str, ...] = ()
         if isinstance(old_value, dict) and isinstance(new_value, dict):
