@@ -237,6 +237,10 @@ class MetadataValidationTests(unittest.TestCase):
             "github.event_name", trusted_workflow["concurrency"]["group"]
         )
         self.assertEqual(trusted_workflow["permissions"]["statuses"], "write")
+        self.assertIn(
+            ".github/CODEOWNERS",
+            trusted_workflow["on"]["push"]["paths"],
+        )
 
         trusted_job = trusted_workflow["jobs"]["validate"]
         self.assertEqual(trusted_job["name"], "Run trusted metadata validation")
@@ -271,7 +275,14 @@ class MetadataValidationTests(unittest.TestCase):
             trusted_pr_validation.count("python trusted/scripts/validate_metadata.py"),
             2,
         )
-        self.assertIn("GITHUB_STEP_SUMMARY=", trusted_pr_validation)
+        self.assertNotIn("GITHUB_STEP_SUMMARY=", trusted_pr_validation)
+        self.assertIn(
+            '--summary-title "Trusted metadata result"', trusted_pr_validation
+        )
+        self.assertIn(
+            '--summary-title "Candidate rules and enforcement artifacts"',
+            trusted_pr_validation,
+        )
         for artifact in (
             ".github/CODEOWNERS",
             ".github/workflows/validate-metadata.yml",
@@ -625,6 +636,16 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("### Record changes", summary)
         self.assertNotIn("Pull request record changes", summary)
 
+    def test_summary_can_label_independent_validation_passes(self) -> None:
+        report = ValidationReport(root=self.root)
+
+        summary = render_markdown_summary(
+            report, title="Candidate rules and enforcement artifacts"
+        )
+
+        self.assertIn("## Candidate rules and enforcement artifacts", summary)
+        self.assertNotIn("## Metadata validation", summary)
+
     def test_duplicate_author_and_padding_are_rejected(self) -> None:
         self.write_record(
             "00001",
@@ -656,6 +677,29 @@ class MetadataValidationTests(unittest.TestCase):
             ),
         )
         self.assertIn("record.url_credentials", self.error_codes())
+
+    def test_private_url_hosts_are_rejected(self) -> None:
+        urls = (
+            "http://localhost/paper",
+            "http://intranet/paper",
+            "http://127.0.0.1/paper",
+            "http://169.254.169.254/paper",
+            "http://10.0.0.1/paper",
+            "http://172.16.0.1/paper",
+            "http://192.168.0.1/paper",
+            "http://[::1]/paper",
+            "http://[fe80::1]/paper",
+        )
+        for url in urls:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        "https://doi.org/10.1234/example.1",
+                        url,
+                    ),
+                )
+                self.assertIn("record.url_private_host", self.error_codes())
 
     def test_missing_relationship_target_is_rejected(self) -> None:
         self.write_record(
@@ -821,6 +865,29 @@ class MetadataValidationTests(unittest.TestCase):
                     VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
                 )
                 self.assertNotIn("record.private_reference", self.error_codes())
+
+    def test_credentialed_or_private_urls_in_notes_are_rejected(self) -> None:
+        urls_and_codes = (
+            ("https://user:secret@example.test/paper", "record.notes_url_credentials"),
+            ("http://localhost/private.pdf", "record.notes_url_private_host"),
+            ("http://metadata.localhost/private.pdf", "record.notes_url_private_host"),
+            ("http://intranet/private.pdf", "record.notes_url_private_host"),
+            ("http://archive.local/private.pdf", "record.notes_url_private_host"),
+            ("http://127.0.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://169.254.169.254/private.pdf", "record.notes_url_private_host"),
+            ("http://10.0.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://172.16.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://192.168.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://[::1]/private.pdf", "record.notes_url_private_host"),
+            ("http://[fe80::1]/private.pdf", "record.notes_url_private_host"),
+        )
+        for url, expected_code in urls_and_codes:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
+                )
+                self.assertIn(expected_code, self.error_codes())
 
     def test_inline_math_is_not_a_private_reference(self) -> None:
         notes = (

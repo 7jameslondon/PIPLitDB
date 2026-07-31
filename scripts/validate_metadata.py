@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import re
@@ -40,6 +41,15 @@ VOCABULARY_SPECS = {
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
 PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\s<>\"']+", re.IGNORECASE)
+PRIVATE_HOST_SUFFIXES = (
+    ".home",
+    ".home.arpa",
+    ".internal",
+    ".lan",
+    ".local",
+    ".localdomain",
+    ".localhost",
+)
 PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
     r"(?:ALLUSERSPROFILE|APPDATA|CD|COMMONPROGRAMFILES(?:\(X86\))?|HOME|"
     r"HOMEDRIVE|HOMEPATH|LOCALAPPDATA|OLDPWD|ONEDRIVE(?:COMMERCIAL|CONSUMER)?|"
@@ -984,7 +994,9 @@ class MetadataValidator:
                         relative,
                         self._line_for(lines, ("pip_litdb_notes",)),
                     )
-                searchable_notes = PUBLIC_URL_RE.sub("", notes)
+                searchable_notes = self._remove_public_note_urls(
+                    notes, relative, lines
+                )
                 for pattern in PRIVATE_REFERENCE_PATTERNS:
                     if pattern.search(searchable_notes):
                         self.report.add(
@@ -1005,6 +1017,65 @@ class MetadataValidator:
                             relative,
                             self._line_for(lines, ("pip_litdb_notes",)),
                         )
+
+    def _remove_public_note_urls(
+        self,
+        notes: str,
+        relative: str,
+        lines: dict[tuple[Any, ...], int],
+    ) -> str:
+        line = self._line_for(lines, ("pip_litdb_notes",))
+
+        def inspect(match: re.Match[str]) -> str:
+            url = match.group(0)
+            try:
+                parsed = urlsplit(url)
+                # Accessing these properties catches malformed bracketed hosts and ports.
+                host = parsed.hostname
+                _ = parsed.port
+            except ValueError as exc:
+                self.report.add(
+                    "error",
+                    "record.notes_url_format",
+                    f"Public metadata notes contain a malformed URL: {exc}.",
+                    relative,
+                    line,
+                )
+                return url
+
+            accepted_public_url = True
+            if parsed.scheme.casefold() not in {"http", "https"} or not host:
+                self.report.add(
+                    "error",
+                    "record.notes_url_format",
+                    "Public metadata notes contain an HTTP(S) URL without a host.",
+                    relative,
+                    line,
+                )
+                accepted_public_url = False
+            if parsed.username is not None or parsed.password is not None:
+                self.report.add(
+                    "error",
+                    "record.notes_url_credentials",
+                    "Public metadata notes must not contain URLs with embedded credentials.",
+                    relative,
+                    line,
+                )
+                accepted_public_url = False
+            if host and _url_host_is_non_public(host):
+                self.report.add(
+                    "error",
+                    "record.notes_url_private_host",
+                    f"Public metadata notes must not contain a URL for non-public host {host!r}.",
+                    relative,
+                    line,
+                )
+                accepted_public_url = False
+
+            # Only known-public URLs are exempt from filesystem-reference scanning.
+            return "" if accepted_public_url else url
+
+        return PUBLIC_URL_RE.sub(inspect, notes)
 
     def _check_vocab_value(
         self,
@@ -1057,6 +1128,14 @@ class MetadataValidator:
                 "error",
                 "record.url_credentials",
                 "Public metadata URLs must not contain embedded credentials.",
+                relative,
+                self._line_for(lines, ("url",)),
+            )
+        if _url_host_is_non_public(parsed.hostname):
+            self.report.add(
+                "error",
+                "record.url_private_host",
+                f"Public metadata URLs must not target non-public host {parsed.hostname!r}.",
                 relative,
                 self._line_for(lines, ("url",)),
             )
@@ -1325,6 +1404,20 @@ def _format_value_path(path: Sequence[Any]) -> str:
 def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKC", value).casefold()
     return " ".join(normalized.split())
+
+
+def _url_host_is_non_public(host: str) -> bool:
+    """Recognize non-public URL targets without performing a DNS lookup."""
+    normalized = host.casefold().rstrip(".")
+    try:
+        address = ipaddress.ip_address(normalized)
+    except ValueError:
+        return (
+            "." not in normalized
+            or normalized == "localhost"
+            or any(normalized.endswith(suffix) for suffix in PRIVATE_HOST_SUFFIXES)
+        )
+    return not address.is_global
 
 
 def _normalize_title(value: str) -> str:
@@ -1602,11 +1695,14 @@ def _markdown_escape(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ")
 
 
-def render_markdown_summary(report: ValidationReport) -> str:
+def render_markdown_summary(
+    report: ValidationReport, title: str = "Metadata validation"
+) -> str:
+    title = " ".join(title.split()) or "Metadata validation"
     icon = "\u2705" if report.passed else "\u274c"
     status = "Passed" if report.passed else "Failed"
     lines = [
-        "## Metadata validation",
+        f"## {title}",
         "",
         f"{icon} **{status}** \u2014 {report.record_count} resulting records, "
         f"{len(report.errors)} errors, and {len(report.warnings)} warnings.",
@@ -1799,6 +1895,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         type=Path,
         help="Write a Markdown summary here (defaults to GITHUB_STEP_SUMMARY in GitHub Actions).",
     )
+    parser.add_argument(
+        "--summary-title",
+        default="Metadata validation",
+        help="Heading for this validation pass in the Markdown summary.",
+    )
     return parser.parse_args(argv)
 
 
@@ -1820,7 +1921,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if summary_file is not None:
         summary_file.parent.mkdir(parents=True, exist_ok=True)
         with summary_file.open("a", encoding="utf-8", newline="\n") as stream:
-            stream.write(render_markdown_summary(report))
+            stream.write(render_markdown_summary(report, title=args.summary_title))
     return 0 if report.passed else 1
 
 
