@@ -48,19 +48,29 @@ PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
     r"TMPDIR|PSHOME|PSSCRIPTROOT|PUBLIC|PWD|USERPROFILE|WINDIR|"
     r"XDG_(?:CACHE|CONFIG|DATA|STATE)_HOME|XDG_RUNTIME_DIR)"
 )
-PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
-    r"(?<![A-Za-z0-9_$%])(?:%[A-Za-z_][A-Za-z0-9_()]*%|\$env:"
-    r"[A-Za-z_][A-Za-z0-9_()]*|\$\{env:[^}=\r\n]+\}|\$"
+EXPLICIT_ENVIRONMENT_REFERENCE_RE = re.compile(
+    r"(?:%[A-Za-z_][A-Za-z0-9_()]*%|\$env:[A-Za-z_][A-Za-z0-9_()]*|"
+    r"\$\{env:[^}=\r\n]+\})",
+    re.IGNORECASE,
+)
+BARE_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
+    r"(?<![A-Za-z0-9_$%])\$"
     + PATH_ENVIRONMENT_VARIABLE_NAME_RE
-    + r"|\$\{"
+    + r"(?![A-Za-z0-9_$%])",
+    re.IGNORECASE,
+)
+BRACED_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
+    r"\$\{"
     + PATH_ENVIRONMENT_VARIABLE_NAME_RE
-    + r"\})(?![A-Za-z0-9_$%])",
+    + r"\}",
     re.IGNORECASE,
 )
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
     re.compile(r"\bfile:(?:[\\/]+|[A-Za-z]:[\\/])", re.IGNORECASE),
-    PATH_ENVIRONMENT_REFERENCE_RE,
+    EXPLICIT_ENVIRONMENT_REFERENCE_RE,
+    BARE_PATH_ENVIRONMENT_REFERENCE_RE,
+    BRACED_PATH_ENVIRONMENT_REFERENCE_RE,
     re.compile(r"(?<![A-Za-z0-9_%])%[A-Za-z_][A-Za-z0-9_()]*%[\\/][^\s]*"),
     re.compile(
         r"(?<![A-Za-z0-9_$])\$(?:env:[A-Za-z_][A-Za-z0-9_]*|\{env:[^}=\r\n]+\})[\\/][^\s]*",
