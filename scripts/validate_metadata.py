@@ -40,9 +40,30 @@ VOCABULARY_SPECS = {
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
 PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\s<>\"']+", re.IGNORECASE)
+PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
+    r"(?:APPDATA|COMMONPROGRAMFILES(?:\(X86\))?|HOME|HOMEDRIVE|HOMEPATH|"
+    r"LOCALAPPDATA|ONEDRIVE(?:COMMERCIAL|CONSUMER)?|PROGRAMDATA|"
+    r"PROGRAMFILES(?:\(X86\))?|PROGRAMW6432|SYSTEMDRIVE|SYSTEMROOT|TEMP|TMP|"
+    r"TMPDIR|WINDIR|XDG_(?:CACHE|CONFIG|DATA|STATE)_HOME)"
+)
+PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
+    r"(?<![A-Za-z0-9_$%])(?:%"
+    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
+    + r"%|\$"
+    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
+    + r"|\$\{"
+    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
+    + r"\}|\$env:"
+    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
+    + r"|\$\{env:"
+    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
+    + r"\})(?![A-Za-z0-9_$%])",
+    re.IGNORECASE,
+)
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
     re.compile(r"\bfile:(?:[\\/]+|[A-Za-z]:[\\/])", re.IGNORECASE),
+    PATH_ENVIRONMENT_REFERENCE_RE,
     re.compile(r"(?<![A-Za-z0-9_%])%[A-Za-z_][A-Za-z0-9_()]*%[\\/][^\s]*"),
     re.compile(
         r"(?<![A-Za-z0-9_$])\$(?:env:[A-Za-z_][A-Za-z0-9_]*|\{env:[^}=\r\n]+\})[\\/][^\s]*",
