@@ -498,14 +498,6 @@
       },
     });
 
-    const top = element("div", { className: "record-card-top" }, [
-      element("span", { className: "record-id", text: `PAPER ID ${record.pip_litdb_id}` }),
-      element("span", {
-        className: "record-year",
-        text: record.publication_year ? String(record.publication_year) : "Year unknown",
-      }),
-    ]);
-
     const title = element("h3", {
       id: titleId,
       text: record.title || "Untitled record",
@@ -518,8 +510,20 @@
       className: "journal",
       text: record.journal || "Journal not specified",
     });
+    journal.append(
+      element("span", {
+        className: "record-year-inline",
+        text: record.publication_year ? String(record.publication_year) : "Year unknown",
+      }),
+    );
 
     const tags = element("div", { className: "tag-row" });
+    tags.append(
+      element("span", {
+        className: "tag record-id-tag",
+        text: `PAPER ID ${record.pip_litdb_id}`,
+      }),
+    );
     if (record.document_type) {
       tags.append(
         element("span", {
@@ -563,7 +567,7 @@
       cardActions,
     ]);
 
-    card.append(top, title, authors, journal, bottom);
+    card.append(title, authors, journal, bottom);
     return card;
   }
 
