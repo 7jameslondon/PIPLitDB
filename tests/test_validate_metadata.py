@@ -539,6 +539,8 @@ class MetadataValidationTests(unittest.TestCase):
         references = (
             "papers (private)/00001/main.pdf",
             r"D:\Papers\00001\main.pdf",
+            r"C:private\paper.pdf",
+            "C:private/paper.pdf",
             r"\\labserver\restricted\00001\main.pdf",
             "//labserver/restricted/00001/main.pdf",
             "/tmp/00001/main.pdf",

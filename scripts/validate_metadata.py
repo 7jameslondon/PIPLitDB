@@ -90,7 +90,7 @@ PRIVATE_REFERENCE_PATTERNS = (
         r"(?<![A-Za-z0-9_$])\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})[\\/]"
         r"(?![^\s]*\$)[^\s]*"
     ),
-    re.compile(r"\b[A-Za-z]:[\\/][^\s]*"),
+    re.compile(r"\b[A-Za-z]:(?=[^\s]*[\\/])[^\s]*"),
     re.compile(r"(?<![\\/])\\\\[^\\/\s]+[\\/][^\\/\s]+"),
     re.compile(r"(?<![:/])//[^/\s]+/[^/\s]+"),
     re.compile(
