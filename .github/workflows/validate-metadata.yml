@@ -35,7 +35,7 @@ jobs:
       - name: Fetch pushed branch's previous tip
         if: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
         run: >-
-          git fetch --no-tags --depth=1 origin
+          git fetch --no-tags origin
           "${{ github.event.before }}"
 
       - name: Set up Python

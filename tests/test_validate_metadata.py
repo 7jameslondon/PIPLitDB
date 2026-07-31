@@ -140,9 +140,10 @@ class MetadataValidationTests(unittest.TestCase):
             "'0000000000000000000000000000000000000000' }}",
         )
         self.assertIn(
-            "git fetch --no-tags --depth=1 origin",
+            "git fetch --no-tags origin",
             steps_by_name[fetch_step_name]["run"],
         )
+        self.assertNotIn("--depth", steps_by_name[fetch_step_name]["run"])
         self.assertIn(
             "${{ github.event.before }}", steps_by_name[fetch_step_name]["run"]
         )
@@ -755,6 +756,78 @@ class MetadataValidationTests(unittest.TestCase):
             "change.record_removed", {finding.code for finding in report.warnings}
         )
 
+    def test_fetched_previous_tip_keeps_history_for_id_reuse_detection(self) -> None:
+        self.git("init")
+        self.git("config", "user.email", "validator@example.test")
+        self.git("config", "user.name", "Metadata Validator")
+        self.git("add", ".")
+        self.git("commit", "-m", "initial record")
+        common_ancestor = self.git("rev-parse", "HEAD").strip()
+
+        self.write_record(
+            "00002",
+            VALID_RECORD.replace("A valid paper", "Original second paper").replace(
+                "10.1234/example.1", "10.1234/example.2"
+            ),
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "add second record")
+        (self.root / "database" / "records" / "00002.yaml").unlink()
+        self.git("add", "--all")
+        self.git("commit", "-m", "delete second record")
+        previous_tip = self.git("rev-parse", "HEAD").strip()
+
+        self.git("switch", "-c", "rewritten", common_ancestor)
+        self.write_record(
+            "00002",
+            VALID_RECORD.replace("A valid paper", "Replacement second paper").replace(
+                "10.1234/example.1", "10.1234/replacement.2"
+            ),
+        )
+        self.git("add", ".")
+        self.git("commit", "-m", "reuse second record id")
+        rewritten_tip = self.git("rev-parse", "HEAD").strip()
+
+        with tempfile.TemporaryDirectory() as transport_directory:
+            transport_root = Path(transport_directory)
+            remote = transport_root / "remote.git"
+            runner = transport_root / "runner"
+            self.git_at(transport_root, "init", "--bare", str(remote))
+            self.git_at(remote, "config", "uploadpack.allowAnySHA1InWant", "true")
+            self.git("remote", "add", "test-origin", remote.as_uri())
+            self.git(
+                "push", "test-origin", f"{previous_tip}:refs/heads/main"
+            )
+            self.git(
+                "push", "--force", "test-origin", f"{rewritten_tip}:refs/heads/main"
+            )
+            self.git_at(
+                transport_root,
+                "clone",
+                "--no-tags",
+                "--branch",
+                "main",
+                remote.as_uri(),
+                str(runner),
+            )
+            self.git_at(
+                runner,
+                "fetch",
+                "--no-tags",
+                "origin",
+                previous_tip,
+            )
+
+            report = validate_repository(
+                runner,
+                base=previous_tip,
+                head=rewritten_tip,
+                comparison="direct",
+            )
+            self.assertIn(
+                "change.id_reused", {finding.code for finding in report.errors}
+            )
+
     def test_cli_prints_non_latin_findings_with_cp1252_stdout(self) -> None:
         self.write_record(
             "00001",
@@ -787,9 +860,13 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertNotIn("Traceback", completed.stderr)
 
     def git(self, *arguments: str) -> str:
+        return self.git_at(self.root, *arguments)
+
+    @staticmethod
+    def git_at(root: Path, *arguments: str) -> str:
         completed = subprocess.run(
             ["git", *arguments],
-            cwd=self.root,
+            cwd=root,
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
