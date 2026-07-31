@@ -85,7 +85,7 @@ Both entries must be added, changed, or removed together.
 
 ### Validation
 
-Database validation should check:
+Automated database validation checks:
 
 - Every record follows `paper.schema.json`.
 - Every `document_type` and `publication_stage` value is defined in its corresponding vocabulary file.
@@ -94,6 +94,54 @@ Database validation should check:
 - Related-paper IDs and relationship types.
 - Every related-paper entry has exactly one corresponding entry in the related record using the inverse relationship type defined in `relationship-types.yaml`.
 - Values governed by the files in `database/vocabularies`.
+
+It also rejects duplicate YAML/JSON keys, YAML aliases, symlinked database paths, malformed
+vocabulary definitions, blank or padded single-line values, duplicate authors within a record,
+DOI/DOI-URL mismatches, embedded URL credentials, non-public or unsupported URL targets,
+local/private filesystem references in public notes, self-relationships, missing relationship targets,
+reuse of a record ID found in base-branch history, and relationship vocabulary inverses that are not
+themselves reciprocal.
+Exact normalized title/year and URL collisions are reported as reviewer warnings because they can
+represent either accidental duplicates or legitimate separate versions.
+
+Run the complete validation locally with Python 3.12 or later:
+
+```powershell
+python -m pip install -r requirements-validation.txt
+python -m unittest discover -s tests -v
+python scripts/validate_metadata.py
+```
+
+To get the same add/remove/modify/rename summary produced for a pull request, include a base Git
+revision:
+
+```powershell
+python scripts/validate_metadata.py --base origin/main --head HEAD
+```
+
+That default uses merge-base semantics to summarize a pull-request branch. For an exact transition,
+such as a pushed branch's before and after commits, add `--comparison direct`.
+
+Two isolated GitHub Actions workflows cover pull requests. The `Validate metadata` workflow's
+trusted job uses the workflow, dependencies, validator, schema, and controlled vocabularies from the
+base branch and treats the proposed pull-request checkout's records as data only. It publishes the
+`Validate metadata records` status directly on the pull request's merge commit, so that status can be
+made a required branch-protection check without letting a pull request weaken the rules that judge
+it. A second pass, still using trusted executable code, verifies that proposed schema and vocabulary
+files remain present, parseable, symlink-safe, and internally consistent. It also requires the
+validator, workflow, dependency manifest, tests, and `.github/CODEOWNERS` policy to remain regular
+files. The CODEOWNERS policy assigns those enforcement paths, the schema, and the controlled
+vocabularies to `@7jameslondon`; branch protection for `main` should require review from Code Owners
+so changes to the enforcement mechanism or its rules cannot approve themselves. The separate `Test
+metadata validator` workflow runs `Test proposed metadata validator` in the ordinary, read-only
+pull-request context to exercise validator and rule changes before they merge without creating the
+protected status name.
+
+The trusted job validates the entire resulting database, not only changed files, so removing a
+referenced record or changing only one side of a relationship fails the check. It also adds a job
+summary with compact ID ranges, field-level modifications, errors, and non-blocking human-review
+warnings. The same trusted validation runs after metadata changes reach `main` and can be run
+manually.
 
 Search and export tools read the YAML files directly.
 
