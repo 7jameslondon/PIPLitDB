@@ -2,15 +2,15 @@ document_type: research_article
 publication_stage: publication
 title: "Targeting specific gene by alkylating pyrrole-imidazole polyamides."
 authors:
-  - name: "M. Minoshima"
-  - name: "J. Chou"
-  - name: "S. Lefebvre"
-  - name: "T. Bando"
-  - name: "K.-i. Shinohara"
-  - name: "J. M. Gottesfeld"
-  - name: "H. Sugiyama"
+  - name: "Masafumi Minoshima"
+  - name: "James Chou"
+  - name: "Sophie Lefebvre"
+  - name: "Toshikazu Bando"
+  - name: "Ken-ichi Shinohara"
+  - name: "Joel M. Gottesfeld"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nass/nrn183"
 url: "https://doi.org/10.1093/nass/nrn183"
 publication_year: 2008
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

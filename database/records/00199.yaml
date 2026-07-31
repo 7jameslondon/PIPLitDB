@@ -9,6 +9,6 @@ authors:
   - name: "Hiroshi Sugiyama"
 doi: "10.1021/bc100352y"
 url: "https://doi.org/10.1021/bc100352y"
-publication_year: 2010
+publication_year: 2011
 journal: "Bioconjugate Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

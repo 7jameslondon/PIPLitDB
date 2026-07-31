@@ -6,7 +6,7 @@ authors:
   - name: "Ken‐ichi Shinohara"
   - name: "Akimichi Ohtsuki"
   - name: "Yusuke Nakano"
-  - name: "Minoshima Masafumi"
+  - name: "Masafumi Minoshima"
   - name: "Toshikazu Bando"
   - name: "Hiroki Nagase"
   - name: "Yasuhiro Yamada"
@@ -19,4 +19,4 @@ doi: "10.1002/cbic.201100597"
 url: "https://doi.org/10.1002/cbic.201100597"
 publication_year: 2011
 journal: "ChemBioChem"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
