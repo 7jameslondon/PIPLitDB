@@ -137,9 +137,43 @@
         <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
 
         <div id="loading-state" class="loading-grid" aria-label="Loading records">
-          <div class="skeleton-card"></div>
-          <div class="skeleton-card"></div>
-          <div class="skeleton-card"></div>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-author"></div>
+            <div class="skeleton-line skeleton-journal"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title is-short"></div>
+            <div class="skeleton-line skeleton-author"></div>
+            <div class="skeleton-line skeleton-journal is-short"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-author is-short"></div>
+            <div class="skeleton-line skeleton-journal"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
         </div>
 
         <section id="records" class="record-grid" aria-busy="true" aria-label="Literature records"></section>

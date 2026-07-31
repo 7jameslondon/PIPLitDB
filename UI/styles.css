@@ -563,21 +563,78 @@ input:focus-visible {
 }
 
 .skeleton-card {
-  min-height: 22rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  cursor: default;
+  pointer-events: none;
+}
+
+.skeleton-line,
+.skeleton-shape {
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
   background:
     linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.65) 40%, transparent 60%) 0 0 / 200% 100%,
-    linear-gradient(var(--surface-muted) 1.1rem, transparent 0) 1.3rem 1.4rem / 5rem 1.1rem no-repeat,
-    linear-gradient(var(--surface-muted) 1.4rem, transparent 0) 1.3rem 4.2rem / calc(100% - 2.6rem) 4.2rem no-repeat,
-    linear-gradient(var(--surface-muted) 0.9rem, transparent 0) 1.3rem 10.2rem / 70% 4rem no-repeat,
-    var(--surface);
+    var(--surface-muted);
   animation: shimmer 1.4s linear infinite;
+}
+
+.skeleton-line {
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 3.2rem;
+  margin-bottom: 0.4rem;
+  border-radius: 6px;
+}
+
+.skeleton-title.is-short {
+  width: 72%;
+}
+
+.skeleton-author {
+  width: 62%;
+  height: 1.35rem;
+  margin-bottom: 0.3rem;
+}
+
+.skeleton-author.is-short {
+  width: 46%;
+}
+
+.skeleton-journal {
+  width: 48%;
+  height: 1.25rem;
+}
+
+.skeleton-journal.is-short {
+  width: 34%;
+}
+
+.skeleton-tag {
+  width: 6.7rem;
+  height: 1.75rem;
+}
+
+.skeleton-tag.is-short {
+  width: 4.8rem;
+}
+
+.skeleton-tag.is-warm {
+  width: 5.7rem;
+}
+
+.skeleton-button {
+  flex: 0 0 auto;
+  width: 6.8rem;
+  height: 2rem;
+  margin-left: auto;
+  border-radius: 8px;
 }
 
 @keyframes shimmer {
   to {
-    background-position: -200% 0, 1.3rem 1.4rem, 1.3rem 4.2rem, 1.3rem 10.2rem, 0 0;
+    background-position: -200% 0, 0 0;
   }
 }
 
