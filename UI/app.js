@@ -491,20 +491,19 @@
 
   function createRecordCard(record) {
     const titleId = `record-title-${record.pip_litdb_id}`;
+    const openDetails = () => openRecord(record.pip_litdb_id);
     const card = element("article", {
       className: "record-card",
       attributes: {
         "aria-labelledby": titleId,
       },
     });
-
-    const top = element("div", { className: "record-card-top" }, [
-      element("span", { className: "record-id", text: `PIP ${record.pip_litdb_id}` }),
-      element("span", {
-        className: "record-year",
-        text: record.publication_year ? String(record.publication_year) : "Year unknown",
-      }),
-    ]);
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, input, select, textarea, summary, [role='button'], [role='link']")) {
+        return;
+      }
+      openDetails();
+    });
 
     const title = element("h3", {
       id: titleId,
@@ -514,12 +513,25 @@
       className: "authors",
       text: formatAuthors(record.authors),
     });
-    const journal = element("p", {
+    const journal = element("span", {
       className: "journal",
       text: record.journal || "Journal not specified",
     });
+    const journalRow = element("p", { className: "journal-row" }, [
+      journal,
+      element("span", {
+        className: "record-year-inline",
+        text: record.publication_year ? String(record.publication_year) : "Year unknown",
+      }),
+    ]);
 
     const tags = element("div", { className: "tag-row" });
+    tags.append(
+      element("span", {
+        className: "tag record-id-tag",
+        text: `PAPER ID ${record.pip_litdb_id}`,
+      }),
+    );
     if (record.document_type) {
       tags.append(
         element("span", {
@@ -555,7 +567,7 @@
         "aria-label": `View details for ${record.title || `record ${record.pip_litdb_id}`}`,
       },
     });
-    detailsButton.addEventListener("click", () => openRecord(record.pip_litdb_id));
+    detailsButton.addEventListener("click", openDetails);
     cardActions.append(detailsButton);
 
     const bottom = element("div", { className: "record-card-bottom" }, [
@@ -563,7 +575,7 @@
       cardActions,
     ]);
 
-    card.append(top, title, authors, journal, bottom);
+    card.append(title, authors, journalRow, bottom);
     return card;
   }
 
