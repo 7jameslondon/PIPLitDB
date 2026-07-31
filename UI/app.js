@@ -29,7 +29,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     captureElements();
     bindEvents();
-    loadCatalog();
+    loadDatabase();
   });
 
   function captureElements() {
@@ -72,19 +72,19 @@
     ];
 
     filterControls.forEach((control) => {
-      control.addEventListener(control === ui.search ? "input" : "change", renderCatalog);
+      control.addEventListener(control === ui.search ? "input" : "change", renderDatabase);
     });
 
     ui.clearFilters.addEventListener("click", resetFilters);
     ui.emptyClearFilters.addEventListener("click", resetFilters);
-    ui.retry.addEventListener("click", loadCatalog);
+    ui.retry.addEventListener("click", loadDatabase);
     ui.dialogClose.addEventListener("click", () => ui.dialog.close());
     ui.dialog.addEventListener("click", closeDialogFromBackdrop);
     ui.dialog.addEventListener("close", clearRecordHash);
     window.addEventListener("hashchange", openRecordFromHash);
   }
 
-  async function loadCatalog() {
+  async function loadDatabase() {
     if (state.isLoading) return;
 
     setLoadingState();
@@ -111,7 +111,7 @@
       setControlsDisabled(false);
       setSourceReady(result.source);
       state.isLoading = false;
-      renderCatalog();
+      renderDatabase();
       openRecordFromHash();
     } catch (error) {
       console.error(error);
@@ -396,7 +396,7 @@
     return vocabulary?.[value]?.label || humanize(value);
   }
 
-  function renderCatalog() {
+  function renderDatabase() {
     if (state.isLoading) return;
 
     const visibleRecords = getVisibleRecords();
@@ -836,7 +836,7 @@
     ui.year.value = "";
     ui.status.value = "";
     ui.sort.value = "year-desc";
-    renderCatalog();
+    renderDatabase();
     ui.search.focus();
   }
 
