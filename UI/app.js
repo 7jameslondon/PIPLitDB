@@ -529,7 +529,7 @@
     tags.append(
       element("span", {
         className: "tag record-id-tag",
-        text: `PAPER ID ${record.pip_litdb_id}`,
+        text: `Paper ID ${record.pip_litdb_id}`,
       }),
     );
     if (record.document_type) {
@@ -583,7 +583,7 @@
     const record = state.recordById.get(id);
     if (!record) return;
 
-    ui.dialogId.textContent = `PIP ${record.pip_litdb_id}`;
+    ui.dialogId.textContent = `Paper ID ${record.pip_litdb_id}`;
     ui.dialogContent.replaceChildren(createRecordDetails(record));
     if (!ui.dialog.open) ui.dialog.showModal();
 
@@ -681,7 +681,7 @@
           button.append(
             element("span", {}, [
               element("strong", {
-                text: `${relationshipLabel} · PIP ${relationship.pip_litdb_id}`,
+                text: `${relationshipLabel} · Paper ID ${relationship.pip_litdb_id}`,
               }),
               element("span", { className: "relationship-title", text: relatedRecord.title }),
             ]),
@@ -693,7 +693,7 @@
           item.append(
             element("div", { className: "relationship-missing" }, [
               element("span", {
-                text: `${relationshipLabel} · PIP ${relationship.pip_litdb_id}`,
+                text: `${relationshipLabel} · Paper ID ${relationship.pip_litdb_id}`,
               }),
               element("span", { className: "relationship-title", text: "Record not loaded" }),
             ]),
