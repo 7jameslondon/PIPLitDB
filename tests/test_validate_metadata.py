@@ -513,6 +513,9 @@ class MetadataValidationTests(unittest.TestCase):
             "/secret.pdf",
             "C:private.pdf",
             "file:/tmp/00001/main.pdf",
+            r"%USERPROFILE%\private\00001\main.pdf",
+            "$HOME/private/00001/main.pdf",
+            "${HOME}/private/00001/main.pdf",
         )
         for reference in references:
             with self.subTest(reference=reference):
