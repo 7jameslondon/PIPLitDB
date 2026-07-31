@@ -496,10 +496,20 @@ input:focus-visible {
   flex: 0 1 auto;
   overflow: hidden;
   color: inherit;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
   font-weight: inherit;
   text-overflow: ellipsis;
-  text-underline-offset: 0.16rem;
+  text-decoration: none;
+  transition: background-size 180ms ease;
   white-space: nowrap;
+}
+
+.record-doi-link:hover,
+.record-doi-link:focus-visible {
+  background-size: 100% 1px;
 }
 
 .record-card-bottom {
