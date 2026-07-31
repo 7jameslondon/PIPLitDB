@@ -341,9 +341,8 @@ h2 {
 .filter-grid {
   display: grid;
   grid-template-columns:
-    repeat(2, minmax(8rem, 1fr))
     minmax(18rem, 2.2fr)
-    repeat(2, minmax(8rem, 1fr))
+    repeat(4, minmax(8rem, 1fr))
     auto;
   gap: 0.75rem;
   align-items: end;
