@@ -49,15 +49,10 @@ PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
     r"XDG_(?:CACHE|CONFIG|DATA|STATE)_HOME|XDG_RUNTIME_DIR)"
 )
 PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
-    r"(?<![A-Za-z0-9_$%])(?:%"
-    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
-    + r"%|\$"
+    r"(?<![A-Za-z0-9_$%])(?:%[A-Za-z_][A-Za-z0-9_()]*%|\$env:"
+    r"[A-Za-z_][A-Za-z0-9_()]*|\$\{env:[^}=\r\n]+\}|\$"
     + PATH_ENVIRONMENT_VARIABLE_NAME_RE
     + r"|\$\{"
-    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
-    + r"\}|\$env:"
-    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
-    + r"|\$\{env:"
     + PATH_ENVIRONMENT_VARIABLE_NAME_RE
     + r"\})(?![A-Za-z0-9_$%])",
     re.IGNORECASE,
