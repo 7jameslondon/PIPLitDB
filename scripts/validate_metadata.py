@@ -40,7 +40,10 @@ VOCABULARY_SPECS = {
     "record-statuses.yaml": frozenset({"label", "description"}),
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
-PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\x20\r\n<>\"]+", re.IGNORECASE)
+HIERARCHICAL_URL_RE = re.compile(
+    r"\b[a-z][a-z0-9+.-]*://[^\x20\r\n<>\"]+", re.IGNORECASE
+)
+SUPPORTED_PUBLIC_URL_SCHEMES = frozenset({"http", "https"})
 AMBIGUOUS_NUMERIC_HOST_RE = re.compile(
     r"^(?:(?:0x[0-9a-f]+|[0-9]+)\.)+(?:0x[0-9a-f]+|[0-9]+)$",
     re.IGNORECASE,
@@ -1075,11 +1078,21 @@ class MetadataValidator:
                 return matched_url
 
             accepted_public_url = True
-            if parsed.scheme.casefold() not in {"http", "https"} or not host:
+            scheme = parsed.scheme.casefold()
+            if not scheme or not host:
                 self.report.add(
                     "error",
                     "record.notes_url_format",
-                    "Public metadata notes contain an HTTP(S) URL without a host.",
+                    "Public metadata notes contain a hierarchical URL without a host.",
+                    relative,
+                    line,
+                )
+                accepted_public_url = False
+            if scheme not in SUPPORTED_PUBLIC_URL_SCHEMES:
+                self.report.add(
+                    "error",
+                    "record.notes_url_private_scheme",
+                    f"Public metadata notes must not contain {scheme or 'unknown'}:// URLs.",
                     relative,
                     line,
                 )
@@ -1106,7 +1119,7 @@ class MetadataValidator:
             # Only known-public URLs are exempt from filesystem-reference scanning.
             return trailing_delimiter if accepted_public_url else matched_url
 
-        return PUBLIC_URL_RE.sub(inspect, notes)
+        return HIERARCHICAL_URL_RE.sub(inspect, notes)
 
     def _check_vocab_value(
         self,

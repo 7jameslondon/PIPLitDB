@@ -244,18 +244,14 @@ class MetadataValidationTests(unittest.TestCase):
 
         trusted_job = trusted_workflow["jobs"]["validate"]
         self.assertEqual(trusted_job["name"], "Run trusted metadata validation")
-        self.assertEqual(
-            trusted_job.get("if"),
-            "${{ github.event_name != 'pull_request_target' || "
-            "github.event.pull_request.base.ref == "
-            "github.event.repository.default_branch }}",
-        )
+        self.assertNotIn("if", trusted_job)
         steps = trusted_job["steps"]
         steps_by_name = {step["name"]: step for step in steps}
         trusted_checkout = steps_by_name["Check out trusted validator"]["with"]
         self.assertIn(
-            "github.event.pull_request.base.sha", trusted_checkout["ref"]
+            "github.event.repository.default_branch", trusted_checkout["ref"]
         )
+        self.assertNotIn("github.event.pull_request.base.sha", trusted_checkout["ref"])
         self.assertEqual(trusted_checkout["path"], "trusted")
         candidate_checkout = steps_by_name[
             "Check out pull request result as data only"
@@ -996,7 +992,57 @@ class MetadataValidationTests(unittest.TestCase):
                     "00001",
                     VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
                 )
+                self.assertIn("record.notes_url_private_scheme", self.error_codes())
                 self.assertIn("record.private_reference", self.error_codes())
+
+    def test_private_transfer_urls_receive_generic_security_checks(self) -> None:
+        urls_and_codes = (
+            (
+                "sftp://user:secret@intranet/private.pdf",
+                {
+                    "record.notes_url_private_scheme",
+                    "record.notes_url_credentials",
+                    "record.notes_url_private_host",
+                },
+            ),
+            (
+                "ftp://labserver/private.pdf",
+                {
+                    "record.notes_url_private_scheme",
+                    "record.notes_url_private_host",
+                },
+            ),
+            (
+                "scp://user@10.0.0.1/private.pdf",
+                {
+                    "record.notes_url_private_scheme",
+                    "record.notes_url_credentials",
+                    "record.notes_url_private_host",
+                },
+            ),
+            (
+                "gopher://example.com/resource",
+                {"record.notes_url_private_scheme"},
+            ),
+        )
+        for url, expected_codes in urls_and_codes:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
+                )
+                self.assertTrue(expected_codes.issubset(self.error_codes()))
+
+    def test_supported_public_note_url_schemes_are_accepted(self) -> None:
+        for url in ("http://example.com/paper", "https://example.com/paper"):
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
+                )
+                codes = self.error_codes()
+                self.assertNotIn("record.notes_url_private_scheme", codes)
+                self.assertNotIn("record.notes_url_private_host", codes)
 
     def test_internationalized_public_url_in_notes_is_accepted(self) -> None:
         self.write_record(

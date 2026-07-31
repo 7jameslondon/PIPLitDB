@@ -97,9 +97,10 @@ Automated database validation checks:
 
 It also rejects duplicate YAML/JSON keys, YAML aliases, symlinked database paths, malformed
 vocabulary definitions, blank or padded single-line values, duplicate authors within a record,
-DOI/DOI-URL mismatches, embedded URL credentials, non-public URL targets, local/private filesystem
-references in public notes, self-relationships, missing relationship targets, reuse of a record ID
-found in base-branch history, and relationship vocabulary inverses that are not themselves reciprocal.
+DOI/DOI-URL mismatches, embedded URL credentials, non-public or unsupported URL targets,
+local/private filesystem references in public notes, self-relationships, missing relationship targets,
+reuse of a record ID found in base-branch history, and relationship vocabulary inverses that are not
+themselves reciprocal.
 Exact normalized title/year and URL collisions are reported as reviewer warnings because they can
 represent either accidental duplicates or legitimate separate versions.
 
