@@ -130,6 +130,26 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertEqual(
             steps_by_name["Install validation dependencies"].get("id"), "install"
         )
+        fetch_step_name = "Fetch pushed branch's previous tip"
+        push_validation_step_name = (
+            "Validate pushed result and summarize record changes"
+        )
+        self.assertEqual(
+            steps_by_name[fetch_step_name].get("if"),
+            "${{ github.event_name == 'push' && github.event.before != "
+            "'0000000000000000000000000000000000000000' }}",
+        )
+        self.assertIn(
+            "git fetch --no-tags --depth=1 origin",
+            steps_by_name[fetch_step_name]["run"],
+        )
+        self.assertIn(
+            "${{ github.event.before }}", steps_by_name[fetch_step_name]["run"]
+        )
+        self.assertLess(
+            steps.index(steps_by_name[fetch_step_name]),
+            steps.index(steps_by_name[push_validation_step_name]),
+        )
 
         expected_conditions = {
             "Validate pull request result and summarize record changes": (
@@ -155,9 +175,7 @@ class MetadataValidationTests(unittest.TestCase):
                 )
         self.assertIn(
             "--comparison direct",
-            steps_by_name[
-                "Validate pushed result and summarize record changes"
-            ]["run"],
+            steps_by_name[push_validation_step_name]["run"],
         )
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:
