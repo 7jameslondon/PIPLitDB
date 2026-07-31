@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "Method of Determining Pyrrole-Imidazole Polyamide in Rat Plasma Using Ultra-Fast Liquid Chromatography-Ultraviolet Spectrometry."
+title: "Method of Determining Pyrrole–Imidazole Polyamide in Rat Plasma Using Ultra-Fast Liquid Chromatography-Ultraviolet Spectrometry"
 authors:
   - name: "Aoi Miyamoto"
   - name: "Kouta Yagishita"
@@ -12,4 +12,4 @@ doi: "10.1248/bpb.b19-00644"
 url: "https://doi.org/10.1248/bpb.b19-00644"
 publication_year: 2020
 journal: "Biological and Pharmaceutical Bulletin"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

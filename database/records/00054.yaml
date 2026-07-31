@@ -13,4 +13,4 @@ doi: "10.1016/j.bmc.2019.115248"
 url: "https://doi.org/10.1016/j.bmc.2019.115248"
 publication_year: 2020
 journal: "Bioorganic & Medicinal Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

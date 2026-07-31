@@ -2,11 +2,11 @@ document_type: research_article
 publication_stage: publication
 title: "Application of Cu(I)-catalyzed azide–alkyne cycloaddition for the design and synthesis of sequence specific probes targeting double-stranded DNA"
 authors:
-  - name: "Svetlana V Vasilyeva"
-  - name: "Vyacheslav V Filichev"
-  - name: "Alexandre S Boutorine"
+  - name: "Svetlana V. Vasilyeva"
+  - name: "Vyacheslav V. Filichev"
+  - name: "Alexandre S. Boutorine"
 doi: "10.3762/bjoc.12.128"
 url: "https://doi.org/10.3762/bjoc.12.128"
 publication_year: 2016
 journal: "Beilstein Journal of Organic Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

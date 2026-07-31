@@ -17,4 +17,4 @@ doi: "10.1021/cb500724t"
 url: "https://doi.org/10.1021/cb500724t"
 publication_year: 2014
 journal: "ACS Chemical Biology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -23,4 +23,4 @@ doi: "10.1038/ncomms7706"
 url: "https://doi.org/10.1038/ncomms7706"
 publication_year: 2015
 journal: "Nature Communications"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

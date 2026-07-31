@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "Sequence-Selective Minor Groove Recognition of a DNA Duplex Containing Synthetic Genetic Components."
+title: "Sequence-Selective Minor Groove Recognition of a DNA Duplex Containing Synthetic Genetic Components"
 authors:
   - name: "Giacomo Padroni"
   - name: "Jamie M. Withers"
@@ -12,4 +12,4 @@ doi: "10.1021/jacs.8b12444"
 url: "https://doi.org/10.1021/jacs.8b12444"
 publication_year: 2019
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

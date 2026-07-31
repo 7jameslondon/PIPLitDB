@@ -8,4 +8,4 @@ doi: "10.1016/j.antiviral.2018.02.012"
 url: "https://doi.org/10.1016/j.antiviral.2018.02.012"
 publication_year: 2018
 journal: "Antiviral Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
