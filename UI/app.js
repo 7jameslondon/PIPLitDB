@@ -195,7 +195,7 @@
           records,
           vocabularies,
           source: {
-            name: "GitHub · live YAML",
+            name: "GitHub",
             detail: `${commit.sha.slice(0, 7)} on ${ref}`,
             url: `${webBase}/tree/${commit.sha}/${trimSlashes(config.paths.records)}`,
           },
@@ -241,7 +241,7 @@
           records,
           vocabularies,
           source: {
-            name: "Local files · live YAML",
+            name: "Local files",
             detail: "Read on this refresh",
             url: directoryUrl.href,
           },
