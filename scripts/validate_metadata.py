@@ -40,20 +40,25 @@ VOCABULARY_SPECS = {
     "record-statuses.yaml": frozenset({"label", "description"}),
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
-PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\x20\r\n<>\"']+", re.IGNORECASE)
+PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\x20\r\n<>\"]+", re.IGNORECASE)
 AMBIGUOUS_NUMERIC_HOST_RE = re.compile(
     r"^(?:(?:0x[0-9a-f]+|[0-9]+)\.)+(?:0x[0-9a-f]+|[0-9]+)$",
     re.IGNORECASE,
 )
 DNS_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$", re.IGNORECASE)
 PRIVATE_HOST_SUFFIXES = (
+    ".alt",
+    ".example",
     ".home",
     ".home.arpa",
     ".internal",
+    ".invalid",
     ".lan",
     ".local",
     ".localdomain",
     ".localhost",
+    ".onion",
+    ".test",
 )
 PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
     r"(?:ALLUSERSPROFILE|APPDATA|CD|COMMONPROGRAMFILES(?:\(X86\))?|HOME|"
@@ -98,6 +103,9 @@ BARE_RELATIVE_FILE_REFERENCE_RE = re.compile(
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
     re.compile(r"\bfile:(?:[\\/]+|[A-Za-z]:[\\/])", re.IGNORECASE),
+    re.compile(
+        r"\b(?:afp|cifs|dav|nfs|smb|sshfs|webdav):/{1,2}", re.IGNORECASE
+    ),
     EXPLICIT_ENVIRONMENT_REFERENCE_RE,
     BARE_PATH_ENVIRONMENT_REFERENCE_RE,
     BRACED_PATH_ENVIRONMENT_REFERENCE_RE,
@@ -1032,7 +1040,16 @@ class MetadataValidator:
         line = self._line_for(lines, ("pip_litdb_notes",))
 
         def inspect(match: re.Match[str]) -> str:
-            url = match.group(0)
+            matched_url = match.group(0)
+            trailing_delimiter = ""
+            url = matched_url
+            if (
+                url.endswith("'")
+                and match.start() > 0
+                and notes[match.start() - 1] == "'"
+            ):
+                url = url[:-1]
+                trailing_delimiter = "'"
             if _url_has_unsafe_characters(url):
                 self.report.add(
                     "error",
@@ -1041,7 +1058,7 @@ class MetadataValidator:
                     relative,
                     line,
                 )
-                return url
+                return matched_url
             try:
                 parsed = urlsplit(url)
                 # Accessing these properties catches malformed bracketed hosts and ports.
@@ -1055,7 +1072,7 @@ class MetadataValidator:
                     relative,
                     line,
                 )
-                return url
+                return matched_url
 
             accepted_public_url = True
             if parsed.scheme.casefold() not in {"http", "https"} or not host:
@@ -1087,7 +1104,7 @@ class MetadataValidator:
                 accepted_public_url = False
 
             # Only known-public URLs are exempt from filesystem-reference scanning.
-            return "" if accepted_public_url else url
+            return trailing_delimiter if accepted_public_url else matched_url
 
         return PUBLIC_URL_RE.sub(inspect, notes)
 

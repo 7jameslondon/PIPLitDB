@@ -244,7 +244,12 @@ class MetadataValidationTests(unittest.TestCase):
 
         trusted_job = trusted_workflow["jobs"]["validate"]
         self.assertEqual(trusted_job["name"], "Run trusted metadata validation")
-        self.assertNotIn("if", trusted_job)
+        self.assertEqual(
+            trusted_job.get("if"),
+            "${{ github.event_name != 'pull_request_target' || "
+            "github.event.pull_request.base.ref == "
+            "github.event.repository.default_branch }}",
+        )
         steps = trusted_job["steps"]
         steps_by_name = {step["name"]: step for step in steps}
         trusted_checkout = steps_by_name["Check out trusted validator"]["with"]
@@ -690,6 +695,10 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://０１７７.０.０.１/paper", "record.url_private_host"),
             ("http://archive.ｌｏｃａｌ/paper", "record.url_private_host"),
             ("http://metadata.ｌｏｃａｌｈｏｓｔ/paper", "record.url_private_host"),
+            ("https://service.test/paper", "record.url_private_host"),
+            ("https://service.invalid/paper", "record.url_private_host"),
+            ("https://service.example/paper", "record.url_private_host"),
+            ("https://service.onion/paper", "record.url_private_host"),
             ("http://169.254.169.254/paper", "record.url_private_host"),
             ("http://10.0.0.1/paper", "record.url_private_host"),
             ("http://172.16.0.1/paper", "record.url_private_host"),
@@ -716,7 +725,7 @@ class MetadataValidationTests(unittest.TestCase):
 
     def test_public_url_hosts_are_accepted(self) -> None:
         urls = (
-            "https://example.test/paper",
+            "https://example.com/paper",
             "https://例え.テスト/paper",
             "https://8.8.8.8/paper",
             "https://[2606:4700:4700::1111]/paper",
@@ -886,9 +895,9 @@ class MetadataValidationTests(unittest.TestCase):
 
     def test_web_url_in_notes_is_not_a_private_reference(self) -> None:
         urls = (
-            "https://example.test/private/00001/main.pdf",
-            "https://example.test/?download=/tmp/00001/main.pdf",
-            "example.test/private/main.pdf",
+            "https://example.com/private/00001/main.pdf",
+            "https://example.com/?download=/tmp/00001/main.pdf",
+            "example.com/private/main.pdf",
             "doi:10.1234/example.pdf",
         )
         for url in urls:
@@ -914,6 +923,10 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://０１７７.０.０.１/private.pdf", "record.notes_url_private_host"),
             ("http://archive.ｌｏｃａｌ/private.pdf", "record.notes_url_private_host"),
             ("http://metadata.ｌｏｃａｌｈｏｓｔ/private.pdf", "record.notes_url_private_host"),
+            ("https://service.test/private.pdf", "record.notes_url_private_host"),
+            ("https://service.invalid/private.pdf", "record.notes_url_private_host"),
+            ("https://service.example/private.pdf", "record.notes_url_private_host"),
+            ("https://service.onion/private.pdf", "record.notes_url_private_host"),
             ("http://169.254.169.254/private.pdf", "record.notes_url_private_host"),
             ("http://10.0.0.1/private.pdf", "record.notes_url_private_host"),
             ("http://172.16.0.1/private.pdf", "record.notes_url_private_host"),
@@ -934,6 +947,56 @@ class MetadataValidationTests(unittest.TestCase):
                     VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
                 )
                 self.assertIn(expected_code, self.error_codes())
+
+    def test_apostrophe_in_url_userinfo_does_not_split_security_checks(self) -> None:
+        urls = (
+            "http://public.example'@localhost",
+            "http://public.example'@localhost/private.pdf",
+        )
+        for url in urls:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f'pip_litdb_notes: "See {url}"\n',
+                )
+                codes = self.error_codes()
+                self.assertIn("record.notes_url_credentials", codes)
+                self.assertIn("record.notes_url_private_host", codes)
+
+    def test_apostrophe_in_ordinary_notes_prose_is_accepted(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + "pip_litdb_notes: \"The author's public copy is at "
+            + "https://example.com/paper.\"\n",
+        )
+
+        self.assertTrue(validate_repository(self.root).passed)
+
+    def test_single_quoted_public_url_in_notes_is_accepted(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + 'pip_litdb_notes: "See \'https://example.com/paper\'."\n',
+        )
+
+        self.assertTrue(validate_repository(self.root).passed)
+
+    def test_network_filesystem_urls_in_notes_are_rejected(self) -> None:
+        urls = (
+            "smb://labserver/private/share",
+            "cifs://labserver/private/share",
+            "nfs://labserver/export",
+            "afp://labserver/share",
+            "sshfs://labserver/share",
+        )
+        for url in urls:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
+                )
+                self.assertIn("record.private_reference", self.error_codes())
 
     def test_internationalized_public_url_in_notes_is_accepted(self) -> None:
         self.write_record(
