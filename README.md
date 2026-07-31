@@ -46,7 +46,7 @@ The database records the following fields for each paper:
 - DOI
 - URL: Ideally a DOI link; otherwise, a publisher link
 - Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper. Every relationship must be stored in both related records using inverse relationship types. For example, if one record uses `is_preprint_of`, the other must use `has_preprint`.
-- Publication year
+- Publication year: The year used in the work's formal citation. For an issue-assigned publication, use the issue year even when the article was published online in an earlier year. Crossref's `published-print` year and PubMed's citation year are preferred authoritative sources when available. Do not substitute Crossref's generic `published` or `issued` year, or PubMed's `Epub` year, when those fields represent an earlier online-first publication. For a work without an issue assignment, use the year shown in the authoritative recommended citation.
 - Journal: Ideally the standard full name, not an abbreviation. If it's a preprint, use the server name.
 - PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
