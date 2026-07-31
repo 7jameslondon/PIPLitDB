@@ -1605,6 +1605,10 @@ def _annotation_escape(value: str) -> str:
     return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
+def _annotation_property_escape(value: str) -> str:
+    return _annotation_escape(value).replace(":", "%3A").replace(",", "%2C")
+
+
 def _configure_stdout() -> None:
     """Keep record-controlled findings printable on narrow Windows encodings."""
     reconfigure = getattr(sys.stdout, "reconfigure", None)
@@ -1628,10 +1632,10 @@ def print_report(report: ValidationReport) -> None:
         if os.environ.get("GITHUB_ACTIONS") == "true":
             properties = []
             if finding.path:
-                properties.append(f"file={_annotation_escape(finding.path)}")
+                properties.append(f"file={_annotation_property_escape(finding.path)}")
             if finding.line:
                 properties.append(f"line={finding.line}")
-            properties.append(f"title={_annotation_escape(finding.code)}")
+            properties.append(f"title={_annotation_property_escape(finding.code)}")
             print(
                 f"::{finding.severity} {','.join(properties)}::"
                 f"{_annotation_escape(finding.message)}"

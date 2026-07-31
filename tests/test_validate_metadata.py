@@ -7,11 +7,14 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
-from scripts.validate_metadata import validate_repository
+from scripts.validate_metadata import Finding, ValidationReport, print_report, validate_repository
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -930,6 +933,35 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("record.unknown_vocabulary_value", completed.stdout)
         self.assertIn("研究", completed.stdout)
         self.assertNotIn("Traceback", completed.stderr)
+
+    def test_github_annotation_properties_escape_delimiters(self) -> None:
+        report = ValidationReport(
+            root=self.root,
+            findings=[
+                Finding(
+                    "error",
+                    "record:filename,invalid",
+                    "Invalid filename: keep, message delimiters readable.",
+                    "database/records/bad,line=999:spoof.yaml",
+                    4,
+                )
+            ],
+        )
+        output = StringIO()
+
+        with patch.dict(os.environ, {"GITHUB_ACTIONS": "true"}), redirect_stdout(output):
+            print_report(report)
+
+        annotation = next(
+            line for line in output.getvalue().splitlines() if line.startswith("::error ")
+        )
+        self.assertIn(
+            "file=database/records/bad%2Cline=999%3Aspoof.yaml,line=4,"
+            "title=record%3Afilename%2Cinvalid::",
+            annotation,
+        )
+        self.assertIn("Invalid filename: keep, message delimiters readable.", annotation)
+        self.assertNotIn("file=database/records/bad,line=999", annotation)
 
     def git(self, *arguments: str) -> str:
         return self.git_at(self.root, *arguments)
