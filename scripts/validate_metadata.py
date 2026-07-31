@@ -63,6 +63,8 @@ PRIVATE_HOST_SUFFIXES = (
     ".onion",
     ".test",
 )
+TRAILING_URL_SENTENCE_PUNCTUATION = frozenset(".,;:!'")
+URL_CLOSING_DELIMITERS = {")": "(", "]": "[", "}": "{"}
 PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
     r"(?:ALLUSERSPROFILE|APPDATA|CD|COMMONPROGRAMFILES(?:\(X86\))?|HOME|"
     r"HOMEDRIVE|HOMEPATH|LOCALAPPDATA|OLDPWD|ONEDRIVE(?:COMMERCIAL|CONSUMER)?|"
@@ -1044,15 +1046,7 @@ class MetadataValidator:
 
         def inspect(match: re.Match[str]) -> str:
             matched_url = match.group(0)
-            trailing_delimiter = ""
-            url = matched_url
-            if (
-                url.endswith("'")
-                and match.start() > 0
-                and notes[match.start() - 1] == "'"
-            ):
-                url = url[:-1]
-                trailing_delimiter = "'"
+            url, trailing_delimiter = _split_trailing_url_punctuation(matched_url)
             if _url_has_unsafe_characters(url):
                 self.report.add(
                     "error",
@@ -1496,6 +1490,24 @@ def _url_has_unsafe_characters(url: str) -> bool:
         or ord(character) == 0x7F
         for character in url
     )
+
+
+def _split_trailing_url_punctuation(url: str) -> tuple[str, str]:
+    """Separate prose punctuation while retaining balanced URL delimiters."""
+    trailing: list[str] = []
+    while url:
+        character = url[-1]
+        if character in TRAILING_URL_SENTENCE_PUNCTUATION:
+            trailing.append(character)
+            url = url[:-1]
+            continue
+        opening = URL_CLOSING_DELIMITERS.get(character)
+        if opening is not None and url.count(character) > url.count(opening):
+            trailing.append(character)
+            url = url[:-1]
+            continue
+        break
+    return url, "".join(reversed(trailing))
 
 
 def _normalize_title(value: str) -> str:

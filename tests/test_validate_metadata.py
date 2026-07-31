@@ -1044,6 +1044,37 @@ class MetadataValidationTests(unittest.TestCase):
                 self.assertNotIn("record.notes_url_private_scheme", codes)
                 self.assertNotIn("record.notes_url_private_host", codes)
 
+    def test_trailing_prose_punctuation_is_not_part_of_note_urls(self) -> None:
+        notes = (
+            "See https://example.com, for details.",
+            "See https://example.com; it is public.",
+            "See https://example.com: the public source.",
+            "See https://example.com!",
+            "See (https://example.com).",
+            "See [https://example.com].",
+            "See [the source](https://example.com).",
+        )
+        for note in notes:
+            with self.subTest(note=note):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f'pip_litdb_notes: "{note}"\n',
+                )
+                self.assertTrue(validate_repository(self.root).passed)
+
+    def test_balanced_delimiters_can_remain_in_note_url_paths(self) -> None:
+        urls = (
+            "https://example.com/a_(balanced)",
+            "https://example.com/search?q=[public]",
+        )
+        for url in urls:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
+                )
+                self.assertTrue(validate_repository(self.root).passed)
+
     def test_internationalized_public_url_in_notes_is_accepted(self) -> None:
         self.write_record(
             "00001",
