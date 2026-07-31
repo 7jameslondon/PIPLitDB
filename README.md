@@ -121,12 +121,18 @@ python scripts/validate_metadata.py --base origin/main --head HEAD
 That default uses merge-base semantics to summarize a pull-request branch. For an exact transition,
 such as a pushed branch's before and after commits, add `--comparison direct`.
 
-The `Validate metadata` GitHub Actions workflow runs on every pull request so its `Validate metadata
-records` job can safely be made a required branch-protection check. It validates the entire resulting
-database, not only changed files, so removing a referenced record or changing only one side of a
-relationship fails the check. It also adds a job summary with compact ID ranges, field-level
-modifications, errors, and non-blocking human-review warnings. The same validation runs after
-metadata changes reach `main` and can be run manually.
+The `Validate metadata` GitHub Actions workflow runs two isolated pull-request jobs. The `Validate
+metadata records` enforcement job uses the workflow, dependencies, and validator from the trusted
+base branch and treats the proposed pull-request checkout as data only. This prevents a pull request
+from weakening the validator that judges it, so the job can safely be made a required
+branch-protection check. A separate `Test proposed metadata validator` job runs in the ordinary,
+read-only pull-request context to exercise validator changes before they merge.
+
+The trusted job validates the entire resulting database, not only changed files, so removing a
+referenced record or changing only one side of a relationship fails the check. It also adds a job
+summary with compact ID ranges, field-level modifications, errors, and non-blocking human-review
+warnings. The same trusted validation runs after metadata changes reach `main` and can be run
+manually.
 
 Search and export tools read the YAML files directly.
 

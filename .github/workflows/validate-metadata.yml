@@ -1,8 +1,10 @@
 name: Validate metadata
 
 on:
-  # Run on every PR so this workflow can safely be configured as a required check.
+  # Test the validator proposed by each PR in the ordinary, untrusted PR context.
   pull_request:
+  # Enforce metadata rules with workflow and validator code from the trusted base branch.
+  pull_request_target:
   push:
     branches:
       - main
@@ -18,22 +20,36 @@ permissions:
   contents: read
 
 concurrency:
-  group: metadata-validation-${{ github.event.pull_request.number || github.ref }}
+  # The trusted and candidate PR runs must not cancel each other.
+  group: metadata-validation-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
     name: Validate metadata records
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out repository history
+      - name: Check out trusted validator
         uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || github.sha }}
           fetch-depth: 0
+          path: trusted
+
+      - name: Check out pull request result as data only
+        if: ${{ github.event_name == 'pull_request_target' }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
 
       - name: Fetch pushed branch's previous tip
         if: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
+        working-directory: trusted
         run: >-
           git fetch --no-tags origin
           "${{ github.event.before }}"
@@ -43,33 +59,71 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-validation.txt
+          cache-dependency-path: trusted/requirements-validation.txt
 
-      - name: Install validation dependencies
-        id: install
-        run: python -m pip install --requirement requirements-validation.txt
+      - name: Install trusted validation dependencies
+        id: trusted_install
+        run: python -m pip install --requirement trusted/requirements-validation.txt
 
-      - name: Validate pull request result and summarize record changes
-        if: ${{ !cancelled() && steps.install.outcome == 'success' && github.event_name == 'pull_request' }}
+      - name: Validate pull request with trusted validator
+        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'pull_request_target' }}
         run: >-
-          python scripts/validate_metadata.py
+          python trusted/scripts/validate_metadata.py
+          --root candidate
           --base "${{ github.event.pull_request.base.sha }}"
-          --head "${{ github.sha }}"
+          --head "${{ github.event.pull_request.merge_commit_sha }}"
 
       - name: Validate pushed result and summarize record changes
-        if: ${{ !cancelled() && steps.install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
+        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
         run: >-
-          python scripts/validate_metadata.py
+          python trusted/scripts/validate_metadata.py
+          --root trusted
           --base "${{ github.event.before }}"
           --head "${{ github.sha }}"
           --comparison direct
 
       - name: Validate complete database
-        if: ${{ !cancelled() && steps.install.outcome == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')) }}
-        run: python scripts/validate_metadata.py
+        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')) }}
+        run: python trusted/scripts/validate_metadata.py --root trusted
 
-      - name: Test metadata validator
-        # Run tests after validation so tests from the proposed commit cannot
-        # mutate the checkout before the committed database is inspected.
-        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      - name: Test trusted metadata validator
+        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name != 'pull_request_target' }}
+        working-directory: trusted
+        run: python -m unittest discover --start-directory tests --verbose
+
+  test-candidate:
+    name: Test proposed metadata validator
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out proposed pull request result
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: candidate/requirements-validation.txt
+
+      - name: Install proposed validation dependencies
+        id: candidate_install
+        run: python -m pip install --requirement candidate/requirements-validation.txt
+
+      - name: Exercise proposed validator against pull request result
+        if: ${{ !cancelled() && steps.candidate_install.outcome == 'success' }}
+        run: >-
+          python candidate/scripts/validate_metadata.py
+          --root candidate
+          --base "${{ github.event.pull_request.base.sha }}"
+          --head "${{ github.sha }}"
+
+      - name: Test proposed metadata validator
+        if: ${{ !cancelled() && steps.candidate_install.outcome == 'success' }}
+        working-directory: candidate
         run: python -m unittest discover --start-directory tests --verbose

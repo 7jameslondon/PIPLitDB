@@ -127,19 +127,47 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertTrue(report.passed, report.findings)
         self.assertEqual(report.record_count, 1)
 
-    def test_workflow_validates_before_running_pr_supplied_tests(self) -> None:
+    def test_workflow_separates_trusted_enforcement_from_candidate_tests(self) -> None:
         workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
         )
         workflow = yaml.load(
             workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader
         )
+        self.assertIn("pull_request", workflow["on"])
+        self.assertIn("pull_request_target", workflow["on"])
+        self.assertIn("github.event_name", workflow["concurrency"]["group"])
+
         steps = workflow["jobs"]["validate"]["steps"]
         steps_by_name = {step["name"]: step for step in steps}
         self.assertEqual(
-            steps_by_name["Install validation dependencies"].get("id"), "install"
+            workflow["jobs"]["validate"].get("if"),
+            "${{ github.event_name != 'pull_request' }}",
         )
-        test_step_name = "Test metadata validator"
+        trusted_checkout = steps_by_name["Check out trusted validator"]["with"]
+        self.assertIn(
+            "github.event.pull_request.base.sha", trusted_checkout["ref"]
+        )
+        self.assertEqual(trusted_checkout["path"], "trusted")
+        candidate_checkout = steps_by_name[
+            "Check out pull request result as data only"
+        ]
+        self.assertEqual(
+            candidate_checkout.get("if"),
+            "${{ github.event_name == 'pull_request_target' }}",
+        )
+        self.assertEqual(candidate_checkout["with"]["path"], "candidate")
+        self.assertEqual(candidate_checkout["with"]["persist-credentials"], "false")
+        self.assertEqual(
+            steps_by_name["Install trusted validation dependencies"].get("id"),
+            "trusted_install",
+        )
+        trusted_pr_validation = steps_by_name[
+            "Validate pull request with trusted validator"
+        ]["run"]
+        self.assertIn("python trusted/scripts/validate_metadata.py", trusted_pr_validation)
+        self.assertIn("--root candidate", trusted_pr_validation)
+
         fetch_step_name = "Fetch pushed branch's previous tip"
         push_validation_step_name = (
             "Validate pushed result and summarize record changes"
@@ -161,41 +189,28 @@ class MetadataValidationTests(unittest.TestCase):
             steps.index(steps_by_name[fetch_step_name]),
             steps.index(steps_by_name[push_validation_step_name]),
         )
-
-        expected_conditions = {
-            "Validate pull request result and summarize record changes": (
-                "${{ !cancelled() && steps.install.outcome == 'success' && "
-                "github.event_name == 'pull_request' }}"
-            ),
-            "Validate pushed result and summarize record changes": (
-                "${{ !cancelled() && steps.install.outcome == 'success' && "
-                "github.event_name == 'push' && github.event.before != "
-                "'0000000000000000000000000000000000000000' }}"
-            ),
-            "Validate complete database": (
-                "${{ !cancelled() && steps.install.outcome == 'success' && "
-                "(github.event_name == 'workflow_dispatch' || "
-                "(github.event_name == 'push' && github.event.before == "
-                "'0000000000000000000000000000000000000000')) }}"
-            ),
-        }
-        for step_name, expected_condition in expected_conditions.items():
-            with self.subTest(step=step_name):
-                self.assertEqual(
-                    steps_by_name[step_name].get("if"), expected_condition
-                )
-                self.assertLess(
-                    steps.index(steps_by_name[step_name]),
-                    steps.index(steps_by_name[test_step_name]),
-                )
-        self.assertEqual(
-            steps_by_name[test_step_name].get("if"),
-            "${{ !cancelled() && steps.install.outcome == 'success' }}",
-        )
         self.assertIn(
             "--comparison direct",
             steps_by_name[push_validation_step_name]["run"],
         )
+
+        candidate_job = workflow["jobs"]["test-candidate"]
+        self.assertEqual(
+            candidate_job.get("if"), "${{ github.event_name == 'pull_request' }}"
+        )
+        candidate_steps = candidate_job["steps"]
+        candidate_steps_by_name = {step["name"]: step for step in candidate_steps}
+        candidate_validation = candidate_steps_by_name[
+            "Exercise proposed validator against pull request result"
+        ]
+        candidate_tests = candidate_steps_by_name[
+            "Test proposed metadata validator"
+        ]
+        self.assertLess(
+            candidate_steps.index(candidate_validation),
+            candidate_steps.index(candidate_tests),
+        )
+        self.assertIn("candidate/scripts/validate_metadata.py", candidate_validation["run"])
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:
         self.write_record("00001", VALID_RECORD + "title: Duplicate key\n")
@@ -552,6 +567,10 @@ class MetadataValidationTests(unittest.TestCase):
             "../paper.pdf",
             "../restricted/00001/main.pdf",
             r".\restricted\00001\main.pdf",
+            "scans/Jones2024.pdf",
+            r"archive\Jones2024.pdf",
+            "exports/2024/Jones.json",
+            "See scans/Jones2024.pdf for the local copy",
             "/secret.pdf",
             "file:/tmp/00001/main.pdf",
             r"%USERPROFILE%\private\00001\main.pdf",
@@ -637,6 +656,8 @@ class MetadataValidationTests(unittest.TestCase):
         urls = (
             "https://example.test/private/00001/main.pdf",
             "https://example.test/?download=/tmp/00001/main.pdf",
+            "example.test/private/main.pdf",
+            "doi:10.1234/example.pdf",
         )
         for url in urls:
             with self.subTest(url=url):

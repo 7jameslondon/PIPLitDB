@@ -74,6 +74,12 @@ DELAYED_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
     r"![A-Za-z_][A-Za-z0-9_()]*(?::[^!\r\n]*)?![\\/][^\s]*)",
     re.IGNORECASE,
 )
+BARE_RELATIVE_FILE_REFERENCE_RE = re.compile(
+    r"(?<![A-Za-z0-9_.:/\\-])"
+    r"(?:[A-Za-z0-9_-]+[\\/])+"
+    r"[A-Za-z0-9_][A-Za-z0-9_.-]*\.[A-Za-z0-9]{1,16}"
+    r"(?![A-Za-z0-9_])"
+)
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
     re.compile(r"\bfile:(?:[\\/]+|[A-Za-z]:[\\/])", re.IGNORECASE),
@@ -98,6 +104,7 @@ PRIVATE_REFERENCE_PATTERNS = (
     ),
     re.compile(r"(?<![A-Za-z0-9_])\.\.?[\\/][^\\/\s]+(?:[\\/][^\\/\s]+)*"),
     re.compile(r"(?<![A-Za-z0-9_:/%])/(?!/)[^/\s]+(?:/[^/\s]+)*"),
+    BARE_RELATIVE_FILE_REFERENCE_RE,
 )
 POSSIBLE_DRIVE_RELATIVE_PATH_RE = re.compile(
     r"\b[A-Za-z]:(?![\\/])[^\s]+"
