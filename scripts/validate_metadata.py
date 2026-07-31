@@ -90,7 +90,7 @@ PRIVATE_REFERENCE_PATTERNS = (
         r"(?<![A-Za-z0-9_$])\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})[\\/]"
         r"(?![^\s]*\$)[^\s]*"
     ),
-    re.compile(r"\b[A-Za-z]:(?![\\/]{2})(?:[\\/]|(?=[^\\/\s]))[^\s]*"),
+    re.compile(r"\b[A-Za-z]:[\\/][^\s]*"),
     re.compile(r"(?<![\\/])\\\\[^\\/\s]+[\\/][^\\/\s]+"),
     re.compile(r"(?<![:/])//[^/\s]+/[^/\s]+"),
     re.compile(
@@ -98,6 +98,9 @@ PRIVATE_REFERENCE_PATTERNS = (
     ),
     re.compile(r"(?<![A-Za-z0-9_])\.\.?[\\/][^\\/\s]+(?:[\\/][^\\/\s]+)*"),
     re.compile(r"(?<![A-Za-z0-9_:/%])/(?!/)[^/\s]+(?:/[^/\s]+)*"),
+)
+POSSIBLE_DRIVE_RELATIVE_PATH_RE = re.compile(
+    r"\b[A-Za-z]:(?![\\/])[^\s]+"
 )
 
 
@@ -930,6 +933,16 @@ class MetadataValidator:
                             self._line_for(lines, ("pip_litdb_notes",)),
                         )
                         break
+                else:
+                    if POSSIBLE_DRIVE_RELATIVE_PATH_RE.search(searchable_notes):
+                        self.report.add(
+                            "warning",
+                            "record.possible_private_reference",
+                            "Metadata notes might contain a drive-relative Windows "
+                            "path; confirm the text is public metadata.",
+                            relative,
+                            self._line_for(lines, ("pip_litdb_notes",)),
+                        )
 
     def _check_vocab_value(
         self,

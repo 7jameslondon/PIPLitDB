@@ -551,7 +551,6 @@ class MetadataValidationTests(unittest.TestCase):
             "../restricted/00001/main.pdf",
             r".\restricted\00001\main.pdf",
             "/secret.pdf",
-            "C:private.pdf",
             "file:/tmp/00001/main.pdf",
             r"%USERPROFILE%\private\00001\main.pdf",
             r"%ProgramFiles(x86)%\private\00001\main.pdf",
@@ -606,6 +605,31 @@ class MetadataValidationTests(unittest.TestCase):
                     VALID_RECORD + f"pip_litdb_notes: '{reference}'\n",
                 )
                 self.assertIn("record.private_reference", self.error_codes())
+
+    def test_ambiguous_drive_relative_text_does_not_fail_validation(self) -> None:
+        notes = (
+            "C:private.pdf",
+            "The A:T base-pair ratio was measured.",
+            "The result was p:0.05.",
+        )
+        for note in notes:
+            with self.subTest(note=note):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD + f"pip_litdb_notes: '{note}'\n",
+                )
+
+                report = validate_repository(self.root)
+
+                self.assertTrue(report.passed, report.findings)
+                self.assertNotIn(
+                    "record.private_reference",
+                    {finding.code for finding in report.errors},
+                )
+                self.assertIn(
+                    "record.possible_private_reference",
+                    {finding.code for finding in report.warnings},
+                )
 
     def test_web_url_in_notes_is_not_a_private_reference(self) -> None:
         urls = (
