@@ -513,16 +513,17 @@
       className: "authors",
       text: formatAuthors(record.authors),
     });
-    const journal = element("p", {
+    const journal = element("span", {
       className: "journal",
       text: record.journal || "Journal not specified",
     });
-    journal.append(
+    const journalRow = element("p", { className: "journal-row" }, [
+      journal,
       element("span", {
         className: "record-year-inline",
         text: record.publication_year ? String(record.publication_year) : "Year unknown",
       }),
-    );
+    ]);
 
     const tags = element("div", { className: "tag-row" });
     tags.append(
@@ -574,7 +575,7 @@
       cardActions,
     ]);
 
-    card.append(title, authors, journal, bottom);
+    card.append(title, authors, journalRow, bottom);
     return card;
   }
 

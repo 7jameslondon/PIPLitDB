@@ -472,12 +472,20 @@ input:focus-visible {
   -webkit-line-clamp: 2;
 }
 
-.journal {
+.journal-row {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
   margin-bottom: 0;
   color: var(--ink);
   font-size: 0.87rem;
-  font-style: italic;
   line-height: 1.45;
+}
+
+.journal {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-style: italic;
   -webkit-line-clamp: 1;
 }
 
@@ -512,7 +520,8 @@ input:focus-visible {
 }
 
 .record-year-inline {
-  color: var(--muted);
+  flex: 0 0 auto;
+  color: var(--ink-soft);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.72rem;
   font-style: normal;
@@ -524,7 +533,7 @@ input:focus-visible {
 .record-year-inline::before {
   content: "\00b7";
   margin: 0 0.5rem;
-  color: var(--line-strong);
+  color: var(--line);
 }
 
 .relationship-count {
