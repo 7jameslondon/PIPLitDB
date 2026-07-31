@@ -524,6 +524,9 @@ class MetadataValidationTests(unittest.TestCase):
             "$HOME",
             r"$env:TEMP",
             "%TEMP%",
+            "%USERPROFILE%",
+            r"$env:USERPROFILE",
+            r"${env:USERPROFILE}",
         )
         for reference in references:
             with self.subTest(reference=reference):
