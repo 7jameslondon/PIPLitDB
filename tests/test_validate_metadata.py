@@ -514,7 +514,9 @@ class MetadataValidationTests(unittest.TestCase):
             "C:private.pdf",
             "file:/tmp/00001/main.pdf",
             r"%USERPROFILE%\private\00001\main.pdf",
+            r"%ProgramFiles(x86)%\private\00001\main.pdf",
             "$HOME/private/00001/main.pdf",
+            "$HOME/",
             "${HOME}/private/00001/main.pdf",
         )
         for reference in references:
@@ -537,6 +539,13 @@ class MetadataValidationTests(unittest.TestCase):
                     VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
                 )
                 self.assertNotIn("record.private_reference", self.error_codes())
+
+    def test_inline_math_is_not_a_private_reference(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD + "pip_litdb_notes: 'The ratio $A/B$ was reported.'\n",
+        )
+        self.assertNotIn("record.private_reference", self.error_codes())
 
     def test_blank_notes_are_rejected(self) -> None:
         self.write_record(
