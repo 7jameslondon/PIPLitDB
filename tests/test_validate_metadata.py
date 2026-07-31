@@ -128,22 +128,24 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertEqual(report.record_count, 1)
 
     def test_workflow_separates_trusted_enforcement_from_candidate_tests(self) -> None:
-        workflow_path = (
+        trusted_workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
         )
-        workflow = yaml.load(
-            workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader
+        trusted_workflow = yaml.load(
+            trusted_workflow_path.read_text(encoding="utf-8"),
+            Loader=yaml.BaseLoader,
         )
-        self.assertIn("pull_request", workflow["on"])
-        self.assertIn("pull_request_target", workflow["on"])
-        self.assertIn("github.event_name", workflow["concurrency"]["group"])
+        self.assertNotIn("pull_request", trusted_workflow["on"])
+        self.assertIn("pull_request_target", trusted_workflow["on"])
+        self.assertIn(
+            "github.event_name", trusted_workflow["concurrency"]["group"]
+        )
 
-        steps = workflow["jobs"]["validate"]["steps"]
+        trusted_job = trusted_workflow["jobs"]["validate"]
+        self.assertEqual(trusted_job["name"], "Validate metadata records")
+        self.assertNotIn("if", trusted_job)
+        steps = trusted_job["steps"]
         steps_by_name = {step["name"]: step for step in steps}
-        self.assertEqual(
-            workflow["jobs"]["validate"].get("if"),
-            "${{ github.event_name != 'pull_request' }}",
-        )
         trusted_checkout = steps_by_name["Check out trusted validator"]["with"]
         self.assertIn(
             "github.event.pull_request.base.sha", trusted_checkout["ref"]
@@ -167,6 +169,13 @@ class MetadataValidationTests(unittest.TestCase):
         ]["run"]
         self.assertIn("python trusted/scripts/validate_metadata.py", trusted_pr_validation)
         self.assertIn("--root candidate", trusted_pr_validation)
+        self.assertFalse(
+            any(
+                "python candidate/" in step.get("run", "")
+                or step.get("working-directory") == "candidate"
+                for step in steps
+            )
+        )
 
         fetch_step_name = "Fetch pushed branch's previous tip"
         push_validation_step_name = (
@@ -194,10 +203,20 @@ class MetadataValidationTests(unittest.TestCase):
             steps_by_name[push_validation_step_name]["run"],
         )
 
-        candidate_job = workflow["jobs"]["test-candidate"]
-        self.assertEqual(
-            candidate_job.get("if"), "${{ github.event_name == 'pull_request' }}"
+        candidate_workflow_path = (
+            REPOSITORY_ROOT
+            / ".github"
+            / "workflows"
+            / "test-metadata-validator.yml"
         )
+        candidate_workflow = yaml.load(
+            candidate_workflow_path.read_text(encoding="utf-8"),
+            Loader=yaml.BaseLoader,
+        )
+        self.assertIn("pull_request", candidate_workflow["on"])
+        self.assertNotIn("pull_request_target", candidate_workflow["on"])
+        candidate_job = candidate_workflow["jobs"]["test-candidate"]
+        self.assertEqual(candidate_job["name"], "Test proposed metadata validator")
         candidate_steps = candidate_job["steps"]
         candidate_steps_by_name = {step["name"]: step for step in candidate_steps}
         candidate_validation = candidate_steps_by_name[
