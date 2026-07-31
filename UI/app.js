@@ -22,6 +22,7 @@
     vocabularies: {},
     source: null,
     isLoading: false,
+    yearBounds: { min: null, max: null },
   };
 
   const ui = {};
@@ -29,14 +30,19 @@
   document.addEventListener("DOMContentLoaded", () => {
     captureElements();
     bindEvents();
-    loadCatalog();
+    loadDatabase();
   });
 
   function captureElements() {
     ui.search = document.querySelector("#search");
     ui.documentType = document.querySelector("#document-type-filter");
     ui.publicationStage = document.querySelector("#publication-stage-filter");
-    ui.year = document.querySelector("#year-filter");
+    ui.yearRange = document.querySelector("#year-range-filter");
+    ui.yearMinInput = document.querySelector("#year-min-input");
+    ui.yearMaxInput = document.querySelector("#year-max-input");
+    ui.yearSlider = document.querySelector("#year-range-slider");
+    ui.yearMinSlider = document.querySelector("#year-min-slider");
+    ui.yearMaxSlider = document.querySelector("#year-max-slider");
     ui.status = document.querySelector("#status-filter");
     ui.sort = document.querySelector("#sort");
     ui.clearFilters = document.querySelector("#clear-filters");
@@ -51,7 +57,6 @@
     ui.error = document.querySelector("#error-state");
     ui.errorTitle = document.querySelector("#error-title");
     ui.errorDetail = document.querySelector("#error-detail");
-    ui.statusMessage = document.querySelector("#status-message");
     ui.sourceDot = document.querySelector("#source-dot");
     ui.sourceName = document.querySelector("#source-name");
     ui.sourceLink = document.querySelector("#source-link");
@@ -66,25 +71,42 @@
       ui.search,
       ui.documentType,
       ui.publicationStage,
-      ui.year,
       ui.status,
       ui.sort,
     ];
 
     filterControls.forEach((control) => {
-      control.addEventListener(control === ui.search ? "input" : "change", renderCatalog);
+      control.addEventListener(control === ui.search ? "input" : "change", renderDatabase);
+    });
+
+    [
+      [ui.yearMinInput, "min"],
+      [ui.yearMaxInput, "max"],
+    ].forEach(([input, edge]) => {
+      input.addEventListener("input", () => syncYearRangeFromNumber(edge, false));
+      input.addEventListener("change", () => syncYearRangeFromNumber(edge, true));
+    });
+
+    [
+      [ui.yearMinSlider, "min"],
+      [ui.yearMaxSlider, "max"],
+    ].forEach(([slider, edge]) => {
+      slider.addEventListener("input", () => syncYearRangeFromSlider(edge, false));
+      slider.addEventListener("change", () => syncYearRangeFromSlider(edge, true));
+      slider.addEventListener("focus", () => bringYearSliderThumbToFront(slider));
+      slider.addEventListener("pointerdown", () => bringYearSliderThumbToFront(slider));
     });
 
     ui.clearFilters.addEventListener("click", resetFilters);
     ui.emptyClearFilters.addEventListener("click", resetFilters);
-    ui.retry.addEventListener("click", loadCatalog);
+    ui.retry.addEventListener("click", loadDatabase);
     ui.dialogClose.addEventListener("click", () => ui.dialog.close());
     ui.dialog.addEventListener("click", closeDialogFromBackdrop);
     ui.dialog.addEventListener("close", clearRecordHash);
     window.addEventListener("hashchange", openRecordFromHash);
   }
 
-  async function loadCatalog() {
+  async function loadDatabase() {
     if (state.isLoading) return;
 
     setLoadingState();
@@ -111,7 +133,7 @@
       setControlsDisabled(false);
       setSourceReady(result.source);
       state.isLoading = false;
-      renderCatalog();
+      renderDatabase();
       openRecordFromHash();
     } catch (error) {
       console.error(error);
@@ -196,7 +218,7 @@
           records,
           vocabularies,
           source: {
-            name: "GitHub · live YAML",
+            name: "GitHub",
             detail: `${commit.sha.slice(0, 7)} on ${ref}`,
             url: `${webBase}/tree/${commit.sha}/${trimSlashes(config.paths.records)}`,
           },
@@ -242,7 +264,7 @@
           records,
           vocabularies,
           source: {
-            name: "Local files · live YAML",
+            name: "Local files",
             detail: "Read on this refresh",
             url: directoryUrl.href,
           },
@@ -354,11 +376,134 @@
       "No status",
     );
 
-    removeGeneratedOptions(ui.year);
     const years = uniqueRecordValues("publication_year")
       .map(Number)
-      .sort((a, b) => b - a);
-    years.forEach((year) => addOption(ui.year, String(year), String(year)));
+      .filter(Number.isFinite);
+    populateYearRange(years);
+  }
+
+  function populateYearRange(years) {
+    if (years.length === 0) {
+      state.yearBounds = { min: null, max: null };
+      [ui.yearMinInput, ui.yearMaxInput].forEach((input) => {
+        input.value = "";
+        input.removeAttribute("min");
+        input.removeAttribute("max");
+      });
+      [ui.yearMinSlider, ui.yearMaxSlider].forEach((slider) => {
+        slider.min = "0";
+        slider.max = "0";
+        slider.value = "0";
+      });
+      updateYearRangeTrack();
+      return;
+    }
+
+    const min = Math.min(...years);
+    const max = Math.max(...years);
+    state.yearBounds = { min, max };
+    [ui.yearMinInput, ui.yearMaxInput, ui.yearMinSlider, ui.yearMaxSlider].forEach((control) => {
+      control.min = String(min);
+      control.max = String(max);
+    });
+    setYearRangeValues(min, max);
+  }
+
+  function syncYearRangeFromNumber(edge, force) {
+    const input = edge === "min" ? ui.yearMinInput : ui.yearMaxInput;
+    const { min: lowerBound, max: upperBound } = state.yearBounds;
+    if (lowerBound === null || upperBound === null) return;
+
+    const parsed = Number(input.value);
+    const valueCanCommit = input.value !== "" && Number.isInteger(parsed);
+    const valueIsValid = valueCanCommit && input.checkValidity();
+    const completeYearLength = String(lowerBound).length;
+    if (!force && !valueIsValid && (!valueCanCommit || input.value.length < completeYearLength)) {
+      return;
+    }
+
+    const fallback = edge === "min" ? lowerBound : upperBound;
+    const value = clampYear(valueCanCommit ? parsed : fallback, lowerBound, upperBound);
+    let min = Number(ui.yearMinSlider.value);
+    let max = Number(ui.yearMaxSlider.value);
+
+    if (edge === "min") {
+      min = value;
+      if (min > max) max = min;
+    } else {
+      max = value;
+      if (max < min) min = max;
+    }
+
+    setYearRangeValues(min, max);
+    renderDatabase();
+  }
+
+  function syncYearRangeFromSlider(edge, shouldRender) {
+    let min = Number(ui.yearMinSlider.value);
+    let max = Number(ui.yearMaxSlider.value);
+
+    if (edge === "min" && min > max) min = max;
+    if (edge === "max" && max < min) max = min;
+
+    setYearRangeValues(min, max);
+    if (shouldRender) renderDatabase();
+  }
+
+  function setYearRangeValues(min, max) {
+    const { min: lowerBound, max: upperBound } = state.yearBounds;
+    if (lowerBound === null || upperBound === null) return;
+
+    const normalizedMin = clampYear(Math.round(min), lowerBound, upperBound);
+    const normalizedMax = clampYear(Math.round(max), lowerBound, upperBound);
+    const orderedMin = Math.min(normalizedMin, normalizedMax);
+    const orderedMax = Math.max(normalizedMin, normalizedMax);
+
+    ui.yearMinInput.value = String(orderedMin);
+    ui.yearMaxInput.value = String(orderedMax);
+    ui.yearMinSlider.value = String(orderedMin);
+    ui.yearMaxSlider.value = String(orderedMax);
+    updateYearRangeTrack();
+  }
+
+  function updateYearRangeTrack() {
+    const { min: lowerBound, max: upperBound } = state.yearBounds;
+    if (lowerBound === null || upperBound === null || lowerBound === upperBound) {
+      ui.yearSlider.style.setProperty("--year-range-start", "0%");
+      ui.yearSlider.style.setProperty("--year-range-end", "100%");
+      return;
+    }
+
+    const span = upperBound - lowerBound;
+    const start = ((Number(ui.yearMinSlider.value) - lowerBound) / span) * 100;
+    const end = ((Number(ui.yearMaxSlider.value) - lowerBound) / span) * 100;
+    ui.yearSlider.style.setProperty("--year-range-start", `${start}%`);
+    ui.yearSlider.style.setProperty("--year-range-end", `${end}%`);
+  }
+
+  function bringYearSliderThumbToFront(activeSlider) {
+    ui.yearMinSlider.style.zIndex = activeSlider === ui.yearMinSlider ? "4" : "3";
+    ui.yearMaxSlider.style.zIndex = activeSlider === ui.yearMaxSlider ? "4" : "3";
+  }
+
+  function clampYear(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function getSelectedYearRange() {
+    if (state.yearBounds.min === null || state.yearBounds.max === null) return null;
+    return {
+      min: Number(ui.yearMinSlider.value),
+      max: Number(ui.yearMaxSlider.value),
+    };
+  }
+
+  function isYearRangeActive() {
+    const selected = getSelectedYearRange();
+    return Boolean(
+      selected &&
+        (selected.min > state.yearBounds.min || selected.max < state.yearBounds.max),
+    );
   }
 
   function populateVocabularySelect(select, values, vocabulary, emptyLabel) {
@@ -396,7 +541,7 @@
     return vocabulary?.[value]?.label || humanize(value);
   }
 
-  function renderCatalog() {
+  function renderDatabase() {
     if (state.isLoading) return;
 
     const visibleRecords = getVisibleRecords();
@@ -421,21 +566,23 @@
       ui.search.value ||
         ui.documentType.value ||
         ui.publicationStage.value ||
-        ui.year.value ||
+        isYearRangeActive() ||
         ui.status.value,
     );
     ui.clearFilters.disabled = !hasActiveFilters;
-    ui.statusMessage.textContent = hasActiveFilters
-      ? `${formatNumber(visibleRecords.length)} ${pluralize(visibleRecords.length, "result")} after filtering.`
-      : "";
   }
 
   function getVisibleRecords() {
     const query = normalize(ui.search.value);
+    const yearRange = getSelectedYearRange();
+    const filterByYear = isYearRangeActive();
     const records = state.records.filter((record) => {
       if (ui.documentType.value && record.document_type !== ui.documentType.value) return false;
       if (ui.publicationStage.value && record.publication_stage !== ui.publicationStage.value) return false;
-      if (ui.year.value && String(record.publication_year) !== ui.year.value) return false;
+      if (filterByYear) {
+        const year = Number(record.publication_year);
+        if (!Number.isFinite(year) || year < yearRange.min || year > yearRange.max) return false;
+      }
       if (
         ui.status.value &&
         (ui.status.value === "__missing__"
@@ -518,18 +665,44 @@
       text: record.journal || "Journal not specified",
     });
     const journalRow = element("p", { className: "journal-row" }, [
-      journal,
       element("span", {
         className: "record-year-inline",
         text: record.publication_year ? String(record.publication_year) : "Year unknown",
       }),
+      element("span", {
+        className: "journal-separator",
+        text: "·",
+        attributes: { "aria-hidden": "true" },
+      }),
+      journal,
     ]);
+    const doiUrl = safeHttpUrl(record.doi ? `https://doi.org/${record.doi}` : null);
+    if (doiUrl) {
+      journalRow.append(
+        element("span", {
+          className: "journal-separator",
+          text: "·",
+          attributes: { "aria-hidden": "true" },
+        }),
+        element("a", {
+          className: "record-doi-link",
+          text: record.doi,
+          attributes: {
+            href: doiUrl,
+            target: "_blank",
+            rel: "noreferrer",
+            title: record.doi,
+            "aria-label": `Open DOI ${record.doi}`,
+          },
+        }),
+      );
+    }
 
     const tags = element("div", { className: "tag-row" });
     tags.append(
       element("span", {
         className: "tag record-id-tag",
-        text: `PAPER ID ${record.pip_litdb_id}`,
+        text: `Paper ID ${record.pip_litdb_id}`,
       }),
     );
     if (record.document_type) {
@@ -583,7 +756,7 @@
     const record = state.recordById.get(id);
     if (!record) return;
 
-    ui.dialogId.textContent = `PIP ${record.pip_litdb_id}`;
+    ui.dialogId.textContent = `Paper ID ${record.pip_litdb_id}`;
     ui.dialogContent.replaceChildren(createRecordDetails(record));
     if (!ui.dialog.open) ui.dialog.showModal();
 
@@ -681,7 +854,7 @@
           button.append(
             element("span", {}, [
               element("strong", {
-                text: `${relationshipLabel} · PIP ${relationship.pip_litdb_id}`,
+                text: `${relationshipLabel} · Paper ID ${relationship.pip_litdb_id}`,
               }),
               element("span", { className: "relationship-title", text: relatedRecord.title }),
             ]),
@@ -693,7 +866,7 @@
           item.append(
             element("div", { className: "relationship-missing" }, [
               element("span", {
-                text: `${relationshipLabel} · PIP ${relationship.pip_litdb_id}`,
+                text: `${relationshipLabel} · Paper ID ${relationship.pip_litdb_id}`,
               }),
               element("span", { className: "relationship-title", text: "Record not loaded" }),
             ]),
@@ -807,10 +980,12 @@
     ui.search.value = "";
     ui.documentType.value = "";
     ui.publicationStage.value = "";
-    ui.year.value = "";
+    if (state.yearBounds.min !== null && state.yearBounds.max !== null) {
+      setYearRangeValues(state.yearBounds.min, state.yearBounds.max);
+    }
     ui.status.value = "";
     ui.sort.value = "year-desc";
-    renderCatalog();
+    renderDatabase();
     ui.search.focus();
   }
 
@@ -818,6 +993,7 @@
     state.isLoading = true;
     state.records = [];
     state.recordById = new Map();
+    state.yearBounds = { min: null, max: null };
     setControlsDisabled(true);
     ui.records.replaceChildren();
     ui.records.hidden = false;
@@ -825,7 +1001,6 @@
     ui.loading.hidden = false;
     ui.empty.hidden = true;
     ui.error.hidden = true;
-    ui.statusMessage.textContent = "";
     ui.recordCount.textContent = "Loading records…";
     ui.sourceName.textContent = "Connecting…";
     ui.sourceLink.hidden = true;
@@ -856,11 +1031,12 @@
   }
 
   function setControlsDisabled(disabled) {
-    [ui.search, ui.documentType, ui.publicationStage, ui.year, ui.status, ui.sort].forEach(
+    [ui.search, ui.documentType, ui.publicationStage, ui.status, ui.sort].forEach(
       (control) => {
         control.disabled = disabled;
       },
     );
+    ui.yearRange.disabled = disabled || state.yearBounds.min === null;
     ui.clearFilters.disabled = disabled;
   }
 

@@ -7,7 +7,7 @@
       name="description"
       content="Browse the public PIP LitDB metadata records."
     />
-    <title>PIP LitDB — Public metadata catalog</title>
+    <title>PIP LitDB — Public metadata database</title>
     <link rel="stylesheet" href="./styles.css?v=compact-cards" />
   </head>
   <body>
@@ -16,12 +16,9 @@
     <header class="site-header">
       <div class="header-inner">
         <div class="brand-block">
-          <p class="eyebrow">Public metadata catalog</p>
+          <p class="eyebrow">Public metadata database</p>
           <h1>PIP LitDB</h1>
-          <p class="intro">
-            Literature about pyrrole–imidazole polyamides, collected as an open,
-            version-controlled database.
-          </p>
+          <p class="intro">Literature about pyrrole–imidazole polyamides.</p>
         </div>
 
         <div class="header-actions">
@@ -70,18 +67,10 @@
     </header>
 
     <main>
-      <section class="catalog-shell" aria-labelledby="catalog-heading">
-        <div class="catalog-heading-row">
-          <div>
-            <p class="section-kicker">Database records</p>
-            <h2 id="catalog-heading">Explore the literature</h2>
-          </div>
-          <p id="record-count" class="record-count">Loading records…</p>
-        </div>
-
+      <section class="database-shell" aria-label="Literature database">
         <section class="controls" aria-label="Search and filter records">
           <div class="search-field">
-            <label for="search">Search the catalog</label>
+            <label for="search">Search the database</label>
             <div class="search-input-wrap">
               <span aria-hidden="true">⌕</span>
               <input
@@ -95,6 +84,47 @@
           </div>
 
           <div class="filter-grid">
+            <fieldset id="year-range-filter" class="year-range-filter" disabled>
+              <legend>Year range</legend>
+              <div class="year-range-control">
+                <input
+                  id="year-min-input"
+                  class="year-range-number"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="From year"
+                  autocomplete="off"
+                />
+                <div id="year-range-slider" class="year-range-slider">
+                  <span class="year-range-track" aria-hidden="true"></span>
+                  <span class="year-range-selection" aria-hidden="true"></span>
+                  <input
+                    id="year-min-slider"
+                    class="year-range-slider-input is-min"
+                    type="range"
+                    step="1"
+                    aria-label="Earliest publication year"
+                  />
+                  <input
+                    id="year-max-slider"
+                    class="year-range-slider-input is-max"
+                    type="range"
+                    step="1"
+                    aria-label="Latest publication year"
+                  />
+                </div>
+                <input
+                  id="year-max-input"
+                  class="year-range-number"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="To year"
+                  autocomplete="off"
+                />
+              </div>
+            </fieldset>
             <label>
               <span>Document type</span>
               <select id="document-type-filter" disabled>
@@ -105,12 +135,6 @@
               <span>Publication stage</span>
               <select id="publication-stage-filter" disabled>
                 <option value="">All stages</option>
-              </select>
-            </label>
-            <label>
-              <span>Year</span>
-              <select id="year-filter" disabled>
-                <option value="">All years</option>
               </select>
             </label>
             <label>
@@ -134,12 +158,50 @@
           </div>
         </section>
 
-        <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+        <p id="record-count" class="record-count" role="status" aria-live="polite">
+          Loading records…
+        </p>
 
         <div id="loading-state" class="loading-grid" aria-label="Loading records">
-          <div class="skeleton-card"></div>
-          <div class="skeleton-card"></div>
-          <div class="skeleton-card"></div>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-author"></div>
+            <div class="skeleton-line skeleton-journal"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title is-short"></div>
+            <div class="skeleton-line skeleton-author"></div>
+            <div class="skeleton-line skeleton-journal is-short"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title is-long"></div>
+            <div class="skeleton-line skeleton-author is-short"></div>
+            <div class="skeleton-line skeleton-journal"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
         </div>
 
         <section id="records" class="record-grid" aria-busy="true" aria-label="Literature records"></section>
