@@ -491,11 +491,18 @@
 
   function createRecordCard(record) {
     const titleId = `record-title-${record.pip_litdb_id}`;
+    const openDetails = () => openRecord(record.pip_litdb_id);
     const card = element("article", {
       className: "record-card",
       attributes: {
         "aria-labelledby": titleId,
       },
+    });
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, input, select, textarea, summary, [role='button'], [role='link']")) {
+        return;
+      }
+      openDetails();
     });
 
     const title = element("h3", {
@@ -559,7 +566,7 @@
         "aria-label": `View details for ${record.title || `record ${record.pip_litdb_id}`}`,
       },
     });
-    detailsButton.addEventListener("click", () => openRecord(record.pip_litdb_id));
+    detailsButton.addEventListener("click", openDetails);
     cardActions.append(detailsButton);
 
     const bottom = element("div", { className: "record-card-bottom" }, [

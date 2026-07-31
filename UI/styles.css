@@ -416,6 +416,7 @@ input:focus-visible {
   text-align: left;
   background: var(--surface);
   box-shadow: 0 7px 25px rgba(20, 42, 43, 0.035);
+  cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
