@@ -43,7 +43,11 @@ PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\s<>\"']+", re.IGNORECASE)
 PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"papers\s*\(private\)", re.IGNORECASE),
     re.compile(r"\bfile:(?:[\\/]+|[A-Za-z]:[\\/])", re.IGNORECASE),
-    re.compile(r"%[^%=\r\n]+%[\\/][^\s]*"),
+    re.compile(r"(?<![A-Za-z0-9_%])%[A-Za-z_][A-Za-z0-9_()]*%[\\/][^\s]*"),
+    re.compile(
+        r"(?<![A-Za-z0-9_$])\$(?:env:[A-Za-z_][A-Za-z0-9_]*|\{env:[^}=\r\n]+\})[\\/][^\s]*",
+        re.IGNORECASE,
+    ),
     re.compile(
         r"(?<![A-Za-z0-9_$])\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})[\\/]"
         r"(?![^\s]*\$)[^\s]*"
@@ -53,7 +57,7 @@ PRIVATE_REFERENCE_PATTERNS = (
     re.compile(r"(?<![:/])//[^/\s]+/[^/\s]+"),
     re.compile(r"(?<![A-Za-z0-9_])~[\\/][^\s]+"),
     re.compile(r"(?<![A-Za-z0-9_])\.\.?[\\/][^\\/\s]+(?:[\\/][^\\/\s]+)*"),
-    re.compile(r"(?<![A-Za-z0-9_:/])/(?!/)[^/\s]+(?:/[^/\s]+)*"),
+    re.compile(r"(?<![A-Za-z0-9_:/%])/(?!/)[^/\s]+(?:/[^/\s]+)*"),
 )
 
 

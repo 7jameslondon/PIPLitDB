@@ -518,6 +518,9 @@ class MetadataValidationTests(unittest.TestCase):
             "$HOME/private/00001/main.pdf",
             "$HOME/",
             "${HOME}/private/00001/main.pdf",
+            r"$env:USERPROFILE\private\00001\main.pdf",
+            r"$Env:OneDrive\private\00001\main.pdf",
+            r"${env:ProgramFiles(x86)}\private\00001\main.pdf",
         )
         for reference in references:
             with self.subTest(reference=reference):
@@ -544,6 +547,14 @@ class MetadataValidationTests(unittest.TestCase):
         self.write_record(
             "00001",
             VALID_RECORD + "pip_litdb_notes: 'The ratio $A/B$ was reported.'\n",
+        )
+        self.assertNotIn("record.private_reference", self.error_codes())
+
+    def test_percentage_comparison_is_not_a_private_reference(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + "pip_litdb_notes: 'Accuracy across cohorts was 95%/90%/80%.'\n",
         )
         self.assertNotIn("record.private_reference", self.error_codes())
 
