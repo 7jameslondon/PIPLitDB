@@ -408,7 +408,7 @@ input:focus-visible {
   background: var(--surface);
   box-shadow: 0 7px 25px rgba(20, 42, 43, 0.035);
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .record-card::before {
@@ -424,7 +424,6 @@ input:focus-visible {
 .record-card:hover {
   border-color: #a8c5c2;
   box-shadow: var(--shadow);
-  transform: translateY(-3px);
 }
 
 .record-card:hover::before,
