@@ -290,7 +290,8 @@ h2 {
 }
 
 .search-field > label,
-.filter-grid label > span {
+.filter-grid label > span,
+.year-range-filter > legend {
   display: block;
   margin: 0 0 0.42rem 0.15rem;
   color: var(--ink-soft);
@@ -339,9 +340,135 @@ h2 {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  grid-template-columns:
+    repeat(2, minmax(8rem, 1fr))
+    minmax(18rem, 2.2fr)
+    repeat(2, minmax(8rem, 1fr))
+    auto;
   gap: 0.75rem;
   align-items: end;
+}
+
+.year-range-filter {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.year-range-filter > legend {
+  padding: 0;
+}
+
+.year-range-control {
+  display: grid;
+  grid-template-columns: minmax(4.75rem, 0.8fr) minmax(7rem, 2fr) minmax(4.75rem, 0.8fr);
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.year-range-number {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.year-range-slider {
+  --year-range-start: 0%;
+  --year-range-end: 100%;
+  position: relative;
+  height: 2.75rem;
+}
+
+.year-range-track,
+.year-range-selection {
+  position: absolute;
+  top: 50%;
+  height: 0.25rem;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.year-range-track {
+  right: 0;
+  left: 0;
+  background: var(--line);
+}
+
+.year-range-selection {
+  right: calc(100% - var(--year-range-end));
+  left: var(--year-range-start);
+  background: var(--accent);
+}
+
+.year-range-slider-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.year-range-slider-input.is-min {
+  z-index: 3;
+}
+
+.year-range-slider-input.is-max {
+  z-index: 4;
+}
+
+.year-range-slider-input::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  background: transparent;
+}
+
+.year-range-slider-input::-webkit-slider-thumb {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: -0.425rem;
+  appearance: none;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-deep);
+  pointer-events: auto;
+}
+
+.year-range-slider-input::-moz-range-track {
+  height: 0.25rem;
+  background: transparent;
+}
+
+.year-range-slider-input::-moz-range-thumb {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-deep);
+  pointer-events: auto;
+}
+
+.year-range-slider-input:focus-visible {
+  outline: none;
+}
+
+.year-range-slider-input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(20, 108, 103, 0.22);
+}
+
+.year-range-slider-input:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(20, 108, 103, 0.22);
 }
 
 select {
@@ -884,6 +1011,10 @@ input:focus-visible {
   .filter-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .year-range-filter {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 700px) {
@@ -905,6 +1036,10 @@ input:focus-visible {
   .metadata-grid,
   .author-list {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .year-range-filter {
+    grid-column: span 2;
   }
 
   /* Reserve additional text lines gradually as card content wraps. */
@@ -938,6 +1073,10 @@ input:focus-visible {
   .metadata-grid,
   .author-list {
     grid-template-columns: 1fr;
+  }
+
+  .year-range-filter {
+    grid-column: 1;
   }
 
   .skeleton-title.is-short {

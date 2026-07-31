@@ -96,12 +96,47 @@
                 <option value="">All stages</option>
               </select>
             </label>
-            <label>
-              <span>Year</span>
-              <select id="year-filter" disabled>
-                <option value="">All years</option>
-              </select>
-            </label>
+            <fieldset id="year-range-filter" class="year-range-filter" disabled>
+              <legend>Year range</legend>
+              <div class="year-range-control">
+                <input
+                  id="year-min-input"
+                  class="year-range-number"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="From year"
+                  autocomplete="off"
+                />
+                <div id="year-range-slider" class="year-range-slider">
+                  <span class="year-range-track" aria-hidden="true"></span>
+                  <span class="year-range-selection" aria-hidden="true"></span>
+                  <input
+                    id="year-min-slider"
+                    class="year-range-slider-input is-min"
+                    type="range"
+                    step="1"
+                    aria-label="Earliest publication year"
+                  />
+                  <input
+                    id="year-max-slider"
+                    class="year-range-slider-input is-max"
+                    type="range"
+                    step="1"
+                    aria-label="Latest publication year"
+                  />
+                </div>
+                <input
+                  id="year-max-input"
+                  class="year-range-number"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="To year"
+                  autocomplete="off"
+                />
+              </div>
+            </fieldset>
             <label>
               <span>Record status</span>
               <select id="status-filter" disabled>
