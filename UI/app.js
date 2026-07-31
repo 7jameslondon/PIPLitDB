@@ -518,12 +518,37 @@
       text: record.journal || "Journal not specified",
     });
     const journalRow = element("p", { className: "journal-row" }, [
-      journal,
       element("span", {
         className: "record-year-inline",
         text: record.publication_year ? String(record.publication_year) : "Year unknown",
       }),
+      element("span", {
+        className: "journal-separator",
+        text: "·",
+        attributes: { "aria-hidden": "true" },
+      }),
+      journal,
     ]);
+    const doiUrl = safeHttpUrl(record.doi ? `https://doi.org/${record.doi}` : null);
+    if (doiUrl) {
+      journalRow.append(
+        element("span", {
+          className: "journal-separator",
+          text: "·",
+          attributes: { "aria-hidden": "true" },
+        }),
+        element("a", {
+          className: "record-doi-link",
+          text: "DOI",
+          attributes: {
+            href: doiUrl,
+            target: "_blank",
+            rel: "noreferrer",
+            "aria-label": `Open DOI ${record.doi}`,
+          },
+        }),
+      );
+    }
 
     const tags = element("div", { className: "tag-row" });
     tags.append(

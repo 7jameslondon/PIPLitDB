@@ -476,6 +476,7 @@ input:focus-visible {
   display: flex;
   align-items: baseline;
   min-width: 0;
+  overflow: hidden;
   margin-bottom: 0;
   color: var(--ink);
   font-size: 0.87rem;
@@ -484,9 +485,25 @@ input:focus-visible {
 
 .journal {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   font-style: italic;
   -webkit-line-clamp: 1;
+}
+
+.journal-separator,
+.record-year-inline,
+.record-doi-link {
+  flex: 0 0 auto;
+}
+
+.journal-separator {
+  margin: 0 0.5rem;
+  color: var(--line);
+}
+
+.record-doi-link {
+  font-weight: 700;
+  text-underline-offset: 0.16rem;
 }
 
 .record-card-bottom {
@@ -520,7 +537,6 @@ input:focus-visible {
 }
 
 .record-year-inline {
-  flex: 0 0 auto;
   color: var(--ink-soft);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.72rem;
@@ -528,12 +544,6 @@ input:focus-visible {
   font-weight: 700;
   letter-spacing: 0.04em;
   white-space: nowrap;
-}
-
-.record-year-inline::before {
-  content: "\00b7";
-  margin: 0 0.5rem;
-  color: var(--line);
 }
 
 .relationship-count {
