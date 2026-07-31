@@ -51,7 +51,6 @@
     ui.error = document.querySelector("#error-state");
     ui.errorTitle = document.querySelector("#error-title");
     ui.errorDetail = document.querySelector("#error-detail");
-    ui.statusMessage = document.querySelector("#status-message");
     ui.sourceDot = document.querySelector("#source-dot");
     ui.sourceName = document.querySelector("#source-name");
     ui.sourceLink = document.querySelector("#source-link");
@@ -425,9 +424,6 @@
         ui.status.value,
     );
     ui.clearFilters.disabled = !hasActiveFilters;
-    ui.statusMessage.textContent = hasActiveFilters
-      ? `${formatNumber(visibleRecords.length)} ${pluralize(visibleRecords.length, "result")} after filtering.`
-      : "";
   }
 
   function getVisibleRecords() {
@@ -851,7 +847,6 @@
     ui.loading.hidden = false;
     ui.empty.hidden = true;
     ui.error.hidden = true;
-    ui.statusMessage.textContent = "";
     ui.recordCount.textContent = "Loading records…";
     ui.sourceName.textContent = "Connecting…";
     ui.sourceLink.hidden = true;

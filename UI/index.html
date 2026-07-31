@@ -68,8 +68,6 @@
 
     <main>
       <section class="database-shell" aria-label="Literature database">
-        <p id="record-count" class="record-count">Loading records…</p>
-
         <section class="controls" aria-label="Search and filter records">
           <div class="search-field">
             <label for="search">Search the database</label>
@@ -125,7 +123,9 @@
           </div>
         </section>
 
-        <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+        <p id="record-count" class="record-count" role="status" aria-live="polite">
+          Loading records…
+        </p>
 
         <div id="loading-state" class="loading-grid" aria-label="Loading records">
           <article class="record-card skeleton-card" aria-hidden="true">
