@@ -66,12 +66,16 @@ jobs:
       - name: Validate pull request with trusted validator
         id: trusted_validation
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'pull_request_target' }}
-        run: >-
-          python trusted/scripts/validate_metadata.py
-          --root candidate
-          --rules-root trusted
-          --base "${{ github.event.pull_request.base.sha }}"
-          --head "${{ github.event.pull_request.merge_commit_sha }}"
+        run: |
+          python trusted/scripts/validate_metadata.py \
+            --root candidate \
+            --rules-root trusted \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.merge_commit_sha }}"
+          # Trusted code also verifies that proposed rule files remain present,
+          # parseable, symlink-safe, and internally consistent.
+          GITHUB_STEP_SUMMARY= python trusted/scripts/validate_metadata.py \
+            --root candidate
 
       - name: Validate pushed result and summarize record changes
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}

@@ -126,9 +126,11 @@ trusted job uses the workflow, dependencies, validator, schema, and controlled v
 base branch and treats the proposed pull-request checkout's records as data only. It publishes the
 `Validate metadata records` status directly on the pull request's merge commit, so that status can be
 made a required branch-protection check without letting a pull request weaken the rules that judge
-it. The separate `Test metadata validator` workflow runs `Test proposed metadata validator` in the
-ordinary, read-only pull-request context to exercise validator and rule changes before they merge
-without creating the protected status name.
+it. A second pass, still using trusted executable code, verifies that proposed schema and vocabulary
+files remain present, parseable, symlink-safe, and internally consistent. The separate `Test metadata
+validator` workflow runs `Test proposed metadata validator` in the ordinary, read-only pull-request
+context to exercise validator and rule changes before they merge without creating the protected
+status name.
 
 The trusted job validates the entire resulting database, not only changed files, so removing a
 referenced record or changing only one side of a relationship fails the check. It also adds a job

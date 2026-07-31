@@ -178,6 +178,32 @@ class MetadataValidationTests(unittest.TestCase):
             self.assertIn("schema.required", trusted_codes)
             self.assertIn("record.unknown_vocabulary_value", trusted_codes)
 
+    def test_candidate_rules_pass_catches_deleted_rule_files(self) -> None:
+        with tempfile.TemporaryDirectory() as trusted_directory:
+            trusted_root = Path(trusted_directory)
+            shutil.copytree(
+                self.root / "database" / "schema",
+                trusted_root / "database" / "schema",
+            )
+            shutil.copytree(
+                self.root / "database" / "vocabularies",
+                trusted_root / "database" / "vocabularies",
+            )
+            shutil.rmtree(self.root / "database" / "schema")
+            shutil.rmtree(self.root / "database" / "vocabularies")
+
+            current_rules_report = validate_repository(
+                self.root, rules_root=trusted_root
+            )
+            candidate_rules_report = validate_repository(self.root)
+
+            self.assertTrue(current_rules_report.passed, current_rules_report.findings)
+            candidate_codes = {
+                finding.code for finding in candidate_rules_report.errors
+            }
+            self.assertIn("schema.missing", candidate_codes)
+            self.assertIn("vocabulary.directory_missing", candidate_codes)
+
     def test_workflow_separates_trusted_enforcement_from_candidate_tests(self) -> None:
         trusted_workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
@@ -222,6 +248,11 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("python trusted/scripts/validate_metadata.py", trusted_pr_validation)
         self.assertIn("--root candidate", trusted_pr_validation)
         self.assertIn("--rules-root trusted", trusted_pr_validation)
+        self.assertEqual(
+            trusted_pr_validation.count("python trusted/scripts/validate_metadata.py"),
+            2,
+        )
+        self.assertIn("GITHUB_STEP_SUMMARY=", trusted_pr_validation)
         status_step = steps_by_name[
             "Publish trusted status on pull request merge commit"
         ]
