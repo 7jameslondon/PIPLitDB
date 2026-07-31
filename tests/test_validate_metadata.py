@@ -286,6 +286,8 @@ class MetadataValidationTests(unittest.TestCase):
             REPOSITORY_ROOT / ".github" / "CODEOWNERS"
         ).read_text(encoding="utf-8")
         self.assertIn("/.github/ @7jameslondon", codeowners)
+        self.assertIn("/database/schema/ @7jameslondon", codeowners)
+        self.assertIn("/database/vocabularies/ @7jameslondon", codeowners)
         self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
         status_step = steps_by_name[
             "Publish trusted status on pull request merge commit"
