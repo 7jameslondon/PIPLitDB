@@ -40,7 +40,12 @@ VOCABULARY_SPECS = {
     "record-statuses.yaml": frozenset({"label", "description"}),
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
-PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\s<>\"']+", re.IGNORECASE)
+PUBLIC_URL_RE = re.compile(r"\bhttps?://[^\x20\r\n<>\"']+", re.IGNORECASE)
+AMBIGUOUS_NUMERIC_HOST_RE = re.compile(
+    r"^(?:(?:0x[0-9a-f]+|[0-9]+)\.)+(?:0x[0-9a-f]+|[0-9]+)$",
+    re.IGNORECASE,
+)
+DNS_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$", re.IGNORECASE)
 PRIVATE_HOST_SUFFIXES = (
     ".home",
     ".home.arpa",
@@ -1028,6 +1033,15 @@ class MetadataValidator:
 
         def inspect(match: re.Match[str]) -> str:
             url = match.group(0)
+            if _url_authority_has_unsafe_characters(url):
+                self.report.add(
+                    "error",
+                    "record.notes_url_format",
+                    "Public metadata notes contain a URL with an unsafe authority.",
+                    relative,
+                    line,
+                )
+                return url
             try:
                 parsed = urlsplit(url)
                 # Accessing these properties catches malformed bracketed hosts and ports.
@@ -1101,6 +1115,15 @@ class MetadataValidator:
         relative: str,
         lines: dict[tuple[Any, ...], int],
     ) -> Any | None:
+        if _url_authority_has_unsafe_characters(url):
+            self.report.add(
+                "error",
+                "record.url_format",
+                "URL authority must not contain backslashes or control characters.",
+                relative,
+                self._line_for(lines, ("url",)),
+            )
+            return None
         try:
             parsed = urlsplit(url)
             # Accessing port catches malformed values that urlsplit otherwise accepts.
@@ -1412,12 +1435,37 @@ def _url_host_is_non_public(host: str) -> bool:
     try:
         address = ipaddress.ip_address(normalized)
     except ValueError:
-        return (
+        if (
             "." not in normalized
             or normalized == "localhost"
             or any(normalized.endswith(suffix) for suffix in PRIVATE_HOST_SUFFIXES)
+            or AMBIGUOUS_NUMERIC_HOST_RE.fullmatch(normalized)
+        ):
+            return True
+        try:
+            ascii_host = normalized.encode("idna").decode("ascii")
+        except UnicodeError:
+            return True
+        labels = ascii_host.split(".")
+        return (
+            len(ascii_host) > 253
+            or any(not DNS_LABEL_RE.fullmatch(label) for label in labels)
         )
-    return not address.is_global
+    return not address.is_global or address.is_multicast
+
+
+def _url_authority_has_unsafe_characters(url: str) -> bool:
+    """Reject authority characters with divergent browser and stdlib semantics."""
+    separator = url.find("://")
+    if separator < 0:
+        return False
+    authority = url[separator + 3 :]
+    for delimiter in "/?# ":
+        authority = authority.split(delimiter, 1)[0]
+    return any(
+        character == "\\" or ord(character) < 0x20 or ord(character) == 0x7F
+        for character in authority
+    )
 
 
 def _normalize_title(value: str) -> str:

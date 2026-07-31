@@ -679,27 +679,53 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("record.url_credentials", self.error_codes())
 
     def test_private_url_hosts_are_rejected(self) -> None:
+        urls_and_codes = (
+            ("http://localhost/paper", "record.url_private_host"),
+            ("http://intranet/paper", "record.url_private_host"),
+            ("http://127.0.0.1/paper", "record.url_private_host"),
+            ("http://127.1/paper", "record.url_private_host"),
+            ("http://0177.0.0.1/paper", "record.url_private_host"),
+            ("http://0x7f.0x0.0x0.0x1/paper", "record.url_private_host"),
+            ("http://169.254.169.254/paper", "record.url_private_host"),
+            ("http://10.0.0.1/paper", "record.url_private_host"),
+            ("http://172.16.0.1/paper", "record.url_private_host"),
+            ("http://192.168.0.1/paper", "record.url_private_host"),
+            ("http://224.0.0.1/paper", "record.url_private_host"),
+            ("http://[::1]/paper", "record.url_private_host"),
+            ("http://[fe80::1]/paper", "record.url_private_host"),
+            ("http://[ff02::1]/paper", "record.url_private_host"),
+            (r"http://127.0.0.1\private.pdf", "record.url_format"),
+            ("http://example.test\t.internal/paper", "record.url_format"),
+        )
+        for url, expected_code in urls_and_codes:
+            with self.subTest(url=url):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        'url: "https://doi.org/10.1234/example.1"',
+                        f"url: '{url}'",
+                    ),
+                )
+                self.assertIn(expected_code, self.error_codes())
+
+    def test_public_url_hosts_are_accepted(self) -> None:
         urls = (
-            "http://localhost/paper",
-            "http://intranet/paper",
-            "http://127.0.0.1/paper",
-            "http://169.254.169.254/paper",
-            "http://10.0.0.1/paper",
-            "http://172.16.0.1/paper",
-            "http://192.168.0.1/paper",
-            "http://[::1]/paper",
-            "http://[fe80::1]/paper",
+            "https://example.test/paper",
+            "https://8.8.8.8/paper",
+            "https://[2606:4700:4700::1111]/paper",
         )
         for url in urls:
             with self.subTest(url=url):
                 self.write_record(
                     "00001",
                     VALID_RECORD.replace(
-                        "https://doi.org/10.1234/example.1",
-                        url,
+                        'url: "https://doi.org/10.1234/example.1"',
+                        f"url: '{url}'",
                     ),
                 )
-                self.assertIn("record.url_private_host", self.error_codes())
+                codes = self.error_codes()
+                self.assertNotIn("record.url_format", codes)
+                self.assertNotIn("record.url_private_host", codes)
 
     def test_missing_relationship_target_is_rejected(self) -> None:
         self.write_record(
@@ -874,12 +900,19 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://intranet/private.pdf", "record.notes_url_private_host"),
             ("http://archive.local/private.pdf", "record.notes_url_private_host"),
             ("http://127.0.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://127.1/private.pdf", "record.notes_url_private_host"),
+            ("http://0177.0.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://0x7f.0x0.0x0.0x1/private.pdf", "record.notes_url_private_host"),
             ("http://169.254.169.254/private.pdf", "record.notes_url_private_host"),
             ("http://10.0.0.1/private.pdf", "record.notes_url_private_host"),
             ("http://172.16.0.1/private.pdf", "record.notes_url_private_host"),
             ("http://192.168.0.1/private.pdf", "record.notes_url_private_host"),
+            ("http://224.0.0.1/private.pdf", "record.notes_url_private_host"),
             ("http://[::1]/private.pdf", "record.notes_url_private_host"),
             ("http://[fe80::1]/private.pdf", "record.notes_url_private_host"),
+            ("http://[ff02::1]/private.pdf", "record.notes_url_private_host"),
+            (r"http://127.0.0.1\private.pdf", "record.notes_url_format"),
+            ("http://example.test\t.internal/private.pdf", "record.notes_url_format"),
         )
         for url, expected_code in urls_and_codes:
             with self.subTest(url=url):
