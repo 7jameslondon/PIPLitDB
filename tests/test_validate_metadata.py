@@ -542,6 +542,7 @@ class MetadataValidationTests(unittest.TestCase):
             r"!USERPROFILE!\private\paper.pdf",
             r"!USERPROFILE:~0,3!\private\paper.pdf",
             r"!USERPROFILE:\=/!",
+            r"!ARBITRARY_PRIVATE_LOCATION!\private\paper.pdf",
             r"prefix$env:USERPROFILE",
             r"${env:USERPROFILE}suffix",
             "prefix${HOME}suffix",
@@ -585,6 +586,10 @@ class MetadataValidationTests(unittest.TestCase):
             "The symbolic variable $HOME$ was reported.",
             "Approximately ~10/20 samples responded.",
             "The ratio was ~1/2.",
+            "Preserve the !IMPORTANT! marker.",
+            "The token !DOI! is replaced during export.",
+            "The grouped expression ${HOME / AWAY}$ was reported.",
+            "Template key ${HOME.path} remains literal.",
         )
         for note in notes:
             with self.subTest(note=note):

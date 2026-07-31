@@ -50,7 +50,6 @@ PATH_ENVIRONMENT_VARIABLE_NAME_RE = (
 )
 EXPLICIT_ENVIRONMENT_REFERENCE_RE = re.compile(
     r"(?:%[A-Za-z_][A-Za-z0-9_()]*(?::[^%\r\n]*)?%|"
-    r"![A-Za-z_][A-Za-z0-9_()]*(?::[^!\r\n]*)?!|"
     r"\$env:[A-Za-z_][A-Za-z0-9_()]*|"
     r"\$\{env:[^}=\r\n]+\})",
     re.IGNORECASE,
@@ -64,7 +63,15 @@ BARE_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
 BRACED_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
     r"\$\{"
     + PATH_ENVIRONMENT_VARIABLE_NAME_RE
-    + r"(?![A-Za-z0-9_])[^}\r\n]*\}",
+    + r"(?![A-Za-z0-9_])(?:(?::|[-+=?]|#{1,2}|%{1,2}|/{1,2}[#%]?|"
+    r"\^{1,2}|,{1,2})[^}\r\n]*|@[A-Za-z])?\}",
+    re.IGNORECASE,
+)
+DELAYED_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
+    r"(?:!"
+    + PATH_ENVIRONMENT_VARIABLE_NAME_RE
+    + r"(?![A-Za-z0-9_])(?::[^!\r\n]*)?!|"
+    r"![A-Za-z_][A-Za-z0-9_()]*(?::[^!\r\n]*)?![\\/][^\s]*)",
     re.IGNORECASE,
 )
 PRIVATE_REFERENCE_PATTERNS = (
@@ -73,6 +80,7 @@ PRIVATE_REFERENCE_PATTERNS = (
     EXPLICIT_ENVIRONMENT_REFERENCE_RE,
     BARE_PATH_ENVIRONMENT_REFERENCE_RE,
     BRACED_PATH_ENVIRONMENT_REFERENCE_RE,
+    DELAYED_PATH_ENVIRONMENT_REFERENCE_RE,
     re.compile(r"(?<![A-Za-z0-9_%])%[A-Za-z_][A-Za-z0-9_()]*%[\\/][^\s]*"),
     re.compile(
         r"(?<![A-Za-z0-9_$])\$(?:env:[A-Za-z_][A-Za-z0-9_]*|\{env:[^}=\r\n]+\})[\\/][^\s]*",
