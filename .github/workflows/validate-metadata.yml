@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: metadata-validation-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
@@ -24,7 +25,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate metadata records
+    name: Run trusted metadata validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -63,10 +64,12 @@ jobs:
         run: python -m pip install --requirement trusted/requirements-validation.txt
 
       - name: Validate pull request with trusted validator
+        id: trusted_validation
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'pull_request_target' }}
         run: >-
           python trusted/scripts/validate_metadata.py
           --root candidate
+          --rules-root trusted
           --base "${{ github.event.pull_request.base.sha }}"
           --head "${{ github.event.pull_request.merge_commit_sha }}"
 
@@ -87,3 +90,23 @@ jobs:
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name != 'pull_request_target' }}
         working-directory: trusted
         run: python -m unittest discover --start-directory tests --verbose
+
+      - name: Publish trusted status on pull request merge commit
+        if: ${{ always() && github.event_name == 'pull_request_target' }}
+        uses: actions/github-script@v8
+        env:
+          VALIDATION_STATE: ${{ steps.trusted_validation.outcome == 'success' && 'success' || 'failure' }}
+        with:
+          script: |
+            const state = process.env.VALIDATION_STATE;
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.merge_commit_sha,
+              state,
+              context: "Validate metadata records",
+              description: state === "success"
+                ? "Trusted metadata validation passed."
+                : "Trusted metadata validation failed.",
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });

@@ -122,12 +122,13 @@ That default uses merge-base semantics to summarize a pull-request branch. For a
 such as a pushed branch's before and after commits, add `--comparison direct`.
 
 Two isolated GitHub Actions workflows cover pull requests. The `Validate metadata` workflow's
-`Validate metadata records` enforcement job uses the workflow, dependencies, and validator from the
-trusted base branch and treats the proposed pull-request checkout as data only. This prevents a pull
-request from weakening the validator that judges it, so the job can safely be made a required
-branch-protection check. The separate `Test metadata validator` workflow runs `Test proposed metadata
-validator` in the ordinary, read-only pull-request context to exercise validator changes before they
-merge without creating the protected check name.
+trusted job uses the workflow, dependencies, validator, schema, and controlled vocabularies from the
+base branch and treats the proposed pull-request checkout's records as data only. It publishes the
+`Validate metadata records` status directly on the pull request's merge commit, so that status can be
+made a required branch-protection check without letting a pull request weaken the rules that judge
+it. The separate `Test metadata validator` workflow runs `Test proposed metadata validator` in the
+ordinary, read-only pull-request context to exercise validator and rule changes before they merge
+without creating the protected status name.
 
 The trusted job validates the entire resulting database, not only changed files, so removing a
 referenced record or changing only one side of a relationship fails the check. It also adds a job

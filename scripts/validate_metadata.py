@@ -76,8 +76,8 @@ DELAYED_PATH_ENVIRONMENT_REFERENCE_RE = re.compile(
 )
 BARE_RELATIVE_FILE_REFERENCE_RE = re.compile(
     r"(?<![A-Za-z0-9_.:/\\-])"
-    r"(?:[A-Za-z0-9_-]+[\\/])+"
-    r"[A-Za-z0-9_][A-Za-z0-9_.-]*\.[A-Za-z0-9]{1,16}"
+    r"(?:[A-Za-z0-9_-](?:[A-Za-z0-9_ -]*[A-Za-z0-9_-])?[\\/])+"
+    r"[A-Za-z0-9_](?:[A-Za-z0-9_. -]*[A-Za-z0-9_-])?\.[A-Za-z0-9]{1,16}"
     r"(?![A-Za-z0-9_])"
 )
 PRIVATE_REFERENCE_PATTERNS = (
@@ -231,8 +231,11 @@ class ParsedYaml:
 
 
 class MetadataValidator:
-    def __init__(self, root: Path, report: ValidationReport) -> None:
+    def __init__(
+        self, root: Path, report: ValidationReport, rules_root: Path | None = None
+    ) -> None:
         self.root = root
+        self.rules_root = rules_root or root
         self.report = report
         self.schema: dict[str, Any] | None = None
         self.schema_validator: Any | None = None
@@ -250,19 +253,24 @@ class MetadataValidator:
         self._validate_database_invariants()
 
     def _relative(self, path: Path) -> str:
-        try:
-            return path.relative_to(self.root).as_posix()
-        except ValueError:
-            return path.as_posix()
+        for root in (self.root, self.rules_root):
+            try:
+                return path.relative_to(root).as_posix()
+            except ValueError:
+                continue
+        return path.as_posix()
 
-    def _unsafe_path_component(self, path: Path) -> Path | None:
+    def _unsafe_path_component(
+        self, path: Path, allowed_root: Path | None = None
+    ) -> Path | None:
         """Return a symlink/junction component or a path that escapes the repository."""
+        allowed_root = allowed_root or self.root
         try:
-            relative_parts = path.relative_to(self.root).parts
+            relative_parts = path.relative_to(allowed_root).parts
         except ValueError:
             return path
 
-        current = self.root
+        current = allowed_root
         for part in relative_parts:
             current /= part
             is_junction = getattr(current, "is_junction", lambda: False)
@@ -270,13 +278,19 @@ class MetadataValidator:
                 return current
 
         try:
-            path.resolve(strict=False).relative_to(self.root)
+            path.resolve(strict=False).relative_to(allowed_root)
         except (OSError, RuntimeError, ValueError):
             return path
         return None
 
-    def _reject_unsafe_path(self, path: Path, kind: str, label: str) -> bool:
-        unsafe_component = self._unsafe_path_component(path)
+    def _reject_unsafe_path(
+        self,
+        path: Path,
+        kind: str,
+        label: str,
+        allowed_root: Path | None = None,
+    ) -> bool:
+        unsafe_component = self._unsafe_path_component(path, allowed_root)
         if unsafe_component is None:
             return False
         self.report.add(
@@ -298,9 +312,11 @@ class MetadataValidator:
         return lines.get((), 1)
 
     def _load_schema(self) -> None:
-        path = self.root / "database" / "schema" / "paper.schema.json"
+        path = self.rules_root / "database" / "schema" / "paper.schema.json"
         relative = self._relative(path)
-        if self._reject_unsafe_path(path, "schema", "Paper schema path"):
+        if self._reject_unsafe_path(
+            path, "schema", "Paper schema path", self.rules_root
+        ):
             return
         if not path.is_file():
             self.report.add("error", "schema.missing", "Paper schema is missing.", relative)
@@ -383,9 +399,12 @@ class MetadataValidator:
             )
 
     def _load_vocabularies(self) -> None:
-        directory = self.root / "database" / "vocabularies"
+        directory = self.rules_root / "database" / "vocabularies"
         if self._reject_unsafe_path(
-            directory, "vocabulary", "Vocabulary directory path"
+            directory,
+            "vocabulary",
+            "Vocabulary directory path",
+            self.rules_root,
         ):
             return
         if not directory.is_dir():
@@ -400,7 +419,9 @@ class MetadataValidator:
         for filename, required_fields in VOCABULARY_SPECS.items():
             path = directory / filename
             relative = self._relative(path)
-            parsed = self._read_yaml(path, "vocabulary")
+            parsed = self._read_yaml(
+                path, "vocabulary", allowed_root=self.rules_root
+            )
             if parsed is None:
                 continue
             self.vocabulary_lines[filename] = parsed.lines
@@ -618,9 +639,13 @@ class MetadataValidator:
                 relative_directory,
             )
 
-    def _read_yaml(self, path: Path, kind: str) -> ParsedYaml | None:
+    def _read_yaml(
+        self, path: Path, kind: str, allowed_root: Path | None = None
+    ) -> ParsedYaml | None:
         relative = self._relative(path)
-        if self._reject_unsafe_path(path, kind, f"Required {kind} file path"):
+        if self._reject_unsafe_path(
+            path, kind, f"Required {kind} file path", allowed_root
+        ):
             return None
         if not path.is_file():
             self.report.add(
@@ -1511,10 +1536,12 @@ def validate_repository(
     base: str | None = None,
     head: str = "HEAD",
     comparison: str = "merge-base",
+    rules_root: Path | str | None = None,
 ) -> ValidationReport:
     root_path = Path(root).resolve()
+    rules_root_path = Path(rules_root).resolve() if rules_root else root_path
     report = ValidationReport(root=root_path, compared_base=base, compared_head=head if base else None)
-    MetadataValidator(root_path, report).validate()
+    MetadataValidator(root_path, report, rules_root_path).validate()
     if base:
         report.changes = detect_record_changes(
             root_path, base, head, report, comparison=comparison
@@ -1701,6 +1728,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Repository root (defaults to the parent of this script's directory).",
     )
     parser.add_argument(
+        "--rules-root",
+        type=Path,
+        help=(
+            "Trusted repository root supplying the schema and controlled "
+            "vocabularies (defaults to --root)."
+        ),
+    )
+    parser.add_argument(
         "--base",
         help="Base Git revision used to classify record additions, removals, modifications, and renames.",
     )
@@ -1729,7 +1764,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     _configure_stdout()
     args = parse_args(argv)
-    report = validate_repository(args.root, args.base, args.head, args.comparison)
+    report = validate_repository(
+        args.root,
+        args.base,
+        args.head,
+        args.comparison,
+        rules_root=args.rules_root,
+    )
     print_report(report)
     summary_file = args.summary_file
     if summary_file is None and os.environ.get("GITHUB_STEP_SUMMARY"):

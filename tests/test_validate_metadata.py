@@ -127,6 +127,57 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertTrue(report.passed, report.findings)
         self.assertEqual(report.record_count, 1)
 
+    def test_trusted_rules_root_ignores_candidate_rule_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as trusted_directory:
+            trusted_root = Path(trusted_directory)
+            shutil.copytree(
+                self.root / "database" / "schema",
+                trusted_root / "database" / "schema",
+            )
+            shutil.copytree(
+                self.root / "database" / "vocabularies",
+                trusted_root / "database" / "vocabularies",
+            )
+
+            (self.root / "database" / "schema" / "paper.schema.json").write_text(
+                """{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["document_type", "publication_stage"],
+  "properties": {
+    "document_type": {"type": "string"},
+    "publication_stage": {"type": "string"}
+  }
+}
+""",
+                encoding="utf-8",
+            )
+            document_types = (
+                self.root / "database" / "vocabularies" / "document-types.yaml"
+            )
+            document_types.write_text(
+                document_types.read_text(encoding="utf-8")
+                + "rogue_type:\n"
+                + "  label: Rogue type\n"
+                + "  description: Candidate-only rule.\n",
+                encoding="utf-8",
+            )
+            self.write_record(
+                "00001",
+                "document_type: rogue_type\npublication_stage: publication\n",
+            )
+
+            candidate_report = validate_repository(self.root)
+            trusted_report = validate_repository(
+                self.root, rules_root=trusted_root
+            )
+
+            self.assertTrue(candidate_report.passed, candidate_report.findings)
+            trusted_codes = {finding.code for finding in trusted_report.errors}
+            self.assertIn("schema.required", trusted_codes)
+            self.assertIn("record.unknown_vocabulary_value", trusted_codes)
+
     def test_workflow_separates_trusted_enforcement_from_candidate_tests(self) -> None:
         trusted_workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
@@ -140,9 +191,10 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn(
             "github.event_name", trusted_workflow["concurrency"]["group"]
         )
+        self.assertEqual(trusted_workflow["permissions"]["statuses"], "write")
 
         trusted_job = trusted_workflow["jobs"]["validate"]
-        self.assertEqual(trusted_job["name"], "Validate metadata records")
+        self.assertEqual(trusted_job["name"], "Run trusted metadata validation")
         self.assertNotIn("if", trusted_job)
         steps = trusted_job["steps"]
         steps_by_name = {step["name"]: step for step in steps}
@@ -169,6 +221,20 @@ class MetadataValidationTests(unittest.TestCase):
         ]["run"]
         self.assertIn("python trusted/scripts/validate_metadata.py", trusted_pr_validation)
         self.assertIn("--root candidate", trusted_pr_validation)
+        self.assertIn("--rules-root trusted", trusted_pr_validation)
+        status_step = steps_by_name[
+            "Publish trusted status on pull request merge commit"
+        ]
+        self.assertIn("always()", status_step["if"])
+        self.assertEqual(status_step["uses"], "actions/github-script@v8")
+        self.assertIn(
+            "context.payload.pull_request.merge_commit_sha",
+            status_step["with"]["script"],
+        )
+        self.assertIn(
+            'context: "Validate metadata records"',
+            status_step["with"]["script"],
+        )
         self.assertFalse(
             any(
                 "python candidate/" in step.get("run", "")
@@ -588,6 +654,9 @@ class MetadataValidationTests(unittest.TestCase):
             r".\restricted\00001\main.pdf",
             "scans/Jones2024.pdf",
             r"archive\Jones2024.pdf",
+            "scans/Jones 2024.pdf",
+            r"archive\Jones 2024.pdf",
+            "local scans/Jones final 2024.pdf",
             "exports/2024/Jones.json",
             "See scans/Jones2024.pdf for the local copy",
             "/secret.pdf",
