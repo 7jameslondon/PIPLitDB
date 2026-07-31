@@ -527,6 +527,12 @@ class MetadataValidationTests(unittest.TestCase):
             "%USERPROFILE%",
             r"$env:USERPROFILE",
             r"${env:USERPROFILE}",
+            "$PWD",
+            "$OLDPWD",
+            "$XDG_RUNTIME_DIR",
+            "%CD%",
+            r"$env:PUBLIC",
+            r"$env:ALLUSERSPROFILE",
         )
         for reference in references:
             with self.subTest(reference=reference):
