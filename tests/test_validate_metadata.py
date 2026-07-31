@@ -539,9 +539,14 @@ class MetadataValidationTests(unittest.TestCase):
             "%USERPROFILE%suffix",
             r"%USERPROFILE:~0,3%\private\paper.pdf",
             r"%USERPROFILE:\=/%",
+            r"!USERPROFILE!\private\paper.pdf",
+            r"!USERPROFILE:~0,3!\private\paper.pdf",
+            r"!USERPROFILE:\=/!",
             r"prefix$env:USERPROFILE",
             r"${env:USERPROFILE}suffix",
             "prefix${HOME}suffix",
+            "${HOME%/*}",
+            "${HOME:-/tmp}/private/paper.pdf",
             "prefix$HOME/private/paper.pdf",
             "$PWD",
             "$OLDPWD",
@@ -578,6 +583,8 @@ class MetadataValidationTests(unittest.TestCase):
         notes = (
             "The ratio $A/B$ was reported.",
             "The symbolic variable $HOME$ was reported.",
+            "Approximately ~10/20 samples responded.",
+            "The ratio was ~1/2.",
         )
         for note in notes:
             with self.subTest(note=note):
