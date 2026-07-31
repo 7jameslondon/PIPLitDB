@@ -1,0 +1,16 @@
+document_type: research_article
+publication_stage: publication
+title: "A synthetic DNA-binding inhibitor of SOX2 guides human induced pluripotent stem cells to differentiate into mesoderm"
+authors:
+  - name: "Junichi Taniguchi"
+  - name: "Ganesh N. Pandian"
+  - name: "Takuya Hidaka"
+  - name: "Kaori Hashiya"
+  - name: "Toshikazu Bando"
+  - name: "Kyeong Kyu Kim"
+  - name: "Hiroshi Sugiyama"
+doi: "10.1093/nar/gkx693"
+url: "https://doi.org/10.1093/nar/gkx693"
+publication_year: 2017
+journal: "Nucleic Acids Research"
+pip_litdb_status: needs_review

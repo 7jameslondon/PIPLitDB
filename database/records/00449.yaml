@@ -1,0 +1,15 @@
+document_type: research_article
+publication_stage: publication
+title: "DNA binding thermodynamics and site stoichiometry as a function of polyamide size"
+authors:
+  - name: "Song Y"
+  - name: "Niederschulte J"
+  - name: "Bales KN"
+  - name: "Park AH"
+  - name: "Bashkin JK"
+  - name: "Dupureur CM"
+doi: "10.1016/j.biochi.2019.07.021"
+url: "https://doi.org/10.1016/j.biochi.2019.07.021"
+publication_year: 2019
+journal: "Biochimie"
+pip_litdb_status: needs_review

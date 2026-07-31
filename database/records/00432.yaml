@@ -1,0 +1,12 @@
+document_type: research_article
+publication_stage: publication
+title: "Knowledge-Based Elastic Potentials for Docking Drugs or Proteins with Nucleic Acids"
+authors:
+  - name: "Ge W"
+  - name: "Schneider B"
+  - name: "Olson WK"
+doi: "10.1529/biophysj.104.043612"
+url: "https://doi.org/10.1529/biophysj.104.043612"
+publication_year: 2005
+journal: "Biophysical Journal"
+pip_litdb_status: needs_review
