@@ -1,0 +1,5 @@
+# Metadata validation enforcement changes require repository-owner review.
+/.github/ @7jameslondon
+/requirements-validation.txt @7jameslondon
+/scripts/validate_metadata.py @7jameslondon
+/tests/test_validate_metadata.py @7jameslondon

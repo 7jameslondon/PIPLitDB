@@ -204,6 +204,25 @@ class MetadataValidationTests(unittest.TestCase):
             self.assertIn("schema.missing", candidate_codes)
             self.assertIn("vocabulary.directory_missing", candidate_codes)
 
+    def test_required_enforcement_artifacts_must_remain_regular_files(self) -> None:
+        artifact = self.root / "scripts" / "validate_metadata.py"
+        artifact.parent.mkdir()
+        artifact.write_text("# trusted artifact\n", encoding="utf-8")
+        required = ("scripts/validate_metadata.py",)
+
+        present_report = validate_repository(
+            self.root, required_artifacts=required
+        )
+        artifact.unlink()
+        missing_report = validate_repository(
+            self.root, required_artifacts=required
+        )
+
+        self.assertTrue(present_report.passed, present_report.findings)
+        self.assertIn(
+            "artifact.missing", {finding.code for finding in missing_report.errors}
+        )
+
     def test_workflow_separates_trusted_enforcement_from_candidate_tests(self) -> None:
         trusted_workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
@@ -253,6 +272,21 @@ class MetadataValidationTests(unittest.TestCase):
             2,
         )
         self.assertIn("GITHUB_STEP_SUMMARY=", trusted_pr_validation)
+        for artifact in (
+            ".github/CODEOWNERS",
+            ".github/workflows/validate-metadata.yml",
+            ".github/workflows/test-metadata-validator.yml",
+            "requirements-validation.txt",
+            "scripts/validate_metadata.py",
+            "tests/test_validate_metadata.py",
+        ):
+            with self.subTest(artifact=artifact):
+                self.assertIn(f"--require-artifact {artifact}", trusted_pr_validation)
+        codeowners = (
+            REPOSITORY_ROOT / ".github" / "CODEOWNERS"
+        ).read_text(encoding="utf-8")
+        self.assertIn("/.github/ @7jameslondon", codeowners)
+        self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
         status_step = steps_by_name[
             "Publish trusted status on pull request merge commit"
         ]

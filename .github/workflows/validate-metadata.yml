@@ -75,7 +75,13 @@ jobs:
           # Trusted code also verifies that proposed rule files remain present,
           # parseable, symlink-safe, and internally consistent.
           GITHUB_STEP_SUMMARY= python trusted/scripts/validate_metadata.py \
-            --root candidate
+            --root candidate \
+            --require-artifact .github/CODEOWNERS \
+            --require-artifact .github/workflows/validate-metadata.yml \
+            --require-artifact .github/workflows/test-metadata-validator.yml \
+            --require-artifact requirements-validation.txt \
+            --require-artifact scripts/validate_metadata.py \
+            --require-artifact tests/test_validate_metadata.py
 
       - name: Validate pushed result and summarize record changes
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}

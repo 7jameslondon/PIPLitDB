@@ -245,12 +245,42 @@ class MetadataValidator:
         self.record_paths: dict[str, str] = {}
         self.record_lines: dict[str, dict[tuple[Any, ...], int]] = {}
 
-    def validate(self) -> None:
+    def validate(self, required_artifacts: Sequence[str] = ()) -> None:
         self._load_schema()
         self._load_vocabularies()
         self._load_records()
         self._validate_record_schema_and_values()
         self._validate_database_invariants()
+        self._validate_required_artifacts(required_artifacts)
+
+    def _validate_required_artifacts(
+        self, required_artifacts: Sequence[str]
+    ) -> None:
+        for relative in required_artifacts:
+            artifact = Path(relative)
+            if (
+                not relative
+                or artifact.is_absolute()
+                or any(part in {"", ".", ".."} for part in artifact.parts)
+            ):
+                self.report.add(
+                    "error",
+                    "artifact.path",
+                    f"Required artifact path {relative!r} must be repository-relative.",
+                )
+                continue
+            path = self.root.joinpath(*artifact.parts)
+            if self._reject_unsafe_path(
+                path, "artifact", f"Required artifact {relative!r}"
+            ):
+                continue
+            if not path.is_file():
+                self.report.add(
+                    "error",
+                    "artifact.missing",
+                    f"Required enforcement artifact {relative!r} is missing.",
+                    artifact.as_posix(),
+                )
 
     def _relative(self, path: Path) -> str:
         for root in (self.root, self.rules_root):
@@ -1537,11 +1567,12 @@ def validate_repository(
     head: str = "HEAD",
     comparison: str = "merge-base",
     rules_root: Path | str | None = None,
+    required_artifacts: Sequence[str] = (),
 ) -> ValidationReport:
     root_path = Path(root).resolve()
     rules_root_path = Path(rules_root).resolve() if rules_root else root_path
     report = ValidationReport(root=root_path, compared_base=base, compared_head=head if base else None)
-    MetadataValidator(root_path, report, rules_root_path).validate()
+    MetadataValidator(root_path, report, rules_root_path).validate(required_artifacts)
     if base:
         report.changes = detect_record_changes(
             root_path, base, head, report, comparison=comparison
@@ -1736,6 +1767,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--require-artifact",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help=(
+            "Require a repository-relative enforcement artifact to remain a regular "
+            "file; may be supplied more than once."
+        ),
+    )
+    parser.add_argument(
         "--base",
         help="Base Git revision used to classify record additions, removals, modifications, and renames.",
     )
@@ -1770,6 +1811,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.head,
         args.comparison,
         rules_root=args.rules_root,
+        required_artifacts=args.require_artifact,
     )
     print_report(report)
     summary_file = args.summary_file
