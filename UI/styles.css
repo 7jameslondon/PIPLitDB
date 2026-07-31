@@ -536,8 +536,8 @@ input:focus-visible {
 }
 
 .record-id-tag {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  letter-spacing: 0.025em;
+  color: #38566c;
+  background: #e3edf3;
 }
 
 .record-year-inline {
