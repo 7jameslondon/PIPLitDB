@@ -499,7 +499,7 @@
     });
 
     const top = element("div", { className: "record-card-top" }, [
-      element("span", { className: "record-id", text: `PIP ${record.pip_litdb_id}` }),
+      element("span", { className: "record-id", text: `PAPER ID ${record.pip_litdb_id}` }),
       element("span", {
         className: "record-year",
         text: record.publication_year ? String(record.publication_year) : "Year unknown",
