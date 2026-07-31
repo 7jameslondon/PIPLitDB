@@ -1033,11 +1033,11 @@ class MetadataValidator:
 
         def inspect(match: re.Match[str]) -> str:
             url = match.group(0)
-            if _url_authority_has_unsafe_characters(url):
+            if _url_has_unsafe_characters(url):
                 self.report.add(
                     "error",
                     "record.notes_url_format",
-                    "Public metadata notes contain a URL with an unsafe authority.",
+                    "Public metadata notes contain a URL with backslashes or whitespace/control characters.",
                     relative,
                     line,
                 )
@@ -1115,11 +1115,11 @@ class MetadataValidator:
         relative: str,
         lines: dict[tuple[Any, ...], int],
     ) -> Any | None:
-        if _url_authority_has_unsafe_characters(url):
+        if _url_has_unsafe_characters(url):
             self.report.add(
                 "error",
                 "record.url_format",
-                "URL authority must not contain backslashes or control characters.",
+                "URL must not contain backslashes or whitespace/control characters.",
                 relative,
                 self._line_for(lines, ("url",)),
             )
@@ -1435,36 +1435,36 @@ def _url_host_is_non_public(host: str) -> bool:
     try:
         address = ipaddress.ip_address(normalized)
     except ValueError:
-        if (
-            "." not in normalized
-            or normalized == "localhost"
-            or any(normalized.endswith(suffix) for suffix in PRIVATE_HOST_SUFFIXES)
-            or AMBIGUOUS_NUMERIC_HOST_RE.fullmatch(normalized)
-        ):
-            return True
         try:
-            ascii_host = normalized.encode("idna").decode("ascii")
+            normalized = normalized.encode("idna").decode("ascii").casefold().rstrip(".")
         except UnicodeError:
             return True
-        labels = ascii_host.split(".")
-        return (
-            len(ascii_host) > 253
-            or any(not DNS_LABEL_RE.fullmatch(label) for label in labels)
-        )
+        try:
+            address = ipaddress.ip_address(normalized)
+        except ValueError:
+            if (
+                "." not in normalized
+                or normalized == "localhost"
+                or any(normalized.endswith(suffix) for suffix in PRIVATE_HOST_SUFFIXES)
+                or AMBIGUOUS_NUMERIC_HOST_RE.fullmatch(normalized)
+            ):
+                return True
+            labels = normalized.split(".")
+            return (
+                len(normalized) > 253
+                or any(not DNS_LABEL_RE.fullmatch(label) for label in labels)
+            )
     return not address.is_global or address.is_multicast
 
 
-def _url_authority_has_unsafe_characters(url: str) -> bool:
-    """Reject authority characters with divergent browser and stdlib semantics."""
-    separator = url.find("://")
-    if separator < 0:
-        return False
-    authority = url[separator + 3 :]
-    for delimiter in "/?# ":
-        authority = authority.split(delimiter, 1)[0]
+def _url_has_unsafe_characters(url: str) -> bool:
+    """Reject URL characters with divergent browser and stdlib semantics."""
     return any(
-        character == "\\" or ord(character) < 0x20 or ord(character) == 0x7F
-        for character in authority
+        character == "\\"
+        or character.isspace()
+        or ord(character) < 0x20
+        or ord(character) == 0x7F
+        for character in url
     )
 
 

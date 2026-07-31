@@ -686,6 +686,10 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://127.1/paper", "record.url_private_host"),
             ("http://0177.0.0.1/paper", "record.url_private_host"),
             ("http://0x7f.0x0.0x0.0x1/paper", "record.url_private_host"),
+            ("http://１２７.０.０.１/paper", "record.url_private_host"),
+            ("http://０１７７.０.０.１/paper", "record.url_private_host"),
+            ("http://archive.ｌｏｃａｌ/paper", "record.url_private_host"),
+            ("http://metadata.ｌｏｃａｌｈｏｓｔ/paper", "record.url_private_host"),
             ("http://169.254.169.254/paper", "record.url_private_host"),
             ("http://10.0.0.1/paper", "record.url_private_host"),
             ("http://172.16.0.1/paper", "record.url_private_host"),
@@ -696,6 +700,8 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://[ff02::1]/paper", "record.url_private_host"),
             (r"http://127.0.0.1\private.pdf", "record.url_format"),
             ("http://example.test\t.internal/paper", "record.url_format"),
+            ("https://example.test/\t/tmp/private.pdf", "record.url_format"),
+            ("https://example.test/\u00a0/tmp/private.pdf", "record.url_format"),
         )
         for url, expected_code in urls_and_codes:
             with self.subTest(url=url):
@@ -711,6 +717,7 @@ class MetadataValidationTests(unittest.TestCase):
     def test_public_url_hosts_are_accepted(self) -> None:
         urls = (
             "https://example.test/paper",
+            "https://例え.テスト/paper",
             "https://8.8.8.8/paper",
             "https://[2606:4700:4700::1111]/paper",
         )
@@ -903,6 +910,10 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://127.1/private.pdf", "record.notes_url_private_host"),
             ("http://0177.0.0.1/private.pdf", "record.notes_url_private_host"),
             ("http://0x7f.0x0.0x0.0x1/private.pdf", "record.notes_url_private_host"),
+            ("http://１２７.０.０.１/private.pdf", "record.notes_url_private_host"),
+            ("http://０１７７.０.０.１/private.pdf", "record.notes_url_private_host"),
+            ("http://archive.ｌｏｃａｌ/private.pdf", "record.notes_url_private_host"),
+            ("http://metadata.ｌｏｃａｌｈｏｓｔ/private.pdf", "record.notes_url_private_host"),
             ("http://169.254.169.254/private.pdf", "record.notes_url_private_host"),
             ("http://10.0.0.1/private.pdf", "record.notes_url_private_host"),
             ("http://172.16.0.1/private.pdf", "record.notes_url_private_host"),
@@ -913,6 +924,8 @@ class MetadataValidationTests(unittest.TestCase):
             ("http://[ff02::1]/private.pdf", "record.notes_url_private_host"),
             (r"http://127.0.0.1\private.pdf", "record.notes_url_format"),
             ("http://example.test\t.internal/private.pdf", "record.notes_url_format"),
+            ("https://example.test/\t/tmp/private.pdf", "record.notes_url_format"),
+            ("https://example.test/\u00a0/tmp/private.pdf", "record.notes_url_format"),
         )
         for url, expected_code in urls_and_codes:
             with self.subTest(url=url):
@@ -921,6 +934,17 @@ class MetadataValidationTests(unittest.TestCase):
                     VALID_RECORD + f"pip_litdb_notes: 'See {url}'\n",
                 )
                 self.assertIn(expected_code, self.error_codes())
+
+    def test_internationalized_public_url_in_notes_is_accepted(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD + "pip_litdb_notes: 'See https://例え.テスト/paper'\n",
+        )
+
+        codes = self.error_codes()
+        self.assertNotIn("record.notes_url_format", codes)
+        self.assertNotIn("record.notes_url_private_host", codes)
+        self.assertNotIn("record.private_reference", codes)
 
     def test_inline_math_is_not_a_private_reference(self) -> None:
         notes = (
