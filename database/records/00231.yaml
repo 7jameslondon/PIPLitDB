@@ -1,12 +1,13 @@
 document_type: research_article
 publication_stage: publication
-title: "Sequence-specific alkylation of DNA by pyrrole-imidazole polyamides through cooperative interaction."
+title: "Sequence-specific alkylation of DNA by pyrrole-imidazole polyamides through cooperative interaction"
 authors:
-  - name: "G. Kashiwazaki"
-  - name: "T. Bando"
-  - name: "H. Sugiyama"
+  - name: "Gengo Kashiwazaki"
+  - name: "Toshikazu Bando"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nass/nrn184"
 url: "https://doi.org/10.1093/nass/nrn184"
 publication_year: 2008
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
+pip_litdb_notes: "The article PDF and PubMed use 'imidazole' in the title; the Oxford Academic webpage and current Crossref metadata use the apparent typo 'imiclazole'."

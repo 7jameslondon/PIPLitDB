@@ -2,17 +2,17 @@ document_type: research_article
 publication_stage: publication
 title: "Synthetic DNA-Binding Inhibitor of HES1 Alters the Notch Signaling Pathway and Induces Neuronal Differentiation"
 authors:
-  - name: "Wei Y"
-  - name: "Pandian GN"
-  - name: "Yu Z"
-  - name: "Zou T"
-  - name: "Li Y"
-  - name: "Darokar J"
-  - name: "Hashiya K"
-  - name: "Bando T"
-  - name: "Sugiyama H"
+  - name: "Yulei Wei"
+  - name: "Ganesh N. Pandian"
+  - name: "Zutao Yu"
+  - name: "Tingting Zou"
+  - name: "Yue Li"
+  - name: "Jayant Darokar"
+  - name: "Kaori Hashiya"
+  - name: "Toshikazu Bando"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1021/acsomega.8b00220"
 url: "https://doi.org/10.1021/acsomega.8b00220"
 publication_year: 2018
 journal: "ACS Omega"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

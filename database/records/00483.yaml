@@ -9,4 +9,4 @@ doi: "10.1016/j.tet.2013.05.126"
 url: "https://doi.org/10.1016/j.tet.2013.05.126"
 publication_year: 2013
 journal: "Tetrahedron"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

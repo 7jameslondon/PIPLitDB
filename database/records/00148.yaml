@@ -14,4 +14,4 @@ doi: "10.1021/jm401100s"
 url: "https://doi.org/10.1021/jm401100s"
 publication_year: 2013
 journal: "Journal of Medicinal Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

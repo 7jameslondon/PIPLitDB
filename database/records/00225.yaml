@@ -12,6 +12,6 @@ authors:
   - name: "Koichi Matsumoto"
 doi: "10.1093/cvr/cvn355"
 url: "https://doi.org/10.1093/cvr/cvn355"
-publication_year: 2008
+publication_year: 2009
 journal: "Cardiovascular Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

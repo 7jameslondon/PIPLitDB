@@ -1,14 +1,14 @@
 document_type: research_article
 publication_stage: publication
-title: "Fmoc solid-phase synthesis and its application to pyrroleimidazole polyamides"
+title: "Fmoc solid-phase synthesis and its application to pyrrole-imidazole polyamides"
 authors:
-  - name: "H. Ayame"
-  - name: "T. Saito"
-  - name: "T. Bando"
-  - name: "N. Fukuda"
-  - name: "H. Sugiyama"
+  - name: "Hirohito Ayame"
+  - name: "Takashi Saito"
+  - name: "Toshikazu Bando"
+  - name: "Noboru Fukuda"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nass/3.1.67"
 url: "https://doi.org/10.1093/nass/3.1.67"
 publication_year: 2003
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

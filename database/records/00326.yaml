@@ -2,11 +2,11 @@ document_type: research_article
 publication_stage: publication
 title: "Chromatin Opening of DNA Satellites by Targeted Sequence-Specific Drugs"
 authors:
-  - name: "Sam Janssen"
+  - name: "Samuel Théodoor Janssen"
   - name: "Thérèse Durussel"
-  - name: "Ulrich K. Laemmli"
+  - name: "Ulrich Karl Laemmli"
 doi: "10.1016/s1097-2765(00)00099-x"
 url: "https://doi.org/10.1016/s1097-2765(00)00099-x"
 publication_year: 2000
 journal: "Molecular Cell"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

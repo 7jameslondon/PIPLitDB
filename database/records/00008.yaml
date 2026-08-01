@@ -2,11 +2,11 @@ document_type: research_article
 publication_stage: publication
 title: "Potentiometric Determination of Acid Dissociation Constants (pKa) for an Anticancer Pyrrole-Imidazole Polyamide"
 authors:
-  - name: "Li X"
-  - name: "Shi Z"
-  - name: "Jia T"
+  - name: "Xue Li"
+  - name: "Zhaofang Shi"
+  - name: "Tiezheng Jia"
 doi: "10.1021/acsmedchemlett.2c00348"
 url: "https://doi.org/10.1021/acsmedchemlett.2c00348"
 publication_year: 2022
 journal: "ACS Medicinal Chemistry Letters"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

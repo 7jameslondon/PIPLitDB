@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "Targeting the Ets Binding Site of the HER2/neuPromoter with Pyrrole-Imidazole Polyamides"
+title: "Targeting the Ets Binding Site of the HER2/neu Promoter with Pyrrole-Imidazole Polyamides"
 authors:
   - name: "Shu-Yuan Chiang"
   - name: "Roland W. Bürli"
@@ -13,4 +13,4 @@ doi: "10.1074/jbc.m000820200"
 url: "https://doi.org/10.1074/jbc.m000820200"
 publication_year: 2000
 journal: "Journal of Biological Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

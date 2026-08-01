@@ -2,17 +2,17 @@ document_type: research_article
 publication_stage: publication
 title: "Sequence-specific DNA cleavage mediated by bipyridine polyamide conjugates"
 authors:
-  - name: "Simon P"
-  - name: "Cannata F"
-  - name: "Perrouault L"
-  - name: "Halby L"
-  - name: "Concordet JP"
-  - name: "Boutorine A"
-  - name: "Ryabinin V"
-  - name: "Sinyakov A"
-  - name: "Giovannangeli C"
+  - name: "Philippe Simon"
+  - name: "Fabio Cannata"
+  - name: "Loïc Perrouault"
+  - name: "Ludovic Halby"
+  - name: "Jean-Paul Concordet"
+  - name: "Alexandre Boutorine"
+  - name: "Vladimir Ryabinin"
+  - name: "Alexandre Sinyakov"
+  - name: "Carine Giovannangeli"
 doi: "10.1093/nar/gkn231"
 url: "https://doi.org/10.1093/nar/gkn231"
 publication_year: 2008
 journal: "Nucleic Acids Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "A Polyamide Inhibits Replication of Vesicular Stomatitis Virus by Targeting RNA in the Nucleocapsid."
+title: "A Polyamide Inhibits Replication of Vesicular Stomatitis Virus by Targeting RNA in the Nucleocapsid"
 authors:
   - name: "Ryan H. Gumpper"
   - name: "Weike Li"
@@ -12,4 +12,4 @@ doi: "10.1128/jvi.00146-18"
 url: "https://doi.org/10.1128/jvi.00146-18"
 publication_year: 2018
 journal: "Journal of Virology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

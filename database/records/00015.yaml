@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "Sequence-Specific Minor Groove Binders in Labeling and Single-Molecule Analysis of DNA."
+title: "Sequence-Specific Minor Groove Binders in Labeling and Single-Molecule Analysis of DNA"
 authors:
   - name: "Xiong Chen"
   - name: "Sergey Abakumov"
@@ -14,6 +14,6 @@ authors:
   - name: "Johan Hofkens"
 doi: "10.1021/jacs.4c11028"
 url: "https://doi.org/10.1021/jacs.4c11028"
-publication_year: 2024
+publication_year: 2025
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

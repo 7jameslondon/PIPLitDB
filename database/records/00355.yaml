@@ -2,15 +2,15 @@ document_type: research_article
 publication_stage: publication
 title: "Stalled DNA Replication Forks at the Endogenous GAA Repeats Drive Repeat Expansion in Friedreich’s Ataxia Cells"
 authors:
-  - name: "Gerhardt J"
-  - name: "Bhalla AD"
-  - name: "Butler JS"
-  - name: "Puckett JW"
-  - name: "Dervan PB"
-  - name: "Rosenwaks Z"
-  - name: "Napierala M"
+  - name: "Jeannine Gerhardt"
+  - name: "Angela D. Bhalla"
+  - name: "Jill Sergesketter Butler"
+  - name: "James W. Puckett"
+  - name: "Peter B. Dervan"
+  - name: "Zev Rosenwaks"
+  - name: "Marek Napierala"
 doi: "10.1016/j.celrep.2016.06.075"
 url: "https://doi.org/10.1016/j.celrep.2016.06.075"
 publication_year: 2016
 journal: "Cell Reports"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

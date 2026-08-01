@@ -2,13 +2,13 @@ document_type: research_article
 publication_stage: publication
 title: "Thermodynamics and site stoichiometry of DNA binding by a large antiviral hairpin polyamide"
 authors:
-  - name: "Song Y"
-  - name: "Niederschulte J"
-  - name: "Bales KN"
-  - name: "Bashkin JK"
-  - name: "Dupureur CM"
+  - name: "Yang Song"
+  - name: "Jacquelyn Niederschulte"
+  - name: "Kristin N. Bales"
+  - name: "James K. Bashkin"
+  - name: "Cynthia M. Dupureur"
 doi: "10.1016/j.biochi.2018.11.013"
 url: "https://doi.org/10.1016/j.biochi.2018.11.013"
 publication_year: 2019
 journal: "Biochimie"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -2,13 +2,13 @@ document_type: research_article
 publication_stage: publication
 title: "Inhibition of Moloney Murine Leukemia Virus Integration Using Polyamides Targeting the Long-Terminal Repeat Sequences"
 authors:
-  - name: "Yang F"
-  - name: "Belitsky JM"
-  - name: "Villanueva RA"
-  - name: "Dervan PB"
-  - name: "Roth MJ"
+  - name: "Fan Yang"
+  - name: "Jason M. Belitsky"
+  - name: "Rodrigo A. Villanueva"
+  - name: "Peter B. Dervan"
+  - name: "Monica J. Roth"
 doi: "10.1021/bi034177s"
 url: "https://doi.org/10.1021/bi034177s"
 publication_year: 2003
 journal: "Biochemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

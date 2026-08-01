@@ -16,4 +16,4 @@ doi: "10.1021/jacs.8b01518"
 url: "https://doi.org/10.1021/jacs.8b01518"
 publication_year: 2018
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -2,10 +2,10 @@ document_type: research_article
 publication_stage: publication
 title: "Imidazopyridine/Pyrrole and Hydroxybenzimidazole/Pyrrole Pairs for DNA Minor Groove Recognition"
 authors:
-  - name: "Renneberg D"
-  - name: "Dervan PB"
+  - name: "Dorte Renneberg"
+  - name: "Peter B. Dervan"
 doi: "10.1021/ja0300158"
 url: "https://doi.org/10.1021/ja0300158"
 publication_year: 2003
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

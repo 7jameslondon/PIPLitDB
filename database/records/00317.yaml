@@ -2,10 +2,10 @@ document_type: research_article
 publication_stage: publication
 title: "Sequence-Specific Trapping of Topoisomerase I by DNA Binding Polyamide−Camptothecin Conjugates"
 authors:
-  - name: "Clay C. C. Wang"
+  - name: "Clay Chia Chun Wang"
   - name: "Peter B. Dervan"
 doi: "10.1021/ja010392p"
 url: "https://doi.org/10.1021/ja010392p"
 publication_year: 2001
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

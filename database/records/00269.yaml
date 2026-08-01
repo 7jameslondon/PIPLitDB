@@ -10,4 +10,4 @@ doi: "10.1093/nass/49.1.75"
 url: "https://doi.org/10.1093/nass/49.1.75"
 publication_year: 2005
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

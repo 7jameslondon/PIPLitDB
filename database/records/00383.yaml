@@ -2,10 +2,10 @@ document_type: research_article
 publication_stage: publication
 title: "Search for the Optimal Linker in Tandem Hairpin Polyamides"
 authors:
-  - name: "Kers I"
-  - name: "Dervan PB"
+  - name: "Inger Kers"
+  - name: "Peter B. Dervan"
 doi: "10.1016/s0968-0896(02)00221-3"
 url: "https://doi.org/10.1016/s0968-0896(02)00221-3"
 publication_year: 2002
 journal: "Bioorganic & Medicinal Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

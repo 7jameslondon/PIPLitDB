@@ -2,14 +2,14 @@ document_type: research_article
 publication_stage: publication
 title: "Fluorescence assay of polyamide–DNA interactions"
 authors:
-  - name: "Dupureur CM"
-  - name: "Bashkin JK"
-  - name: "Aston K"
-  - name: "Koeller KJ"
-  - name: "Gaston KR"
-  - name: "He G"
+  - name: "Cynthia M. Dupureur"
+  - name: "James K. Bashkin"
+  - name: "Karl Aston"
+  - name: "Kevin J. Koeller"
+  - name: "Kimberly R. Gaston"
+  - name: "Gaofei He"
 doi: "10.1016/j.ab.2012.01.017"
 url: "https://doi.org/10.1016/j.ab.2012.01.017"
 publication_year: 2012
 journal: "Analytical Biochemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

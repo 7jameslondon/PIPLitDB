@@ -3,9 +3,9 @@ publication_stage: publication
 title: "Synthesis and cytotoxicity evaluation of novel C7–C7, C7–N3 and N3–N3 dimers of 1-chloromethyl-5-hydroxy-1,2-dihydro-3H-benzo[e]indole (seco-CBI) with pyrrole and imidazole polyamide conjugates"
 authors:
   - name: "Rohtash Kumar"
-  - name: "J. William Lown"
+  - name: "James William Lown"
 doi: "10.1039/b303650m"
 url: "https://doi.org/10.1039/b303650m"
 publication_year: 2003
 journal: "Organic & Biomolecular Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

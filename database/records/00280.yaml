@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "Molecular design of alkylating pyrrole-imidazole polyamides with indole linker."
+title: "Molecular design of alkylating pyrrole-imidazole polyamides with indole linker"
 authors:
   - name: "Shunta Sasaki"
   - name: "Akihiko Narita"
@@ -10,4 +10,4 @@ doi: "10.1093/nass/48.1.205"
 url: "https://doi.org/10.1093/nass/48.1.205"
 publication_year: 2004
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

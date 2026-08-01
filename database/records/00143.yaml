@@ -7,7 +7,7 @@ authors:
   - name: "Yuji Nakai"
   - name: "Toshinori Ozaki"
   - name: "Nobuko Koshikawa"
-  - name: "Kojima Toshio"
+  - name: "Toshio Kojima"
   - name: "Motoaki Kataba"
   - name: "Asako Oguni"
   - name: "Hiroyuki Matsuda"
@@ -21,4 +21,4 @@ doi: "10.1016/j.fob.2014.03.004"
 url: "https://doi.org/10.1016/j.fob.2014.03.004"
 publication_year: 2014
 journal: "FEBS Open Bio"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "Rapid solid-Phase synthesis of DNA-Binding pyrrole-Imidazole polyamides"
+title: "Rapid solid-phase synthesis of DNA-binding pyrrole-imidazole polyamides"
 authors:
   - name: "Peter O. Krutzik"
   - name: "A. Richard Chamberlin"
@@ -8,4 +8,4 @@ doi: "10.1016/s0960-894x(02)00359-1"
 url: "https://doi.org/10.1016/s0960-894x(02)00359-1"
 publication_year: 2002
 journal: "Bioorganic & Medicinal Chemistry Letters"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

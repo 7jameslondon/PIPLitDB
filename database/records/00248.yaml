@@ -13,4 +13,7 @@ doi: "10.1021/ja065235a"
 url: "https://doi.org/10.1021/ja065235a"
 publication_year: 2007
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+related_papers:
+  - pip_litdb_id: "00255"
+    relationship_type: is_version_of
+pip_litdb_status: verified
