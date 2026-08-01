@@ -1,0 +1,18 @@
+document_type: research_article
+publication_stage: publication
+title: "Design and Synthesis of a Cell-Permeable Synthetic Transcription Factor Mimic"
+authors:
+  - name: "Xiangshu Xiao"
+  - name: "Peng Yu"
+  - name: "Hyun-Suk Lim"
+  - name: "Devanjan Sikder"
+  - name: "Thomas Kodadek"
+doi: "10.1021/cc070023a"
+url: "https://doi.org/10.1021/cc070023a"
+publication_year: 2007
+journal: "Journal of Combinatorial Chemistry"
+related_papers:
+  - pip_litdb_id: "00610"
+    relationship_type: is_version_of
+pip_litdb_status: verified
+pip_litdb_notes: "Journal article (vol. 9, issue 4, pp. 592-600; PMID 17530904, PMCID PMC2518654), published in issue 2007-07-09 after online publication on 2007-05-27. The indexed local files are byte-identical copies of the complete 19-page NIH author manuscript. The same authors first reported this work in the shorter Angewandte communication at PIP LitDB 00610."

@@ -1,0 +1,25 @@
+document_type: research_article
+publication_stage: publication
+title: "S1-END-seq reveals DNA secondary structures in human cells"
+authors:
+  - name: "Gabriel Matos-Rodrigues"
+  - name: "Niek van Wietmarschen"
+  - name: "Wei Wu"
+  - name: "Veenu Tripathi"
+  - name: "Natasha C. Koussa"
+  - name: "Raphael Pavani"
+  - name: "William J. Nathan"
+  - name: "Elsa Callen"
+  - name: "Frida Belinky"
+  - name: "Ashraf Mohammed"
+  - name: "Marek Napierala"
+  - name: "Karen Usdin"
+  - name: "Aseem Z. Ansari"
+  - name: "Sergei M. Mirkin"
+  - name: "André Nussenzweig"
+doi: "10.1016/j.molcel.2022.08.007"
+url: "https://doi.org/10.1016/j.molcel.2022.08.007"
+publication_year: 2022
+journal: "Molecular Cell"
+pip_litdb_status: verified
+pip_litdb_notes: "Research article (vol. 82, issue 19, pp. 3538-3552.e5), published online 2022-09-07 and in issue 2022-10-06; PMID 36075220, PMCID PMC9547894. The indexed local PDF is the complete 21-page Cell Press publisher version of record."

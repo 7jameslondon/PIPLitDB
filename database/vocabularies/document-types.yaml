@@ -9,3 +9,7 @@ review:
 correction:
   label: Correction
   description: A document that corrects or clarifies another document.
+
+book:
+  label: Book
+  description: A complete book-length work, including a published scholarly monograph or thesis volume.

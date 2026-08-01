@@ -1,0 +1,13 @@
+document_type: review
+publication_stage: publication
+title: "Therapeutic modulation of endogenous gene function by agents with designed DNA-sequence specificities"
+authors:
+  - name: "Taco G. Uil"
+  - name: "Hidde J. Haisma"
+  - name: "Marianne G. Rots"
+doi: "10.1093/nar/gkg815"
+url: "https://doi.org/10.1093/nar/gkg815"
+publication_year: 2003
+journal: "Nucleic Acids Research"
+pip_litdb_status: verified
+pip_litdb_notes: "Review article (vol. 31, issue 21, pp. 6064–6078; PMID 14576293, PMCID PMC275457), published 2003-11-01. The local source is the complete 15-page Oxford University Press publisher version of record."

@@ -662,7 +662,7 @@
     });
     const journal = element("span", {
       className: "journal",
-      text: record.journal || "Journal not specified",
+      text: record.journal || "Publication venue not specified",
     });
     const journalRow = element("p", { className: "journal-row" }, [
       element("span", {
@@ -795,7 +795,7 @@
 
     const overview = createMetadataSection("Publication details");
     const overviewGrid = element("dl", { className: "metadata-grid" });
-    appendMetadata(overviewGrid, "Journal", record.journal || "Not specified");
+    appendMetadata(overviewGrid, "Journal / series", record.journal || "Not specified");
     appendMetadata(
       overviewGrid,
       "Publication year",

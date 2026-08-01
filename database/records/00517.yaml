@@ -1,0 +1,14 @@
+document_type: research_article
+publication_stage: publication
+title: "Enhanced Nuclear Accumulation of Pyrrole-Imidazole Polyamides by Incorporation of the Tri-Arginine Vector"
+authors:
+  - name: "Takuya Hidaka"
+doi: "10.1007/978-981-16-8436-4_4"
+url: "https://doi.org/10.1007/978-981-16-8436-4_4"
+publication_year: 2022
+journal: "Sequence-Specific DNA Binders for the Therapy of Mitochondrial Diseases"
+related_papers:
+  - pip_litdb_id: "00522"
+    relationship_type: is_version_of
+pip_litdb_status: verified
+pip_litdb_notes: "Book chapter (pp. 67-91). Springer states that this chapter republishes, with permission, the 2020 Chemical Communications article with DOI 10.1039/d0cc05158f."

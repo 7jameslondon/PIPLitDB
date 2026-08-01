@@ -1,0 +1,12 @@
+document_type: review
+publication_stage: publication
+title: "Recognition of DNA Sequences by Pyrrole-Imidazole Polyamide: Rational Drug Design in the Post-Genome Era"
+authors:
+  - name: "Hirokazu Iida"
+  - name: "Hiroshi Sugiyama"
+doi: "10.5059/yukigoseikyokaishi.58.975"
+url: "https://doi.org/10.5059/yukigoseikyokaishi.58.975"
+publication_year: 2000
+journal: "Journal of Synthetic Organic Chemistry, Japan"
+pip_litdb_status: verified
+pip_litdb_notes: "Japanese-language review with an English title, abstract, keywords, and figure/table captions. Published in volume 58, issue 10, pp. 975-987; received 2000-04-17. The local source is the complete 13-page J-STAGE publisher PDF."
