@@ -1,0 +1,74 @@
+name: Temporary OpenAlex 2020 validation
+
+on:
+  push:
+    branches:
+      - agent/automated-paper-discovery
+    paths:
+      - ".github/workflows/temporary-openalex-2020-validation.yml"
+      - "scripts/validate_openalex_window.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-openalex-2020-validation
+  cancel-in-progress: true
+
+jobs:
+  validate-openalex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OPENALEX_API_KEY: ${{ secrets.OPENALEX_API_KEY }}
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-discovery.txt
+
+      - name: Install pinned dependencies
+        run: python -m pip install --requirement requirements-discovery.txt
+
+      - name: Confirm the OpenAlex secret is available
+        shell: bash
+        run: |
+          if [[ -z "${OPENALEX_API_KEY}" ]]; then
+            echo "::error::OPENALEX_API_KEY repository secret is unavailable."
+            exit 1
+          fi
+
+      - name: Run the fixed OpenAlex dry run
+        run: >-
+          python scripts/discover_papers.py
+          --from 2020-05-01
+          --until 2020-10-31
+          --source openalex
+          --dry-run
+          --json-report artifacts/discovery/openalex-2020-validation/discovery.json
+          --markdown-report artifacts/discovery/openalex-2020-validation/discovery.md
+
+      - name: Measure known-paper recovery and identify potential additions
+        run: >-
+          python scripts/validate_openalex_window.py
+          --from 2020-05-01
+          --until 2020-10-31
+          --discovery-report artifacts/discovery/openalex-2020-validation/discovery.json
+          --json-output artifacts/discovery/openalex-2020-validation/validation.json
+          --markdown-output artifacts/discovery/openalex-2020-validation/validation.md
+
+      - name: Upload validation reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: openalex-2020-validation-${{ github.run_id }}
+          path: artifacts/discovery/openalex-2020-validation/
+          if-no-files-found: error
+          retention-days: 14
