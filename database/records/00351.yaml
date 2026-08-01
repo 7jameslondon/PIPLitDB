@@ -2,15 +2,15 @@ document_type: research_article
 publication_stage: publication
 title: "Binding of a hairpin polyamide in the minor groove of DNA: sequence-specific enthalpic discrimination."
 authors:
-  - name: "D S Pilch"
-  - name: "N Poklar"
-  - name: "C A Gelfand"
-  - name: "S M Law"
-  - name: "K J Breslauer"
-  - name: "E E Baird"
-  - name: "P B Dervan"
+  - name: "Daniel S. Pilch"
+  - name: "Nataša Poklar"
+  - name: "Craig A. Gelfand"
+  - name: "Scott M. Law"
+  - name: "Kenneth J. Breslauer"
+  - name: "Eldon E. Baird"
+  - name: "Peter B. Dervan"
 doi: "10.1073/pnas.93.16.8306"
 url: "https://doi.org/10.1073/pnas.93.16.8306"
 publication_year: 1996
 journal: "Proceedings of the National Academy of Sciences"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

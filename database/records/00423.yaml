@@ -2,18 +2,18 @@ document_type: research_article
 publication_stage: publication
 title: "Modulation of dynamic DNA G-quadruplex structures in the hTERT promoter region by ligands"
 authors:
-  - name: "Karna D"
-  - name: "Liang L"
-  - name: "Sharma G"
-  - name: "Mandal S"
-  - name: "Asamitsu S"
-  - name: "Kawamoto Y"
-  - name: "Hashiya K"
-  - name: "Bando T"
-  - name: "Sugiyama H"
-  - name: "Mao H"
+  - name: "Deepak Karna"
+  - name: "Lin Liang"
+  - name: "Grinsun Sharma"
+  - name: "Shankar Mandal"
+  - name: "Sefan Asamitsu"
+  - name: "Yusuke Kawamoto"
+  - name: "Kaori Hashiya"
+  - name: "Toshikazu Bando"
+  - name: "Hiroshi Sugiyama"
+  - name: "Hanbin Mao"
 doi: "10.1093/nar/gkae754"
 url: "https://doi.org/10.1093/nar/gkae754"
 publication_year: 2024
 journal: "Nucleic Acids Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

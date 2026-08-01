@@ -2,11 +2,11 @@ document_type: research_article
 publication_stage: publication
 title: "Influence of β‐Alanine on Hairpin Polyamide Orientation in the DNA Minor Groove"
 authors:
-  - name: "Victor C. Rucker"
+  - name: "Victor C. Rucker"
   - name: "Christian Melander"
-  - name: "Peter B. Dervan"
+  - name: "Peter B. Dervan"
 doi: "10.1002/hlca.200390148"
 url: "https://doi.org/10.1002/hlca.200390148"
 publication_year: 2003
 journal: "Helvetica Chimica Acta"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

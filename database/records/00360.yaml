@@ -2,12 +2,12 @@ document_type: research_article
 publication_stage: publication
 title: "DNA sequence selectivity of hairpin polyamide turn units"
 authors:
-  - name: "Farkas ME"
-  - name: "Li BC"
-  - name: "Dose C"
-  - name: "Dervan PB"
+  - name: "Michelle E. Farkas"
+  - name: "Benjamin C. Li"
+  - name: "Christian Dose"
+  - name: "Peter B. Dervan"
 doi: "10.1016/j.bmcl.2009.03.072"
 url: "https://doi.org/10.1016/j.bmcl.2009.03.072"
 publication_year: 2009
 journal: "Bioorganic & Medicinal Chemistry Letters"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

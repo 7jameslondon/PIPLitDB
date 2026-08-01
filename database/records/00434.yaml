@@ -2,12 +2,12 @@ document_type: research_article
 publication_stage: publication
 title: "Estimation of the DNA sequence discriminatory ability of hairpin-linked lexitropsins"
 authors:
-  - name: "Walker WL"
-  - name: "Landaw EM"
-  - name: "Dickerson RE"
-  - name: "Goodsell DS"
+  - name: "Wynn L. Walker"
+  - name: "Elliot M. Landaw"
+  - name: "Richard E. Dickerson"
+  - name: "David S. Goodsell"
 doi: "10.1073/pnas.94.11.5634"
 url: "https://doi.org/10.1073/pnas.94.11.5634"
 publication_year: 1997
 journal: "Proceedings of the National Academy of Sciences"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
