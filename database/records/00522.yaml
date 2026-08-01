@@ -1,0 +1,19 @@
+document_type: research_article
+publication_stage: publication
+title: "Enhanced nuclear accumulation of pyrrole–imidazole polyamides by incorporation of the tri-arginine vector"
+authors:
+  - name: "Takuya Hidaka"
+  - name: "Yutaro Tsubono"
+  - name: "Kaori Hashiya"
+  - name: "Toshikazu Bando"
+  - name: "Ganesh N. Pandian"
+  - name: "Hiroshi Sugiyama"
+doi: "10.1039/d0cc05158f"
+url: "https://doi.org/10.1039/d0cc05158f"
+publication_year: 2020
+journal: "Chemical Communications"
+related_papers:
+  - pip_litdb_id: "00517"
+    relationship_type: is_version_of
+pip_litdb_status: verified
+pip_litdb_notes: "Research communication (vol. 56, issue 82, pp. 12371-12374). Springer states that its 2022 chapter with DOI 10.1007/978-981-16-8436-4_4 republishes this article with permission of the Royal Society of Chemistry."

@@ -1,22 +1,22 @@
 # PIP LitDB
 
-**PIP LitDB** is a project to collect papers about PIPs (pyrrole–imidazole polyamides) and extract their contents. It has two parts. The first part is a version-controlled public database of PIP paper metadata and the tools to manage the database. The second part is a untracked private database that has a subset of copies of the actual PIP (PDFs and/or HTML copies), extracted text/figures of the paper, and the tools to manage extraction and the database.
+**PIP LitDB** is a project to collect scholarly works about PIPs (pyrrole–imidazole polyamides) and extract their contents. It has two parts. The first part is a version-controlled public database of PIP literature metadata and the tools to manage the database. The second part is an untracked private database that has a subset of copies of the source documents (PDFs and/or HTML copies), extracted text/figures, and the tools to manage extraction and the database.
 
 ## ARD
 
-- Anyone can clone and use the public database without possessing any papers. The private papers can be moved or deleted without effecting the database.
+- Anyone can clone and use the public database without possessing any source documents. The private copies can be moved or deleted without affecting the database.
 
 - The only private untracked part of the project are the paper copies and extractions. The public database of metadata, the tools for the public database, the tools for the private database, and the extraction tools, are all tracked and public.
 
-- One ID for each paper found. Sometimes a paper found online will have slightly diffrent metadata then an entry already in the database but is really just the same paper. For example a title might appear slightly diffrently due to how special charactuers are handled. Another example is when author names are abbrviated or spelled out. In cases like these there is really only one paper with the same content and so only one entry should be put into the database with just one ID. In other cases there is really two diffrent papers. For example one paper might have two diffrent versions from a publisher that really have diffrent conent. Another example is a preprint and a published article of that preprint. In these cases a seperate entry with a seperate ID should be put in the database and then they should be linked via their relasionship.
+- One ID for each distinct work found. Sometimes a work found online will have slightly different metadata than an entry already in the database but is really the same work. For example, a title might appear differently because of how special characters are handled, or author names may be abbreviated in one source and spelled out in another. In cases like these, only one entry and one ID should be put into the database. In other cases there are genuinely different works or versions, such as a preprint and its published article. These should receive separate IDs and be linked through their relationship.
 
 - The public database is organized as a file system of YMAL files so that tracking is handeled by git.
 
 ## Public Metadata Database
 
-The database includes published research articles, preprints, and reviews about PIPs. The database accounts for relationships between articles such as errata, preprints, and versions.
+The database includes published research articles, preprints, reviews, corrections, and books about PIPs. The database accounts for relationships between works such as errata, preprints, and versions.
 
-The YAML files are the complete and only database. Each paper is stored in its own YAML file in `database/records`. The filename is the authoritative PIP LitDB ID: for example, `00001.yaml` has PIP LitDB ID `00001`. The ID is not repeated as a field inside the YAML record. Search and export tools derive the ID from the filename and include it in exported data when appropriate.
+The YAML files are the complete and only database. Each work is stored in its own YAML file in `database/records`. The filename is the authoritative PIP LitDB ID: for example, `00001.yaml` has PIP LitDB ID `00001`. The ID is not repeated as a field inside the YAML record. Search and export tools derive the ID from the filename and include it in exported data when appropriate.
 
 The database is organized as follows:
 
@@ -37,9 +37,9 @@ database/
 
 Each relationship type in `database/vocabularies/relationship-types.yaml` must define its inverse relationship type. For example, the inverse of `is_preprint_of` is `has_preprint`, and the inverse of `corrects` is `is_corrected_by`. A symmetric relationship type may define itself as its inverse.
 
-The database records the following fields for each paper:
+The database records the following fields for each work:
 
-- Document type (`document_type`): The kind of document. Allowed values are `research_article`, `review`, and `correction`.
+- Document type (`document_type`): The kind of document. Allowed values are `research_article`, `review`, `correction`, and `book`.
 - Publication stage (`publication_stage`): The publication stage of the document. Allowed values are `preprint` and `publication`.
 - Title
 - Authors: An ordered list of author names, ideally using each author's full name
@@ -47,7 +47,7 @@ The database records the following fields for each paper:
 - URL: Ideally a DOI link; otherwise, a publisher link
 - Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper. Every relationship must be stored in both related records using inverse relationship types. For example, if one record uses `is_preprint_of`, the other must use `has_preprint`.
 - Publication year: The year used in the work's formal citation. For an issue-assigned publication, use the issue year even when the article was published online in an earlier year. Crossref's `published-print` year and PubMed's citation year are preferred authoritative sources when available. Do not substitute Crossref's generic `published` or `issued` year, or PubMed's `Epub` year, when those fields represent an earlier online-first publication. For a work without an issue assignment, use the year shown in the authoritative recommended citation.
-- Journal: Ideally the standard full name, not an abbreviation. If it's a preprint, use the server name.
+- Journal or publication venue (`journal`): For an article, use the standard full journal name rather than an abbreviation. For a book, use its series name when available, otherwise its publisher or imprint. For a preprint, use the server name.
 - PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
 
@@ -55,7 +55,7 @@ Document type and publication stage describe independent characteristics. For ex
 
 Optional fields with no value, including status and notes, should be omitted rather than stored as empty strings.
 
-An example paper record is:
+An example record is:
 
 ```yaml
 document_type: research_article

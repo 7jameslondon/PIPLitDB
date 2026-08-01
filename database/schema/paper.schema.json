@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pip-litdb.org/schema/paper.schema.json",
-  "title": "PIP LitDB paper record",
-  "description": "Metadata for one paper. The PIP LitDB ID is the five-digit YAML filename and is intentionally not stored in the record.",
+  "title": "PIP LitDB publication record",
+  "description": "Metadata for one scholarly work. The PIP LitDB ID is the five-digit YAML filename and is intentionally not stored in the record.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -54,7 +54,7 @@
     "journal": {
       "type": "string",
       "minLength": 1,
-      "description": "The full journal name or, for a preprint, the server name."
+      "description": "The full journal name, book series or publisher, or preprint server name."
     },
     "related_papers": {
       "type": "array",

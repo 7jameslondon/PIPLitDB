@@ -69,6 +69,9 @@ class MetadataValidationTests(unittest.TestCase):
                 correction:
                   label: Correction
                   description: Corrects another document.
+                book:
+                  label: Book
+                  description: A complete book-length work.
             """,
             "publication-stages.yaml": """
                 preprint:
@@ -124,6 +127,19 @@ class MetadataValidationTests(unittest.TestCase):
 
     def test_valid_database_passes(self) -> None:
         report = validate_repository(self.root)
+        self.assertTrue(report.passed, report.findings)
+        self.assertEqual(report.record_count, 1)
+
+    def test_book_document_type_passes(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "document_type: research_article", "document_type: book"
+            ).replace('journal: "Example Journal"', 'journal: "Example Book Series"'),
+        )
+
+        report = validate_repository(self.root)
+
         self.assertTrue(report.passed, report.findings)
         self.assertEqual(report.record_count, 1)
 

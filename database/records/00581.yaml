@@ -1,0 +1,16 @@
+document_type: research_article
+publication_stage: publication
+title: "Sequence‐Specific Recognition of DNA by a Major and Minor Groove Binding Ligand"
+authors:
+  - name: "Jason W. Szewczyk"
+  - name: "Eldon E. Baird"
+  - name: "Peter B. Dervan"
+doi: "10.1002/anie.199614871"
+url: "https://doi.org/10.1002/anie.199614871"
+publication_year: 1996
+journal: "Angewandte Chemie International Edition in English"
+related_papers:
+  - pip_litdb_id: "00633"
+    relationship_type: is_version_of
+pip_litdb_status: verified
+pip_litdb_notes: "English-language Communication (vol. 35, issue 13-14, pp. 1487-1489), published in July 1996. The indexed local PDF is the complete three-page Wiley publisher version of record."

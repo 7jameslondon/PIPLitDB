@@ -1,0 +1,17 @@
+document_type: research_article
+publication_stage: publication
+title: "Molecular design of hairpin imidazole-pyrrole polyamide for effective DNA alkylation"
+authors:
+  - name: "Toshikazu Bando"
+  - name: "Akihiko Narita"
+  - name: "Isao Saito"
+  - name: "Hiroshi Sugiyama"
+doi: "10.1093/nass/1.1.225"
+url: "https://doi.org/10.1093/nass/1.1.225"
+publication_year: 2001
+journal: "Nucleic Acids Research Supplement"
+related_papers:
+  - pip_litdb_id: "00561"
+    relationship_type: is_version_of
+pip_litdb_status: verified
+pip_litdb_notes: "Two-page proceedings article (vol. 1, issue 1, pp. 225–226), published 2001-11-01 (PMID 12836346); expanded as the 2002 full paper at PIP LitDB 00561. The local source is the complete Oxford publisher PDF."

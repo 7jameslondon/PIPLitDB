@@ -1,0 +1,15 @@
+document_type: review
+publication_stage: publication
+title: "Fluorescent Probes for Nucleic Acid Visualization in Fixed and Live Cells"
+authors:
+  - name: "Alexandre S. Boutorine"
+  - name: "Darya S. Novopashina"
+  - name: "Olga A. Krasheninina"
+  - name: "Karine Nozeret"
+  - name: "Alya G. Venyaminova"
+doi: "10.3390/molecules181215357"
+url: "https://doi.org/10.3390/molecules181215357"
+publication_year: 2013
+journal: "Molecules"
+pip_litdb_status: verified
+pip_litdb_notes: "Review article (vol. 18, issue 12, pp. 15357-15397; PMID 24335616, PMCID PMC6270009), published 2013-12-11. The indexed local PDF is the complete 41-page MDPI publisher version of record, distributed under the CC BY 3.0 license."

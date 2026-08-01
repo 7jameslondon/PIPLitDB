@@ -1,0 +1,13 @@
+document_type: review
+publication_stage: publication
+title: "Molecular Tools for Precision Targeting and Detection of G-Quadruplex Structures"
+authors:
+  - name: "Daniele Esposito"
+  - name: "Alessandra Locatelli"
+  - name: "Rita Morigi"
+doi: "10.3390/molecules30204099"
+url: "https://doi.org/10.3390/molecules30204099"
+publication_year: 2025
+journal: "Molecules"
+pip_litdb_status: verified
+pip_litdb_notes: "Review in Molecules 30(20), article 4099, published 2025-10-15 (PMID 41157115; PMCID PMC12565907). The local source is the complete 44-page MDPI publisher version archived by PubMed Central."

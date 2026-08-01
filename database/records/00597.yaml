@@ -1,0 +1,13 @@
+document_type: review
+publication_stage: publication
+title: "Using synthetic genome readers/regulators to interrogate chromatin processes: A brief review"
+authors:
+  - name: "Steven J. Philips"
+  - name: "Adithi Danda"
+  - name: "Aseem Z. Ansari"
+doi: "10.1016/j.ymeth.2024.03.001"
+url: "https://doi.org/10.1016/j.ymeth.2024.03.001"
+publication_year: 2024
+journal: "Methods"
+pip_litdb_status: verified
+pip_litdb_notes: "Review article (vol. 225, pp. 20-27), published online 2024-03-11 and in the May 2024 issue; PMID 38471600, PMCID PMC11055675. The indexed local PDF is the complete 21-page NIH author manuscript, made available in PMC on 2025-05-01."

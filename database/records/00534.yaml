@@ -1,0 +1,20 @@
+document_type: research_article
+publication_stage: publication
+title: "Targeting 24 bp within Telomere Repeat Sequences with Tandem Tetramer Pyrrole–Imidazole Polyamide Probes"
+authors:
+  - name: "Yusuke Kawamoto"
+  - name: "Asuka Sasaki"
+  - name: "Anandhakumar Chandran"
+  - name: "Kaori Hashiya"
+  - name: "Satoru Ide"
+  - name: "Toshikazu Bando"
+  - name: "Kazuhiro Maeshima"
+  - name: "Hiroshi Sugiyama"
+doi: "10.1021/jacs.6b09023"
+url: "https://doi.org/10.1021/jacs.6b09023"
+publication_year: 2016
+journal: "Journal of the American Chemical Society"
+related_papers:
+  - pip_litdb_id: "00526"
+    relationship_type: is_version_of
+pip_litdb_status: verified

@@ -1,0 +1,23 @@
+document_type: research_article
+publication_stage: publication
+title: "Targeting Oct1 genomic function inhibits androgen receptor signaling and castration-resistant prostate cancer growth"
+authors:
+  - name: "Daisuke Obinata"
+  - name: "Kenichi Takayama"
+  - name: "Kyoko Fujiwara"
+  - name: "Takashi Suzuki"
+  - name: "Shuichi Tsutsumi"
+  - name: "Noboru Fukuda"
+  - name: "Hiroki Nagase"
+  - name: "Tetsuya Fujimura"
+  - name: "Tomohiko Urano"
+  - name: "Yukio Homma"
+  - name: "Hiroyuki Aburatani"
+  - name: "Satoru Takahashi"
+  - name: "Satoshi Inoue"
+doi: "10.1038/onc.2016.171"
+url: "https://doi.org/10.1038/onc.2016.171"
+publication_year: 2016
+journal: "Oncogene"
+pip_litdb_status: verified
+pip_litdb_notes: "Original article (vol. 35, issue 49, pp. 6350-6358; PMID 27270436), published online 2016-06-06 with issue date 2016-12-08. The indexed local PDF is the publisher's 10-page Supplementary Figures file, not the article PDF."
