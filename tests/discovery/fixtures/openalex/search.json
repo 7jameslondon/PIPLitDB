@@ -1,0 +1,21 @@
+{
+  "meta": {"count": 1, "next_cursor": null},
+  "results": [
+    {
+      "id": "https://openalex.org/W123",
+      "doi": "https://doi.org/10.1234/PIP.1",
+      "display_name": "Pyrrole-imidazole polyamide binding",
+      "publication_date": "2025-02-03",
+      "updated_date": "2025-02-10T00:00:00Z",
+      "type": "article",
+      "authorships": [
+        {"author": {"display_name": "Ada Example", "orcid": "https://orcid.org/0000-0001-0000-0001"}}
+      ],
+      "primary_location": {
+        "landing_page_url": "https://doi.org/10.1234/PIP.1",
+        "source": {"display_name": "Journal of PIP Studies", "type": "journal"}
+      },
+      "abstract_inverted_index": {"A": [0], "PIP": [1], "abstract": [2]}
+    }
+  ]
+}

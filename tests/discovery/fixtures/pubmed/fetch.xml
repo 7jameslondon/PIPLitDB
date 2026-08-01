@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID>12345678</PMID>
+      <Article>
+        <Journal>
+          <JournalIssue><PubDate><Year>2025</Year><Month>Apr</Month><Day>1</Day></PubDate></JournalIssue>
+          <Title>Journal of PIP Studies</Title>
+        </Journal>
+        <ArticleTitle>Pyrrole-imidazole polyamide binding</ArticleTitle>
+        <ArticleDate><Year>2025</Year><Month>02</Month><Day>03</Day></ArticleDate>
+        <Abstract><AbstractText>A PIP abstract</AbstractText></Abstract>
+        <AuthorList><Author><ForeName>Ada</ForeName><LastName>Example</LastName></Author></AuthorList>
+        <PublicationTypeList><PublicationType>Journal Article</PublicationType></PublicationTypeList>
+      </Article>
+    </MedlineCitation>
+    <PubmedData><ArticleIdList><ArticleId IdType="doi">10.1234/pip.1</ArticleId></ArticleIdList></PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>

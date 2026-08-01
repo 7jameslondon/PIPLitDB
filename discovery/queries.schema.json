@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "record_threshold", "groups"],
+  "properties": {
+    "version": {"const": 1},
+    "record_threshold": {"type": "integer", "minimum": 1},
+    "max_candidates": {"type": "integer", "minimum": 1, "maximum": 5000},
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "phrases", "weight", "sources"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "phrases": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "weight": {"type": "integer", "minimum": 0},
+          "supporting_terms": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "weight_per_supporting_term": {"type": "integer", "minimum": 0},
+          "match_fields": {"type": "array", "minItems": 1, "items": {"enum": ["title", "abstract"]}},
+          "sources": {"type": "array", "minItems": 1, "items": {"enum": ["openalex", "pubmed", "crossref", "arxiv"]}}
+        }
+      }
+    }
+  }
+}

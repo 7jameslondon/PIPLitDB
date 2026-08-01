@@ -1,0 +1,82 @@
+name: Trusted metadata validation
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: trusted-metadata-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate metadata records
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out trusted validator from the base branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Check out candidate merge result as data only
+        uses: actions/checkout@v6
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+
+      - name: Capture the current merge commit
+        id: merge
+        working-directory: candidate
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: trusted/requirements-validation.txt
+
+      - name: Install trusted validation dependencies
+        run: python -m pip install --requirement trusted/requirements-validation.txt
+
+      - name: Validate candidate metadata with trusted code and rules
+        id: validation
+        run: >-
+          python trusted/scripts/validate_metadata.py
+          --root candidate
+          --rules-root trusted
+          --base "${{ github.event.pull_request.base.sha }}"
+          --head "${{ steps.merge.outputs.sha }}"
+          --require-artifact scripts/validate_metadata.py
+          --require-artifact requirements-validation.txt
+          --require-artifact .github/workflows/validate-metadata-trusted.yml
+
+      - name: Publish trusted status on the tested merge commit
+        if: ${{ always() && steps.merge.outputs.sha != '' }}
+        uses: actions/github-script@v8
+        env:
+          MERGE_SHA: ${{ steps.merge.outputs.sha }}
+          VALIDATION_RESULT: ${{ steps.validation.outcome }}
+        with:
+          script: |
+            const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.MERGE_SHA,
+              state,
+              context: 'Validate metadata records',
+              description: state === 'success'
+                ? 'Trusted metadata validation passed'
+                : 'Trusted metadata validation failed'
+            });
