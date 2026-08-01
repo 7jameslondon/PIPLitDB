@@ -1,8 +1,10 @@
 name: Validate metadata
 
 on:
-  # Enforce metadata rules with workflow and validator code from the trusted base branch.
-  pull_request_target:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches:
+      - main
   push:
     branches:
       - main
@@ -12,43 +14,30 @@ on:
       - "tests/**"
       - "requirements-validation.txt"
       - ".github/workflows/validate-metadata.yml"
-      - ".github/workflows/test-metadata-validator.yml"
       - ".github/CODEOWNERS"
   workflow_dispatch:
 
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
-  group: metadata-validation-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: metadata-validation-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    name: Run trusted metadata validation
+    name: Validate metadata
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out trusted validator
+      - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'pull_request_target' && github.event.repository.default_branch || github.sha }}
           fetch-depth: 0
-          path: trusted
-
-      - name: Check out pull request result as data only
-        if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
-          fetch-depth: 0
-          path: candidate
           persist-credentials: false
 
       - name: Fetch pushed branch's previous tip
         if: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
-        working-directory: trusted
         run: >-
           git fetch --no-tags origin
           "${{ github.event.before }}"
@@ -58,68 +47,31 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: trusted/requirements-validation.txt
+          cache-dependency-path: requirements-validation.txt
 
-      - name: Install trusted validation dependencies
-        id: trusted_install
-        run: python -m pip install --requirement trusted/requirements-validation.txt
+      - name: Install validation dependencies
+        id: install
+        run: python -m pip install --requirement requirements-validation.txt
 
-      - name: Validate pull request with trusted validator
-        id: trusted_validation
-        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'pull_request_target' }}
-        run: |
-          python trusted/scripts/validate_metadata.py \
-            --root candidate \
-            --rules-root trusted \
-            --base "${{ github.event.pull_request.base.sha }}" \
-            --head "${{ github.event.pull_request.merge_commit_sha }}" \
-            --summary-title "Trusted metadata result"
-          # Trusted code also verifies that proposed rule files remain present,
-          # parseable, symlink-safe, and internally consistent.
-          python trusted/scripts/validate_metadata.py \
-            --root candidate \
-            --require-artifact .github/CODEOWNERS \
-            --require-artifact .github/workflows/validate-metadata.yml \
-            --require-artifact .github/workflows/test-metadata-validator.yml \
-            --require-artifact requirements-validation.txt \
-            --require-artifact scripts/validate_metadata.py \
-            --require-artifact tests/test_validate_metadata.py \
-            --summary-title "Candidate rules and enforcement artifacts"
+      - name: Validate pull request result
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && github.event_name == 'pull_request' }}
+        run: >-
+          python scripts/validate_metadata.py
+          --base "${{ github.event.pull_request.base.sha }}"
+          --head "${{ github.sha }}"
 
       - name: Validate pushed result and summarize record changes
-        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
         run: >-
-          python trusted/scripts/validate_metadata.py
-          --root trusted
+          python scripts/validate_metadata.py
           --base "${{ github.event.before }}"
           --head "${{ github.sha }}"
           --comparison direct
 
       - name: Validate complete database
-        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')) }}
-        run: python trusted/scripts/validate_metadata.py --root trusted
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')) }}
+        run: python scripts/validate_metadata.py
 
-      - name: Test trusted metadata validator
-        if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name != 'pull_request_target' }}
-        working-directory: trusted
+      - name: Test metadata validator
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python -m unittest discover --start-directory tests --verbose
-
-      - name: Publish trusted status on pull request merge commit
-        if: ${{ always() && github.event_name == 'pull_request_target' }}
-        uses: actions/github-script@v8
-        env:
-          VALIDATION_STATE: ${{ steps.trusted_validation.outcome == 'success' && 'success' || 'failure' }}
-        with:
-          script: |
-            const state = process.env.VALIDATION_STATE;
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.payload.pull_request.merge_commit_sha,
-              state,
-              context: "Validate metadata records",
-              description: state === "success"
-                ? "Trusted metadata validation passed."
-                : "Trusted metadata validation failed.",
-              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-            });

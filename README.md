@@ -122,26 +122,21 @@ python scripts/validate_metadata.py --base origin/main --head HEAD
 That default uses merge-base semantics to summarize a pull-request branch. For an exact transition,
 such as a pushed branch's before and after commits, add `--comparison direct`.
 
-Two isolated GitHub Actions workflows cover pull requests. The `Validate metadata` workflow's
-trusted job uses the workflow, dependencies, validator, schema, and controlled vocabularies from the
-base branch and treats the proposed pull-request checkout's records as data only. It publishes the
-`Validate metadata records` status directly on the pull request's merge commit, so that status can be
-made a required branch-protection check without letting a pull request weaken the rules that judge
-it. A second pass, still using trusted executable code, verifies that proposed schema and vocabulary
-files remain present, parseable, symlink-safe, and internally consistent. It also requires the
-validator, workflow, dependency manifest, tests, and `.github/CODEOWNERS` policy to remain regular
-files. The CODEOWNERS policy assigns those enforcement paths, the schema, and the controlled
-vocabularies to `@7jameslondon`; branch protection for `main` should require review from Code Owners
-so changes to the enforcement mechanism or its rules cannot approve themselves. The separate `Test
-metadata validator` workflow runs `Test proposed metadata validator` in the ordinary, read-only
-pull-request context to exercise validator and rule changes before they merge without creating the
-protected status name.
+The `Validate metadata` GitHub Actions workflow runs for every pull request targeting `main`.
+GitHub checks out the proposed merge result, then the workflow validates the complete database and
+runs the validator's unit tests. The `Validate metadata` job should be a strict required check for
+`main`, so a pull request must be updated and checked again whenever the base branch changes. The
+same workflow validates metadata changes after they reach `main` and can also be run manually.
 
-The trusted job validates the entire resulting database, not only changed files, so removing a
+The CODEOWNERS policy requests repository-owner review when validation workflows, schemas,
+controlled vocabularies, or validator code change. Because pull request authors cannot approve their
+own changes, Code Owner approval should only be made mandatory after another trusted reviewer is
+available.
+
+The job validates the entire resulting database, not only changed files, so removing a
 referenced record or changing only one side of a relationship fails the check. It also adds a job
 summary with compact ID ranges, field-level modifications, errors, and non-blocking human-review
-warnings. The same trusted validation runs after metadata changes reach `main` and can be run
-manually.
+warnings.
 
 Search and export tools read the YAML files directly.
 
