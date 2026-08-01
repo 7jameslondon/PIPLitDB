@@ -1,0 +1,38 @@
+version: 1
+record_threshold: 6
+max_candidates: 500
+groups:
+  - name: exact_pyrrole_imidazole
+    phrases:
+      - pyrrole-imidazole polyamide
+      - pyrrole imidazole polyamide
+      - Py-Im polyamide
+    weight: 8
+    match_fields: [title, abstract]
+    sources: [openalex, pubmed, crossref, arxiv]
+  - name: hairpin_minor_groove
+    phrases:
+      - hairpin polyamide DNA
+      - hairpin polyamide minor groove
+      - sequence-specific DNA-binding polyamide
+    weight: 5
+    supporting_terms: [DNA, minor groove, sequence-specific]
+    weight_per_supporting_term: 1
+    match_fields: [title, abstract]
+    sources: [openalex, pubmed, crossref, arxiv]
+  - name: minor_groove_polyamide
+    phrases:
+      - minor groove polyamide DNA
+    weight: 4
+    supporting_terms: [pyrrole, imidazole, hairpin]
+    weight_per_supporting_term: 1
+    match_fields: [title, abstract]
+    sources: [openalex, pubmed, crossref, arxiv]
+  - name: ambiguous_pi_polyamide
+    phrases:
+      - PI polyamide
+    weight: 1
+    supporting_terms: [DNA, pyrrole, imidazole, minor groove]
+    weight_per_supporting_term: 1
+    match_fields: [title, abstract]
+    sources: [openalex, pubmed, crossref, arxiv]

@@ -1,0 +1,19 @@
+{
+  "message": {
+    "next-cursor": null,
+    "items": [
+      {
+        "DOI": "10.1234/pip.1",
+        "title": ["Pyrrole-imidazole polyamide binding"],
+        "author": [{"given": "Ada", "family": "Example", "ORCID": "https://orcid.org/0000-0001-0000-0001"}],
+        "abstract": "<jats:p>A PIP abstract</jats:p>",
+        "URL": "https://doi.org/10.1234/pip.1",
+        "type": "journal-article",
+        "container-title": ["Journal of PIP Studies"],
+        "published-online": {"date-parts": [[2025, 2, 3]]},
+        "published-print": {"date-parts": [[2025, 4, 1]]},
+        "relation": {}
+      }
+    ]
+  }
+}

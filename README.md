@@ -140,6 +140,15 @@ warnings.
 
 Search and export tools read the YAML files directly.
 
+### Automated paper discovery
+
+The repository includes an offline-testable discovery pipeline for OpenAlex,
+PubMed, Crossref, and arXiv, with direct bioRxiv enrichment, deterministic
+deduplication, safe candidate record generation, historical-window backtesting,
+and a weekly human-review pull-request workflow. Manual runs are read-only by
+default. Configuration, credentials, review, benchmark-baseline, and recovery
+instructions are in [`discovery/README.md`](discovery/README.md).
+
 ## Public Metadata User Interface
 
 The `UI` directory contains a static HTML, CSS, and JavaScript interface for browsing the public metadata database. The published interface is available at:

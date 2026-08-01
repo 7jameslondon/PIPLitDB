@@ -1,0 +1,7 @@
+version: 1
+status: not_recorded
+description: >-
+  Run scripts/build_discovery_benchmark.py, manually review every exact date and
+  source-eligibility decision, then record a fixed-as-of baseline. An empty
+  manifest is intentional until that review is complete; it must not be
+  represented as a measured zero-paper baseline.

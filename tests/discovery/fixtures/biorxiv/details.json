@@ -1,0 +1,27 @@
+{
+  "messages": [{"status": "ok"}],
+  "collection": [
+    {
+      "doi": "10.1101/2025.01.01.123456",
+      "title": "Pyrrole-imidazole polyamide preprint",
+      "authors": "Ada Example; Bob Example",
+      "date": "2025-01-01",
+      "version": "1",
+      "type": "new_results",
+      "abstract": "A PIP abstract",
+      "published": "10.1234/pip.2",
+      "server": "biorxiv"
+    },
+    {
+      "doi": "10.1101/2025.01.01.123456",
+      "title": "Pyrrole-imidazole polyamide preprint revised",
+      "authors": "Ada Example; Bob Example",
+      "date": "2025-01-10",
+      "version": "2",
+      "type": "new_results",
+      "abstract": "A revised PIP abstract",
+      "published": "10.1234/pip.2",
+      "server": "biorxiv"
+    }
+  ]
+}

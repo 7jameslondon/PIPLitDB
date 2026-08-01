@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "exclusions"],
+  "properties": {
+    "version": {"const": 1},
+    "exclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reason", "decision_date"],
+        "oneOf": [
+          {"required": ["doi"], "not": {"anyOf": [{"required": ["source_id"]}, {"required": ["url"]}]}},
+          {"required": ["source_id", "source"], "not": {"anyOf": [{"required": ["doi"]}, {"required": ["url"]}]}},
+          {"required": ["url"], "not": {"anyOf": [{"required": ["doi"]}, {"required": ["source_id"]}]}}
+        ],
+        "properties": {
+          "doi": {"type": "string", "minLength": 1},
+          "source_id": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "format": "uri"},
+          "source": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 500},
+          "decision_date": {"type": "string", "format": "date"},
+          "title": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

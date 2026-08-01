@@ -15,6 +15,11 @@ on:
       - "requirements-validation.txt"
       - ".github/workflows/validate-metadata.yml"
       - ".github/CODEOWNERS"
+      - "discovery/**"
+      - "requirements-discovery.txt"
+      - ".github/workflows/test-discovery.yml"
+      - ".github/workflows/discover-papers.yml"
+      - ".github/workflows/validate-metadata-trusted.yml"
   workflow_dispatch:
 
 permissions:

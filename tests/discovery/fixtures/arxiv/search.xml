@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <entry>
+    <id>https://arxiv.org/abs/2502.01234v2</id>
+    <updated>2025-02-05T00:00:00Z</updated>
+    <published>2025-02-03T00:00:00Z</published>
+    <title>Pyrrole-imidazole polyamide preprint</title>
+    <summary>A PIP abstract</summary>
+    <author><name>Ada Example</name></author>
+  </entry>
+</feed>

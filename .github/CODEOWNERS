@@ -5,3 +5,12 @@
 /requirements-validation.txt @7jameslondon
 /scripts/validate_metadata.py @7jameslondon
 /tests/test_validate_metadata.py @7jameslondon
+/discovery/ @7jameslondon
+/scripts/discovery/ @7jameslondon
+/scripts/discover_papers.py @7jameslondon
+/scripts/backtest_discovery.py @7jameslondon
+/scripts/build_discovery_benchmark.py @7jameslondon
+/scripts/prepare_discovery_handoff.py @7jameslondon
+/scripts/publish_discovery.py @7jameslondon
+/tests/discovery/ @7jameslondon
+/requirements-discovery.txt @7jameslondon
