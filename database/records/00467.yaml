@@ -2,11 +2,11 @@ document_type: research_article
 publication_stage: publication
 title: "Setting Anchor in the Minor Groove: in Silico Investigation into Formamido N-Methylpyrrole and N-Methylimidazole Polyamides Bound by Cognate DNA Sequences"
 authors:
-  - name: "Collar CJ"
-  - name: "Lee M"
-  - name: "Wilson WD"
+  - name: "Catharine J. Collar"
+  - name: "Moses Lee"
+  - name: "W. David Wilson"
 doi: "10.1021/ci100191a"
 url: "https://doi.org/10.1021/ci100191a"
 publication_year: 2010
 journal: "Journal of Chemical Information and Modeling"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

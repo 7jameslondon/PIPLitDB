@@ -2,15 +2,15 @@ document_type: research_article
 publication_stage: publication
 title: "Effects of a hairpin polyamide on DNA melting: comparison with distamycin and Hoechst 33258"
 authors:
-  - name: "James PL"
-  - name: "Le Strat L"
-  - name: "Ellervik U"
-  - name: "Bratwall C"
-  - name: "Nordén B"
-  - name: "Brown T"
-  - name: "Fox KR"
+  - name: "Peter L. James"
+  - name: "Loic Le Strat"
+  - name: "Ulf Ellervik"
+  - name: "Christina Bratwall"
+  - name: "Bengt Nordén"
+  - name: "Tom Brown"
+  - name: "Keith R. Fox"
 doi: "10.1016/j.bpc.2004.06.001"
 url: "https://doi.org/10.1016/j.bpc.2004.06.001"
 publication_year: 2004
 journal: "Biophysical Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

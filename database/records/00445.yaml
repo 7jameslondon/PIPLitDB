@@ -2,12 +2,12 @@ document_type: research_article
 publication_stage: publication
 title: "Recognition of a 10 base pair sequence of DNA and stereochemical control of the binding affinity of chiral hairpin polyamide–Hoechst 33258 conjugates"
 authors:
-  - name: "Reddy PM"
-  - name: "Toporowski JW"
-  - name: "Kahane AL"
-  - name: "Bruice TC"
+  - name: "Putta Mallikarjuna Reddy"
+  - name: "Joseph W. Toporowski"
+  - name: "Alexandra L. Kahane"
+  - name: "Thomas C. Bruice"
 doi: "10.1016/j.bmcl.2005.08.076"
 url: "https://doi.org/10.1016/j.bmcl.2005.08.076"
 publication_year: 2005
 journal: "Bioorganic & Medicinal Chemistry Letters"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

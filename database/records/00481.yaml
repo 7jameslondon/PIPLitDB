@@ -7,7 +7,7 @@ authors:
   - name: "Caroline O'Hare"
   - name: "Peter J. Morris"
   - name: "Janet M. Hartley"
-  - name: "Zarmeen Taherbhai"
+  - name: "Zarmeen T. Taherbhai"
   - name: "Dorothy Harris"
   - name: "Claudia Forni"
   - name: "Roberto Mantovani"
@@ -17,4 +17,4 @@ doi: "10.1158/1535-7163.mct-06-0503"
 url: "https://doi.org/10.1158/1535-7163.mct-06-0503"
 publication_year: 2007
 journal: "Molecular Cancer Therapeutics"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

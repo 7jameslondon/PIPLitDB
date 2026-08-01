@@ -2,13 +2,13 @@ document_type: research_article
 publication_stage: publication
 title: "DNA Damage Repair Genes Controlling Human Papillomavirus (HPV) Episome Levels under Conditions of Stability and Extreme Instability"
 authors:
-  - name: "Edwards TG"
-  - name: "Vidmar TJ"
-  - name: "Koeller K"
-  - name: "Bashkin JK"
-  - name: "Fisher C"
+  - name: "Terri G. Edwards"
+  - name: "Thomas J. Vidmar"
+  - name: "Kevin Koeller"
+  - name: "James K. Bashkin"
+  - name: "Chris Fisher"
 doi: "10.1371/journal.pone.0075406"
 url: "https://doi.org/10.1371/journal.pone.0075406"
 publication_year: 2013
 journal: "PLOS ONE"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -2,14 +2,14 @@ document_type: research_article
 publication_stage: publication
 title: "Polyamide Platinum Anticancer Complexes Designed to Target Specific DNA Sequences"
 authors:
-  - name: "Jaramillo D"
-  - name: "Wheate NJ"
-  - name: "Ralph SF"
-  - name: "Howard WA"
-  - name: "Tor Y"
-  - name: "Aldrich-Wright JR"
+  - name: "David Jaramillo"
+  - name: "Nial J. Wheate"
+  - name: "Stephen F. Ralph"
+  - name: "Warren A. Howard"
+  - name: "Yitzhak Tor"
+  - name: "Janice R. Aldrich-Wright"
 doi: "10.1021/ic060383n"
 url: "https://doi.org/10.1021/ic060383n"
 publication_year: 2006
 journal: "Inorganic Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

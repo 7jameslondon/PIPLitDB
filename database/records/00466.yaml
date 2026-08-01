@@ -2,14 +2,14 @@ document_type: research_article
 publication_stage: publication
 title: "Hairpin Polyamides That use Parallel and Antiparallel Side-by-Side Peptide Motifs in Binding to DNA"
 authors:
-  - name: "Surovaya AN"
-  - name: "Burckhardt G"
-  - name: "Grokhovsky SL"
-  - name: "Birch-Hirschfeld E"
-  - name: "Gursky GV"
-  - name: "Zimmer C"
+  - name: "Anna N. Surovaya"
+  - name: "Gunther Burckhardt"
+  - name: "Sergei L. Grokhovsky"
+  - name: "Eckhard Birch-Hirschfeld"
+  - name: "Georgii V. Gursky"
+  - name: "Christoph Zimmer"
 doi: "10.1080/07391102.1997.10508159"
 url: "https://doi.org/10.1080/07391102.1997.10508159"
 publication_year: 1997
 journal: "Journal of Biomolecular Structure and Dynamics"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

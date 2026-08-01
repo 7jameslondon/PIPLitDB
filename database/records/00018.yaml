@@ -14,4 +14,4 @@ doi: "10.1021/jacs.3c07802"
 url: "https://doi.org/10.1021/jacs.3c07802"
 publication_year: 2023
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

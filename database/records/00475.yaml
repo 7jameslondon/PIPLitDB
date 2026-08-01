@@ -15,4 +15,4 @@ doi: "10.1016/j.tetlet.2009.10.034"
 url: "https://doi.org/10.1016/j.tetlet.2009.10.034"
 publication_year: 2009
 journal: "Tetrahedron Letters"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
