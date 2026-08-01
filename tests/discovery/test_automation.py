@@ -42,6 +42,10 @@ def report() -> DiscoveryReport:
 
 
 class AutomationTests(unittest.TestCase):
+    def test_schedule_requires_explicit_rollout_variable(self) -> None:
+        workflow = (Path(__file__).resolve().parents[2] / ".github" / "workflows" / "discover-papers.yml").read_text(encoding="utf-8")
+        self.assertIn("vars.DISCOVERY_SCHEDULE_ENABLED == 'true'", workflow)
+
     def test_marker_round_trips_untrusted_identifier_as_base64(self) -> None:
         body = marker("b" * 64, ["doi:10.1234/a-->unsafe"])
         self.assertEqual(body.count("-->"), 1)

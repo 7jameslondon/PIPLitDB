@@ -37,6 +37,7 @@ concurrency:
 
 jobs:
   discover-and-validate:
+    if: ${{ github.event_name != 'schedule' || vars.DISCOVERY_SCHEDULE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

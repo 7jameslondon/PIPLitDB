@@ -96,6 +96,12 @@ Configure these repository secrets before rollout:
   labels, and review requests. A maintainer-owned token would author the PR as
   the requested reviewer and cannot satisfy the notification design.
 
+Scheduled runs are gated by the repository variable
+`DISCOVERY_SCHEDULE_ENABLED`. Leave it unset (or set it to `false`) during
+fixture testing and benchmark review; set it to the literal `true` only after
+the controlled rollout PR passes trusted validation and its review-request email
+is received. Manual dry runs remain available while the schedule is gated.
+
 Repository Actions settings must allow workflow-created pull requests. Use a
 controlled fixture candidate to verify that creating the PR triggers the
 trusted `Validate metadata records` status on the current merge commit. Review
