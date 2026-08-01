@@ -124,15 +124,18 @@ such as a pushed branch's before and after commits, add `--comparison direct`.
 
 Two isolated GitHub Actions workflows cover pull requests. The `Validate metadata` workflow's
 trusted job uses the workflow, dependencies, validator, schema, and controlled vocabularies from the
-base branch and treats the proposed pull-request checkout's records as data only. It publishes the
-`Validate metadata records` status directly on the pull request's merge commit, so that status can be
-made a required branch-protection check without letting a pull request weaken the rules that judge
-it. The trusted job resolves GitHub's pull-request merge ref with bounded retries and verifies that
-its parents are the event's exact base and head commits before validation or status publication. A
+base branch and treats the proposed pull-request checkout's records as data only. It resolves
+GitHub's pull-request merge ref with bounded retries, verifies that its parents are the event's exact
+base and head commits, and records the resulting tree identity before and after validation. A
+regenerated synthetic merge commit remains valid when its parents and tree are unchanged; changed
+content fails validation instead of publishing a stale result. The trusted job publishes the
+`Validate metadata records` status on the stable pull-request head commit so GitHub's synthetic merge
+commit can be regenerated without losing the status. This status should be a strict required check:
+branch rules must require the topic branch to be up to date with the base branch before merging. A
 second pass, still using trusted executable code, verifies that proposed schema and vocabulary
 files remain present, parseable, symlink-safe, and internally consistent. It also requires the
-validator, workflow, dependency manifest, tests, and `.github/CODEOWNERS` policy to remain regular
-files. The CODEOWNERS policy assigns those enforcement paths, the schema, and the controlled
+resolver, validator, workflow, dependency manifest, tests, and `.github/CODEOWNERS` policy to remain
+regular files. The CODEOWNERS policy assigns those enforcement paths, the schema, and the controlled
 vocabularies to `@7jameslondon`; branch protection for `main` should require review from Code Owners
 so changes to the enforcement mechanism or its rules cannot approve themselves. The separate `Test
 metadata validator` workflow runs `Test proposed metadata validator` in the ordinary, read-only

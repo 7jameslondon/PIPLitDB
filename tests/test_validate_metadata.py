@@ -237,6 +237,9 @@ class MetadataValidationTests(unittest.TestCase):
             "github.event_name", trusted_workflow["concurrency"]["group"]
         )
         self.assertEqual(trusted_workflow["permissions"]["statuses"], "write")
+        self.assertEqual(
+            trusted_workflow["permissions"]["pull-requests"], "read"
+        )
         self.assertIn(
             ".github/CODEOWNERS",
             trusted_workflow["on"]["push"]["paths"],
@@ -253,38 +256,49 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertNotIn("github.event.pull_request.base.sha", trusted_checkout["ref"])
         self.assertEqual(trusted_checkout["path"], "trusted")
-        merge_resolution = steps_by_name[
-            "Resolve exact pull request merge commit"
+        pending_status = steps_by_name[
+            "Publish pending trusted status on pull request head"
         ]
-        self.assertEqual(merge_resolution["id"], "pr_merge")
-        self.assertEqual(
-            merge_resolution["env"]["EXPECTED_BASE_SHA"],
-            "${{ github.event.pull_request.base.sha }}",
+        self.assertEqual(pending_status["uses"], "actions/github-script@v8")
+        self.assertIn('state: "pending"', pending_status["with"]["script"])
+        self.assertIn("process.env.HEAD_SHA", pending_status["with"]["script"])
+
+        merge_resolution_before = steps_by_name[
+            "Resolve pull request merge content before validation"
+        ]
+        merge_resolution_after = steps_by_name[
+            "Resolve pull request merge content after validation"
+        ]
+        self.assertEqual(merge_resolution_before["id"], "pr_merge_before")
+        self.assertEqual(merge_resolution_after["id"], "pr_merge_after")
+        for merge_resolution in (merge_resolution_before, merge_resolution_after):
+            self.assertIn(
+                "python scripts/resolve_pr_merge.py", merge_resolution["run"]
+            )
+            self.assertIn(
+                '--expected-base "${{ github.event.pull_request.base.sha }}"',
+                merge_resolution["run"],
+            )
+            self.assertIn(
+                '--expected-head "${{ github.event.pull_request.head.sha }}"',
+                merge_resolution["run"],
+            )
+            self.assertIn('--github-output "${GITHUB_OUTPUT}"', merge_resolution["run"])
+
+        candidate_materialization = steps_by_name[
+            "Materialize verified pull request result as data only"
+        ]
+        self.assertLess(
+            steps.index(merge_resolution_before),
+            steps.index(candidate_materialization),
         )
-        self.assertEqual(
-            merge_resolution["env"]["EXPECTED_HEAD_SHA"],
-            "${{ github.event.pull_request.head.sha }}",
-        )
-        merge_resolution_run = merge_resolution["run"]
-        self.assertIn('refs/pull/${PR_NUMBER}/merge', merge_resolution_run)
-        self.assertIn("max_attempts=8", merge_resolution_run)
-        self.assertIn("actual_parents", merge_resolution_run)
         self.assertIn(
-            'echo "sha=${merge_sha}" >> "${GITHUB_OUTPUT}"',
-            merge_resolution_run,
+            "git clone --no-checkout --no-local trusted candidate",
+            candidate_materialization["run"],
         )
-        candidate_checkout = steps_by_name[
-            "Check out pull request result as data only"
-        ]
-        self.assertLess(steps.index(merge_resolution), steps.index(candidate_checkout))
-        self.assertEqual(
-            candidate_checkout.get("if"),
-            "${{ github.event_name == 'pull_request_target' }}",
-        )
-        self.assertEqual(candidate_checkout["with"]["path"], "candidate")
-        self.assertEqual(candidate_checkout["with"]["persist-credentials"], "false")
-        self.assertEqual(
-            candidate_checkout["with"]["ref"], "${{ steps.pr_merge.outputs.sha }}"
+        self.assertIn(
+            "steps.pr_merge_before.outputs.commit_sha",
+            candidate_materialization["run"],
         )
         self.assertEqual(
             steps_by_name["Install trusted validation dependencies"].get("id"),
@@ -313,7 +327,9 @@ class MetadataValidationTests(unittest.TestCase):
             ".github/workflows/validate-metadata.yml",
             ".github/workflows/test-metadata-validator.yml",
             "requirements-validation.txt",
+            "scripts/resolve_pr_merge.py",
             "scripts/validate_metadata.py",
+            "tests/test_resolve_pr_merge.py",
             "tests/test_validate_metadata.py",
         ):
             with self.subTest(artifact=artifact):
@@ -324,20 +340,24 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("/.github/ @7jameslondon", codeowners)
         self.assertIn("/database/schema/ @7jameslondon", codeowners)
         self.assertIn("/database/vocabularies/ @7jameslondon", codeowners)
+        self.assertIn("/scripts/resolve_pr_merge.py @7jameslondon", codeowners)
         self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
+        self.assertIn("/tests/test_resolve_pr_merge.py @7jameslondon", codeowners)
         status_step = steps_by_name[
-            "Publish trusted status on pull request merge commit"
+            "Publish trusted status on pull request head"
         ]
         self.assertIn("always()", status_step["if"])
-        self.assertIn("steps.pr_merge.outputs.sha != ''", status_step["if"])
+        self.assertIn("!cancelled()", status_step["if"])
         self.assertEqual(status_step["uses"], "actions/github-script@v8")
-        self.assertEqual(
-            status_step["env"]["MERGE_SHA"], "${{ steps.pr_merge.outputs.sha }}"
-        )
         self.assertIn(
-            "process.env.MERGE_SHA",
+            "sha: expectedHead",
             status_step["with"]["script"],
         )
+        self.assertIn("contentStable", status_step["with"]["script"])
+        self.assertIn("BEFORE_TREE_SHA", status_step["env"])
+        self.assertIn("AFTER_TREE_SHA", status_step["env"])
+        self.assertIn("pullRequest.base.sha", status_step["with"]["script"])
+        self.assertIn("pullRequest.head.sha", status_step["with"]["script"])
         self.assertNotIn("merge_commit_sha", trusted_workflow_source)
         self.assertIn(
             'context: "Validate metadata records"',

@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
   statuses: write
 
 concurrency:
@@ -37,52 +38,42 @@ jobs:
           fetch-depth: 0
           path: trusted
 
-      - name: Resolve exact pull request merge commit
-        id: pr_merge
+      - name: Publish pending trusted status on pull request head
+        if: ${{ github.event_name == 'pull_request_target' }}
+        uses: actions/github-script@v8
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.HEAD_SHA,
+              state: "pending",
+              context: "Validate metadata records",
+              description: "Trusted metadata validation is running.",
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+      - name: Resolve pull request merge content before validation
+        id: pr_merge_before
         if: ${{ github.event_name == 'pull_request_target' }}
         working-directory: trusted
-        env:
-          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: >-
+          python scripts/resolve_pr_merge.py
+          --root .
+          --pr-number "${{ github.event.pull_request.number }}"
+          --expected-base "${{ github.event.pull_request.base.sha }}"
+          --expected-head "${{ github.event.pull_request.head.sha }}"
+          --github-output "${GITHUB_OUTPUT}"
+
+      - name: Materialize verified pull request result as data only
+        if: ${{ github.event_name == 'pull_request_target' && steps.pr_merge_before.outcome == 'success' }}
         run: |
           set -euo pipefail
-          # pull_request_target can arrive before GitHub publishes the merge SHA.
-          # Resolve the merge ref itself and accept it only when both parents match.
-          readonly merge_ref="refs/pull/${PR_NUMBER}/merge"
-          readonly local_ref="refs/remotes/origin/pull/${PR_NUMBER}/merge"
-          readonly max_attempts=8
-
-          for attempt in $(seq 1 "${max_attempts}"); do
-            if git fetch --no-tags --force origin "${merge_ref}:${local_ref}"; then
-              merge_sha="$(git rev-parse "${local_ref}^{commit}")"
-              actual_parents="$(git show -s --format=%P "${merge_sha}")"
-              expected_parents="${EXPECTED_BASE_SHA} ${EXPECTED_HEAD_SHA}"
-
-              if [[ "${actual_parents}" == "${expected_parents}" ]]; then
-                echo "sha=${merge_sha}" >> "${GITHUB_OUTPUT}"
-                exit 0
-              fi
-
-              echo "::notice title=Merge ref not current::Attempt ${attempt} resolved ${merge_sha} with parents ${actual_parents}; expected ${expected_parents}."
-            fi
-
-            if (( attempt < max_attempts )); then
-              sleep $((attempt * 2))
-            fi
-          done
-
-          echo "::error title=Cannot resolve exact pull request merge::GitHub did not expose ${merge_ref} with the expected base and head after ${max_attempts} attempts. The pull request may have conflicts, or GitHub may still be generating the merge result."
-          exit 1
-
-      - name: Check out pull request result as data only
-        if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ steps.pr_merge.outputs.sha }}
-          fetch-depth: 0
-          path: candidate
-          persist-credentials: false
+          git clone --no-checkout --no-local trusted candidate
+          git -C candidate fetch --no-tags origin "${{ steps.pr_merge_before.outputs.commit_sha }}"
+          git -C candidate checkout --detach "${{ steps.pr_merge_before.outputs.commit_sha }}"
 
       - name: Fetch pushed branch's previous tip
         if: ${{ github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
@@ -110,7 +101,7 @@ jobs:
             --root candidate \
             --rules-root trusted \
             --base "${{ github.event.pull_request.base.sha }}" \
-            --head "${{ steps.pr_merge.outputs.sha }}" \
+            --head "${{ steps.pr_merge_before.outputs.commit_sha }}" \
             --summary-title "Trusted metadata result"
           # Trusted code also verifies that proposed rule files remain present,
           # parseable, symlink-safe, and internally consistent.
@@ -120,9 +111,23 @@ jobs:
             --require-artifact .github/workflows/validate-metadata.yml \
             --require-artifact .github/workflows/test-metadata-validator.yml \
             --require-artifact requirements-validation.txt \
+            --require-artifact scripts/resolve_pr_merge.py \
             --require-artifact scripts/validate_metadata.py \
+            --require-artifact tests/test_resolve_pr_merge.py \
             --require-artifact tests/test_validate_metadata.py \
             --summary-title "Candidate rules and enforcement artifacts"
+
+      - name: Resolve pull request merge content after validation
+        id: pr_merge_after
+        if: ${{ always() && !cancelled() && github.event_name == 'pull_request_target' && steps.pr_merge_before.outcome == 'success' }}
+        working-directory: trusted
+        run: >-
+          python scripts/resolve_pr_merge.py
+          --root .
+          --pr-number "${{ github.event.pull_request.number }}"
+          --expected-base "${{ github.event.pull_request.base.sha }}"
+          --expected-head "${{ github.event.pull_request.head.sha }}"
+          --github-output "${GITHUB_OUTPUT}"
 
       - name: Validate pushed result and summarize record changes
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' }}
@@ -142,23 +147,55 @@ jobs:
         working-directory: trusted
         run: python -m unittest discover --start-directory tests --verbose
 
-      - name: Publish trusted status on pull request merge commit
-        if: ${{ always() && github.event_name == 'pull_request_target' && steps.pr_merge.outputs.sha != '' }}
+      - name: Publish trusted status on pull request head
+        if: ${{ always() && !cancelled() && github.event_name == 'pull_request_target' }}
         uses: actions/github-script@v8
         env:
-          MERGE_SHA: ${{ steps.pr_merge.outputs.sha }}
-          VALIDATION_STATE: ${{ steps.trusted_validation.outcome == 'success' && 'success' || 'failure' }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_TREE_SHA: ${{ steps.pr_merge_before.outputs.tree_sha }}
+          AFTER_TREE_SHA: ${{ steps.pr_merge_after.outputs.tree_sha }}
+          BEFORE_RESOLUTION_OUTCOME: ${{ steps.pr_merge_before.outcome }}
+          AFTER_RESOLUTION_OUTCOME: ${{ steps.pr_merge_after.outcome }}
+          VALIDATION_OUTCOME: ${{ steps.trusted_validation.outcome }}
         with:
           script: |
-            const state = process.env.VALIDATION_STATE;
+            const expectedBase = process.env.EXPECTED_BASE_SHA;
+            const expectedHead = process.env.EXPECTED_HEAD_SHA;
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            if (
+              pullRequest.state !== "open" ||
+              pullRequest.base.sha !== expectedBase ||
+              pullRequest.head.sha !== expectedHead
+            ) {
+              core.info("Skipping status from a superseded pull request run.");
+              return;
+            }
+
+            const contentStable =
+              process.env.BEFORE_RESOLUTION_OUTCOME === "success" &&
+              process.env.AFTER_RESOLUTION_OUTCOME === "success" &&
+              process.env.BEFORE_TREE_SHA !== "" &&
+              process.env.BEFORE_TREE_SHA === process.env.AFTER_TREE_SHA;
+            const validationPassed = process.env.VALIDATION_OUTCOME === "success";
+            const state = contentStable && validationPassed ? "success" : "failure";
+            const description = state === "success"
+              ? `Validated merge tree ${process.env.AFTER_TREE_SHA.slice(0, 12)}.`
+              : !contentStable
+                ? "Pull request merge content changed during validation."
+                : "Trusted metadata validation failed.";
+
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: process.env.MERGE_SHA,
+              sha: expectedHead,
               state,
               context: "Validate metadata records",
-              description: state === "success"
-                ? "Trusted metadata validation passed."
-                : "Trusted metadata validation failed.",
+              description,
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
