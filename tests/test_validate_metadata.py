@@ -233,8 +233,15 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertNotIn("pull_request", trusted_workflow["on"])
         self.assertIn("pull_request_target", trusted_workflow["on"])
+        pull_request_target = trusted_workflow["on"]["pull_request_target"]
+        self.assertEqual(pull_request_target["branches"], ["main"])
+        self.assertEqual(
+            pull_request_target["types"],
+            ["opened", "reopened", "synchronize", "edited"],
+        )
         self.assertIn(
-            "github.event_name", trusted_workflow["concurrency"]["group"]
+            "github.event.pull_request.number",
+            trusted_workflow["concurrency"]["group"],
         )
         self.assertEqual(trusted_workflow["permissions"]["statuses"], "write")
         self.assertEqual(
@@ -260,8 +267,14 @@ class MetadataValidationTests(unittest.TestCase):
             "Publish pending trusted status on pull request head"
         ]
         self.assertEqual(pending_status["uses"], "actions/github-script@v8")
-        self.assertIn('state: "pending"', pending_status["with"]["script"])
-        self.assertIn("process.env.HEAD_SHA", pending_status["with"]["script"])
+        self.assertIn(
+            "decidePendingStatus", pending_status["with"]["script"]
+        )
+        self.assertIn("pulls.get", pending_status["with"]["script"])
+        self.assertIn(
+            "process.env.EXPECTED_HEAD_SHA", pending_status["with"]["script"]
+        )
+        self.assertIn("EXPECTED_BASE_REF", pending_status["env"])
 
         merge_resolution_before = steps_by_name[
             "Resolve pull request merge content before validation"
@@ -327,8 +340,10 @@ class MetadataValidationTests(unittest.TestCase):
             ".github/workflows/validate-metadata.yml",
             ".github/workflows/test-metadata-validator.yml",
             "requirements-validation.txt",
+            "scripts/pr_status_decision.cjs",
             "scripts/resolve_pr_merge.py",
             "scripts/validate_metadata.py",
+            "tests/test_pr_status_decision.cjs",
             "tests/test_resolve_pr_merge.py",
             "tests/test_validate_metadata.py",
         ):
@@ -340,8 +355,10 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("/.github/ @7jameslondon", codeowners)
         self.assertIn("/database/schema/ @7jameslondon", codeowners)
         self.assertIn("/database/vocabularies/ @7jameslondon", codeowners)
+        self.assertIn("/scripts/pr_status_decision.cjs @7jameslondon", codeowners)
         self.assertIn("/scripts/resolve_pr_merge.py @7jameslondon", codeowners)
         self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
+        self.assertIn("/tests/test_pr_status_decision.cjs @7jameslondon", codeowners)
         self.assertIn("/tests/test_resolve_pr_merge.py @7jameslondon", codeowners)
         status_step = steps_by_name[
             "Publish trusted status on pull request head"
@@ -350,19 +367,16 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("!cancelled()", status_step["if"])
         self.assertEqual(status_step["uses"], "actions/github-script@v8")
         self.assertIn(
-            "sha: expectedHead",
+            "sha: process.env.EXPECTED_HEAD_SHA",
             status_step["with"]["script"],
         )
-        self.assertIn("contentStable", status_step["with"]["script"])
+        self.assertIn("decideFinalStatus", status_step["with"]["script"])
         self.assertIn("BEFORE_TREE_SHA", status_step["env"])
         self.assertIn("AFTER_TREE_SHA", status_step["env"])
-        self.assertIn("pullRequest.base.sha", status_step["with"]["script"])
-        self.assertIn("pullRequest.head.sha", status_step["with"]["script"])
+        self.assertIn("EXPECTED_BASE_REF", status_step["env"])
+        self.assertIn("pulls.get", status_step["with"]["script"])
         self.assertNotIn("merge_commit_sha", trusted_workflow_source)
-        self.assertIn(
-            'context: "Validate metadata records"',
-            status_step["with"]["script"],
-        )
+        self.assertIn("context: decision.context", status_step["with"]["script"])
         self.assertFalse(
             any(
                 "python candidate/" in step.get("run", "")
@@ -397,6 +411,40 @@ class MetadataValidationTests(unittest.TestCase):
             steps_by_name[push_validation_step_name]["run"],
         )
 
+        discover_job = trusted_workflow["jobs"][
+            "discover_open_main_pull_requests"
+        ]
+        self.assertEqual(discover_job["if"], "${{ github.event_name == 'push' }}")
+        discover_script = discover_job["steps"][1]["with"]["script"]
+        self.assertIn('base: "main"', discover_script)
+        self.assertIn("decidePendingStatus", discover_script)
+        self.assertIn("createCommitStatus", discover_script)
+        self.assertIn('core.setOutput("matrix"', discover_script)
+
+        revalidate_job = trusted_workflow["jobs"][
+            "revalidate_open_main_pull_requests"
+        ]
+        self.assertIn("validate", revalidate_job["needs"])
+        self.assertIn("discover_open_main_pull_requests", revalidate_job["needs"])
+        self.assertIn("matrix.pr_number", revalidate_job["concurrency"]["group"])
+        revalidate_steps_by_name = {
+            step["name"]: step for step in revalidate_job["steps"]
+        }
+        revalidate_status = revalidate_steps_by_name[
+            "Publish revalidated status on pull request head"
+        ]
+        self.assertIn("decideFinalStatus", revalidate_status["with"]["script"])
+        self.assertEqual(
+            revalidate_status["env"]["BASE_VALIDATION_OUTCOME"],
+            "${{ needs.validate.result }}",
+        )
+        self.assertIn(
+            "scripts/pr_status_decision.cjs",
+            revalidate_steps_by_name[
+                "Revalidate pull request with current main rules"
+            ]["run"],
+        )
+
         candidate_workflow_path = (
             REPOSITORY_ROOT
             / ".github"
@@ -413,6 +461,10 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertEqual(candidate_job["name"], "Test proposed metadata validator")
         candidate_steps = candidate_job["steps"]
         candidate_steps_by_name = {step["name"]: step for step in candidate_steps}
+        self.assertIn(
+            "node --test tests/test_pr_status_decision.cjs",
+            candidate_steps_by_name["Test proposed metadata validator"]["run"],
+        )
         candidate_validation = candidate_steps_by_name[
             "Exercise proposed validator against pull request result"
         ]

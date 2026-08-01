@@ -3,6 +3,13 @@ name: Validate metadata
 on:
   # Enforce metadata rules with workflow and validator code from the trusted base branch.
   pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+    branches:
+      - main
   push:
     branches:
       - main
@@ -22,7 +29,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: metadata-validation-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: metadata-validation-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -42,16 +49,36 @@ jobs:
         if: ${{ github.event_name == 'pull_request_target' }}
         uses: actions/github-script@v8
         env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         with:
           script: |
+            const { decidePendingStatus } = require(
+              `${process.env.GITHUB_WORKSPACE}/trusted/scripts/pr_status_decision.cjs`
+            );
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            const decision = decidePendingStatus({
+              pullRequest,
+              expectedBaseRef: process.env.EXPECTED_BASE_REF,
+              expectedBaseSha: process.env.EXPECTED_BASE_SHA,
+              expectedHeadSha: process.env.EXPECTED_HEAD_SHA,
+            });
+            if (decision.decision === "skip") {
+              core.info(`Skipping pending status: ${decision.description}`);
+              return;
+            }
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: process.env.HEAD_SHA,
-              state: "pending",
-              context: "Validate metadata records",
-              description: "Trusted metadata validation is running.",
+              sha: process.env.EXPECTED_HEAD_SHA,
+              state: decision.decision,
+              context: decision.context,
+              description: decision.description,
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
 
@@ -111,8 +138,10 @@ jobs:
             --require-artifact .github/workflows/validate-metadata.yml \
             --require-artifact .github/workflows/test-metadata-validator.yml \
             --require-artifact requirements-validation.txt \
+            --require-artifact scripts/pr_status_decision.cjs \
             --require-artifact scripts/resolve_pr_merge.py \
             --require-artifact scripts/validate_metadata.py \
+            --require-artifact tests/test_pr_status_decision.cjs \
             --require-artifact tests/test_resolve_pr_merge.py \
             --require-artifact tests/test_validate_metadata.py \
             --summary-title "Candidate rules and enforcement artifacts"
@@ -145,12 +174,15 @@ jobs:
       - name: Test trusted metadata validator
         if: ${{ !cancelled() && steps.trusted_install.outcome == 'success' && github.event_name != 'pull_request_target' }}
         working-directory: trusted
-        run: python -m unittest discover --start-directory tests --verbose
+        run: |
+          python -m unittest discover --start-directory tests --verbose
+          node --test tests/test_pr_status_decision.cjs
 
       - name: Publish trusted status on pull request head
         if: ${{ always() && !cancelled() && github.event_name == 'pull_request_target' }}
         uses: actions/github-script@v8
         env:
+          EXPECTED_BASE_REF: ${{ github.event.pull_request.base.ref }}
           EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BEFORE_TREE_SHA: ${{ steps.pr_merge_before.outputs.tree_sha }}
@@ -160,42 +192,255 @@ jobs:
           VALIDATION_OUTCOME: ${{ steps.trusted_validation.outcome }}
         with:
           script: |
-            const expectedBase = process.env.EXPECTED_BASE_SHA;
-            const expectedHead = process.env.EXPECTED_HEAD_SHA;
+            const { decideFinalStatus } = require(
+              `${process.env.GITHUB_WORKSPACE}/trusted/scripts/pr_status_decision.cjs`
+            );
             const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
             });
-
-            if (
-              pullRequest.state !== "open" ||
-              pullRequest.base.sha !== expectedBase ||
-              pullRequest.head.sha !== expectedHead
-            ) {
-              core.info("Skipping status from a superseded pull request run.");
+            const decision = decideFinalStatus({
+              pullRequest,
+              expectedBaseRef: process.env.EXPECTED_BASE_REF,
+              expectedBaseSha: process.env.EXPECTED_BASE_SHA,
+              expectedHeadSha: process.env.EXPECTED_HEAD_SHA,
+              beforeTreeSha: process.env.BEFORE_TREE_SHA,
+              afterTreeSha: process.env.AFTER_TREE_SHA,
+              beforeResolutionOutcome: process.env.BEFORE_RESOLUTION_OUTCOME,
+              afterResolutionOutcome: process.env.AFTER_RESOLUTION_OUTCOME,
+              validationOutcome: process.env.VALIDATION_OUTCOME,
+            });
+            if (decision.decision === "skip") {
+              core.info(`Skipping final status: ${decision.description}`);
               return;
             }
-
-            const contentStable =
-              process.env.BEFORE_RESOLUTION_OUTCOME === "success" &&
-              process.env.AFTER_RESOLUTION_OUTCOME === "success" &&
-              process.env.BEFORE_TREE_SHA !== "" &&
-              process.env.BEFORE_TREE_SHA === process.env.AFTER_TREE_SHA;
-            const validationPassed = process.env.VALIDATION_OUTCOME === "success";
-            const state = contentStable && validationPassed ? "success" : "failure";
-            const description = state === "success"
-              ? `Validated merge tree ${process.env.AFTER_TREE_SHA.slice(0, 12)}.`
-              : !contentStable
-                ? "Pull request merge content changed during validation."
-                : "Trusted metadata validation failed.";
-
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: expectedHead,
-              state,
-              context: "Validate metadata records",
-              description,
+              sha: process.env.EXPECTED_HEAD_SHA,
+              state: decision.decision,
+              context: decision.context,
+              description: decision.description,
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+
+  discover_open_main_pull_requests:
+    name: Invalidate open pull requests after main changes
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+    steps:
+      - name: Check out trusted status logic
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Mark current open pull requests pending
+        id: discover
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { decidePendingStatus } = require(
+              `${process.env.GITHUB_WORKSPACE}/trusted/scripts/pr_status_decision.cjs`
+            );
+            const listedPullRequests = await github.paginate(
+              github.rest.pulls.list,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                base: "main",
+                per_page: 100,
+              }
+            );
+            const include = [];
+            for (const listedPullRequest of listedPullRequests) {
+              const expected = {
+                expectedBaseRef: listedPullRequest.base.ref,
+                expectedBaseSha: listedPullRequest.base.sha,
+                expectedHeadSha: listedPullRequest.head.sha,
+              };
+              const { data: pullRequest } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: listedPullRequest.number,
+              });
+              const decision = decidePendingStatus({ pullRequest, ...expected });
+              if (decision.decision === "skip") {
+                core.info(
+                  `Skipping PR #${listedPullRequest.number}: ${decision.description}`
+                );
+                continue;
+              }
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: expected.expectedHeadSha,
+                state: decision.decision,
+                context: decision.context,
+                description: "Revalidating after main changed.",
+                target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              });
+              include.push({
+                pr_number: listedPullRequest.number,
+                base_ref: expected.expectedBaseRef,
+                base_sha: expected.expectedBaseSha,
+                head_sha: expected.expectedHeadSha,
+              });
+            }
+            if (include.length === 0) {
+              include.push({
+                pr_number: 0,
+                base_ref: "",
+                base_sha: "",
+                head_sha: "",
+              });
+            }
+            core.setOutput("matrix", JSON.stringify({ include }));
+
+  revalidate_open_main_pull_requests:
+    name: Revalidate PR #${{ matrix.pr_number }} after main changes
+    needs:
+      - validate
+      - discover_open_main_pull_requests
+    if: ${{ always() && needs.discover_open_main_pull_requests.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover_open_main_pull_requests.outputs.matrix) }}
+    concurrency:
+      group: metadata-validation-${{ matrix.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - name: Check out current trusted validator
+        if: ${{ matrix.pr_number != 0 }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          path: trusted
+
+      - name: Resolve current pull request merge content before validation
+        id: recheck_merge_before
+        if: ${{ matrix.pr_number != 0 }}
+        working-directory: trusted
+        run: >-
+          python scripts/resolve_pr_merge.py
+          --root .
+          --pr-number "${{ matrix.pr_number }}"
+          --expected-base "${{ matrix.base_sha }}"
+          --expected-head "${{ matrix.head_sha }}"
+          --github-output "${GITHUB_OUTPUT}"
+
+      - name: Materialize current pull request result as data only
+        if: ${{ matrix.pr_number != 0 && steps.recheck_merge_before.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          git clone --no-checkout --no-local trusted candidate
+          git -C candidate fetch --no-tags origin "${{ steps.recheck_merge_before.outputs.commit_sha }}"
+          git -C candidate checkout --detach "${{ steps.recheck_merge_before.outputs.commit_sha }}"
+
+      - name: Set up Python for pull request revalidation
+        if: ${{ matrix.pr_number != 0 }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: trusted/requirements-validation.txt
+
+      - name: Install trusted dependencies for pull request revalidation
+        id: recheck_install
+        if: ${{ matrix.pr_number != 0 }}
+        run: python -m pip install --requirement trusted/requirements-validation.txt
+
+      - name: Revalidate pull request with current main rules
+        id: recheck_validation
+        if: ${{ !cancelled() && matrix.pr_number != 0 && steps.recheck_install.outcome == 'success' }}
+        run: |
+          python trusted/scripts/validate_metadata.py \
+            --root candidate \
+            --rules-root trusted \
+            --base "${{ matrix.base_sha }}" \
+            --head "${{ steps.recheck_merge_before.outputs.commit_sha }}" \
+            --summary-title "Trusted metadata result for PR #${{ matrix.pr_number }}"
+          python trusted/scripts/validate_metadata.py \
+            --root candidate \
+            --require-artifact .github/CODEOWNERS \
+            --require-artifact .github/workflows/validate-metadata.yml \
+            --require-artifact .github/workflows/test-metadata-validator.yml \
+            --require-artifact requirements-validation.txt \
+            --require-artifact scripts/pr_status_decision.cjs \
+            --require-artifact scripts/resolve_pr_merge.py \
+            --require-artifact scripts/validate_metadata.py \
+            --require-artifact tests/test_pr_status_decision.cjs \
+            --require-artifact tests/test_resolve_pr_merge.py \
+            --require-artifact tests/test_validate_metadata.py \
+            --summary-title "Candidate rules and enforcement artifacts for PR #${{ matrix.pr_number }}"
+
+      - name: Resolve current pull request merge content after validation
+        id: recheck_merge_after
+        if: ${{ always() && !cancelled() && matrix.pr_number != 0 && steps.recheck_merge_before.outcome == 'success' }}
+        working-directory: trusted
+        run: >-
+          python scripts/resolve_pr_merge.py
+          --root .
+          --pr-number "${{ matrix.pr_number }}"
+          --expected-base "${{ matrix.base_sha }}"
+          --expected-head "${{ matrix.head_sha }}"
+          --github-output "${GITHUB_OUTPUT}"
+
+      - name: Publish revalidated status on pull request head
+        if: ${{ always() && !cancelled() && matrix.pr_number != 0 }}
+        uses: actions/github-script@v8
+        env:
+          EXPECTED_BASE_REF: ${{ matrix.base_ref }}
+          EXPECTED_BASE_SHA: ${{ matrix.base_sha }}
+          EXPECTED_HEAD_SHA: ${{ matrix.head_sha }}
+          BEFORE_TREE_SHA: ${{ steps.recheck_merge_before.outputs.tree_sha }}
+          AFTER_TREE_SHA: ${{ steps.recheck_merge_after.outputs.tree_sha }}
+          BEFORE_RESOLUTION_OUTCOME: ${{ steps.recheck_merge_before.outcome }}
+          AFTER_RESOLUTION_OUTCOME: ${{ steps.recheck_merge_after.outcome }}
+          VALIDATION_OUTCOME: ${{ steps.recheck_validation.outcome }}
+          BASE_VALIDATION_OUTCOME: ${{ needs.validate.result }}
+          PR_NUMBER: ${{ matrix.pr_number }}
+        with:
+          script: |
+            const { decideFinalStatus } = require(
+              `${process.env.GITHUB_WORKSPACE}/trusted/scripts/pr_status_decision.cjs`
+            );
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(process.env.PR_NUMBER),
+            });
+            const decision = decideFinalStatus({
+              pullRequest,
+              expectedBaseRef: process.env.EXPECTED_BASE_REF,
+              expectedBaseSha: process.env.EXPECTED_BASE_SHA,
+              expectedHeadSha: process.env.EXPECTED_HEAD_SHA,
+              beforeTreeSha: process.env.BEFORE_TREE_SHA,
+              afterTreeSha: process.env.AFTER_TREE_SHA,
+              beforeResolutionOutcome: process.env.BEFORE_RESOLUTION_OUTCOME,
+              afterResolutionOutcome: process.env.AFTER_RESOLUTION_OUTCOME,
+              validationOutcome: process.env.VALIDATION_OUTCOME,
+              baseValidationOutcome: process.env.BASE_VALIDATION_OUTCOME,
+            });
+            if (decision.decision === "skip") {
+              core.info(`Skipping revalidated status: ${decision.description}`);
+              return;
+            }
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.EXPECTED_HEAD_SHA,
+              state: decision.decision,
+              context: decision.context,
+              description: decision.description,
               target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });

@@ -3,7 +3,9 @@
 /database/schema/ @7jameslondon
 /database/vocabularies/ @7jameslondon
 /requirements-validation.txt @7jameslondon
+/scripts/pr_status_decision.cjs @7jameslondon
 /scripts/resolve_pr_merge.py @7jameslondon
 /scripts/validate_metadata.py @7jameslondon
+/tests/test_pr_status_decision.cjs @7jameslondon
 /tests/test_resolve_pr_merge.py @7jameslondon
 /tests/test_validate_metadata.py @7jameslondon

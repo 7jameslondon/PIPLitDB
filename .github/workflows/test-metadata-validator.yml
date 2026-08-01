@@ -46,4 +46,6 @@ jobs:
       - name: Test proposed metadata validator
         if: ${{ !cancelled() && steps.candidate_install.outcome == 'success' }}
         working-directory: candidate
-        run: python -m unittest discover --start-directory tests --verbose
+        run: |
+          python -m unittest discover --start-directory tests --verbose
+          node --test tests/test_pr_status_decision.cjs

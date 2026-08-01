@@ -109,6 +109,7 @@ Run the complete validation locally with Python 3.12 or later:
 ```powershell
 python -m pip install -r requirements-validation.txt
 python -m unittest discover -s tests -v
+node --test tests/test_pr_status_decision.cjs
 python scripts/validate_metadata.py
 ```
 
@@ -129,18 +130,26 @@ GitHub's pull-request merge ref with bounded retries, verifies that its parents 
 base and head commits, and records the resulting tree identity before and after validation. A
 regenerated synthetic merge commit remains valid when its parents and tree are unchanged; changed
 content fails validation instead of publishing a stale result. The trusted job publishes the
-`Validate metadata records` status on the stable pull-request head commit so GitHub's synthetic merge
-commit can be regenerated without losing the status. This status should be a strict required check:
-branch rules must require the topic branch to be up to date with the base branch before merging. A
-second pass, still using trusted executable code, verifies that proposed schema and vocabulary
-files remain present, parseable, symlink-safe, and internally consistent. It also requires the
-resolver, validator, workflow, dependency manifest, tests, and `.github/CODEOWNERS` policy to remain
-regular files. The CODEOWNERS policy assigns those enforcement paths, the schema, and the controlled
-vocabularies to `@7jameslondon`; branch protection for `main` should require review from Code Owners
-so changes to the enforcement mechanism or its rules cannot approve themselves. The separate `Test
-metadata validator` workflow runs `Test proposed metadata validator` in the ordinary, read-only
-pull-request context to exercise validator and rule changes before they merge without creating the
-protected status name.
+`Validate metadata records (main)` status on the stable pull-request head commit so GitHub's
+synthetic merge commit can be regenerated without losing the status. The status name is scoped to
+the protected base branch, and both pending and final writes verify the pull request's current state,
+base ref, base commit, and head commit. Opening, reopening, updating, or editing a pull request that
+targets `main` triggers validation. Relevant pushes to `main` immediately return every current open
+pull request to pending and revalidate its merge content with the new base and trusted rules. This
+also covers stacked pull requests whose head already contains the new `main` commit and therefore
+does not change when `main` advances. The pure status-decision logic is behaviorally tested; API calls
+remain in trusted workflow code.
+
+This status should be a strict required check: branch rules must require the topic branch to be up to
+date with `main` before merging. A second pass, still using trusted executable code, verifies that
+proposed schema and vocabulary files remain present, parseable, symlink-safe, and internally
+consistent. It also requires the resolver, status-decision helper, validator, workflow, dependency
+manifest, tests, and `.github/CODEOWNERS` policy to remain regular files. The CODEOWNERS policy
+assigns those enforcement paths, the schema, and the controlled vocabularies to `@7jameslondon`;
+branch protection for `main` should require review from Code Owners so changes to the enforcement
+mechanism or its rules cannot approve themselves. The separate `Test metadata validator` workflow
+runs `Test proposed metadata validator` in the ordinary, read-only pull-request context to exercise
+validator and rule changes before they merge without creating the protected status name.
 
 The trusted job validates the entire resulting database, not only changed files, so removing a
 referenced record or changing only one side of a relationship fails the check. It also adds a job
