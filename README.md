@@ -179,18 +179,34 @@ Users with authorized access to papers may store PDF or HTML copies of the main 
 
 ```text
 papers (private)/
-└── 00001/
-    ├── pdf/
-        ├── main.pdf
-        └── supplementary.pdf
-    ├── html/
-        └── main.html
-    └── extraction/
-        ├── main.md
-        ├── supplementary.md
-        └── figures/
-            └── figure 1.png
+`-- 00001/
+    |-- pdf/
+    |   |-- main.pdf
+    |   `-- supplementary.pdf
+    |-- html/
+    |   `-- main.html
+    `-- extraction/
+        |-- main.md
+        |-- supplementary.md
+        |-- figures/
+        |   |-- main/
+        |   `-- supplementary/
+        |-- tables/
+        |   |-- main/
+        |   `-- supplementary/
+        `-- metadata/
+            |-- main/
+            |   |-- manifest.json
+            |   |-- chunks.jsonl
+            |   |-- figures.jsonl
+            |   |-- tables.jsonl
+            |   `-- text_repairs.jsonl
+            `-- supplementary/
 ```
+
+When both a publisher copy and a PubMed Central copy of the same manuscript are available, retain
+the publisher copy as `main.pdf`; retain the PubMed Central copy only when no publisher copy is
+available.
 
 ## Public Paper Extraction Tools
 
