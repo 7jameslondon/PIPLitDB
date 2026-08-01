@@ -4,8 +4,8 @@ title: "Promoter Scanning for Transcription Inhibition with DNA-Binding Polyamid
 authors:
   - name: "Jennifer A. Ehley"
   - name: "Christian Melander"
-  - name: "David Herman"
-  - name: "Eldon E. Baird"
+  - name: "David Matthew Herman"
+  - name: "Eldon Eugene Baird"
   - name: "Heather A. Ferguson"
   - name: "James A. Goodrich"
   - name: "Peter B. Dervan"
@@ -14,4 +14,4 @@ doi: "10.1128/mcb.22.6.1723-1733.2002"
 url: "https://doi.org/10.1128/mcb.22.6.1723-1733.2002"
 publication_year: 2002
 journal: "Molecular and Cellular Biology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

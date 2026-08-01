@@ -1,4 +1,4 @@
-document_type: research_article
+document_type: review
 publication_stage: publication
 title: "Solid-Phase Synthesis of Pyrrole-Imidazole Polyamides by Resin"
 authors:
@@ -12,4 +12,4 @@ doi: "10.4028/www.scientific.net/amr.908.215"
 url: "https://doi.org/10.4028/www.scientific.net/amr.908.215"
 publication_year: 2014
 journal: "Advanced Materials Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

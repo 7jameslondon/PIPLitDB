@@ -2,13 +2,16 @@ document_type: research_article
 publication_stage: publication
 title: "Regulation of gene expresssion by sequence-specific alkylating polyamide"
 authors:
-  - name: "Oyoshi T"
-  - name: "Kawakami W"
-  - name: "Bando T"
-  - name: "Narita A"
-  - name: "Sugiyama H"
+  - name: "Takanori Oyoshi"
+  - name: "Wakana Kawakami"
+  - name: "Toshikazu Bando"
+  - name: "Akihiko Narita"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nass/2.1.259"
 url: "https://doi.org/10.1093/nass/2.1.259"
 publication_year: 2002
 journal: "Nucleic Acids Research Supplement"
-pip_litdb_status: needs_review
+related_papers:
+  - pip_litdb_id: "00300"
+    relationship_type: is_version_of
+pip_litdb_status: verified

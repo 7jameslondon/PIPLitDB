@@ -2,14 +2,14 @@ document_type: research_article
 publication_stage: publication
 title: "A Bis(guanidinium)alcohol Attached to a Hairpin Polyamide: Synthesis, DNA Binding, and Plasmid Cleavage"
 authors:
-  - name: "Wirth-Hamdoune D"
-  - name: "Ullrich S"
-  - name: "Scheffer U"
-  - name: "Radanović T"
-  - name: "Dürner G"
-  - name: "Göbel MW"
+  - name: "Daniela Wirth-Hamdoune"
+  - name: "Stefan Ullrich"
+  - name: "Ute Scheffer"
+  - name: "Toni Radanović"
+  - name: "Gerd Dürner"
+  - name: "Michael W. Göbel"
 doi: "10.1002/cbic.201500566"
 url: "https://doi.org/10.1002/cbic.201500566"
 publication_year: 2016
 journal: "ChemBioChem"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

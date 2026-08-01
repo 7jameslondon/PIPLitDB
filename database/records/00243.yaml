@@ -2,11 +2,11 @@ document_type: research_article
 publication_stage: publication
 title: "α-Diaminobutyric acid-linked hairpin polyamides"
 authors:
-  - name: "Michelle E. Farkas"
-  - name: "Sherry M. Tsai"
+  - name: "Michelle Elizabeth Farkas"
+  - name: "Sherry Mon-Yue Tsai"
   - name: "Peter B. Dervan"
 doi: "10.1016/j.bmc.2007.07.019"
 url: "https://doi.org/10.1016/j.bmc.2007.07.019"
 publication_year: 2007
 journal: "Bioorganic & Medicinal Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

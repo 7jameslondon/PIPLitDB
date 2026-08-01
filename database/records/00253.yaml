@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "The biological impact of sequence-specific DNA alkylation by pyrrole-imidazole polyamides."
+title: "The biological impact of sequence-specific DNA alkylation by pyrrole-imidazole polyamides"
 authors:
   - name: "Shunta Sasaki"
   - name: "Masafumi Minoshima"
@@ -13,4 +13,4 @@ doi: "10.1093/nass/nrl055"
 url: "https://doi.org/10.1093/nass/nrl055"
 publication_year: 2006
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

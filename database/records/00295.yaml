@@ -8,8 +8,8 @@ authors:
   - name: "Malcolm R. Wood"
   - name: "Christian Melander"
   - name: "Jason M. Belitsky"
-  - name: "Benjamin Edelson"
-  - name: "Nicholas Wurtz"
+  - name: "Benjamin S. Edelson"
+  - name: "Nicholas R. Wurtz"
   - name: "Christoph Briehn"
   - name: "Peter B. Dervan"
   - name: "Joel M. Gottesfeld"
@@ -17,4 +17,4 @@ doi: "10.1016/j.chembiol.2003.09.001"
 url: "https://doi.org/10.1016/j.chembiol.2003.09.001"
 publication_year: 2003
 journal: "Chemistry & Biology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

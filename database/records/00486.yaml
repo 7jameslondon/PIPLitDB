@@ -9,4 +9,4 @@ doi: "10.1002/(sici)1097-458x(199612)34:13<s55::aid-omr38>3.0.co;2-c"
 url: "https://doi.org/10.1002/(sici)1097-458x(199612)34:13%3Cs55::aid-omr38%3E3.0.co;2-c"
 publication_year: 1996
 journal: "Magnetic Resonance in Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

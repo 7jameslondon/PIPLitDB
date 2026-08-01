@@ -2,16 +2,16 @@ document_type: research_article
 publication_stage: publication
 title: "A Two-Hit Mechanism for Pre-Mitotic Arrest of Cancer Cell Proliferation by a Polyamide-Alkylator Conjugate"
 authors:
-  - name: "Alvarez D"
-  - name: "Chou CJ"
-  - name: "Latella L"
-  - name: "Zeitlin SG"
-  - name: "Ku S"
-  - name: "Puri PL"
-  - name: "Dervan PB"
-  - name: "Gottesfeld JM"
+  - name: "David Alvarez"
+  - name: "C. James Chou"
+  - name: "Lucia Latella"
+  - name: "Samantha G. Zeitlin"
+  - name: "Sherman Ku"
+  - name: "Pier Lorenzo Puri"
+  - name: "Peter B. Dervan"
+  - name: "Joel M. Gottesfeld"
 doi: "10.4161/cc.5.14.2913"
 url: "https://doi.org/10.4161/cc.5.14.2913"
 publication_year: 2006
 journal: "Cell Cycle"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

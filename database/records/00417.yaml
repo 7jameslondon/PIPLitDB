@@ -2,12 +2,12 @@ document_type: research_article
 publication_stage: publication
 title: "Extending the recognition site of designed minor groove binding molecules"
 authors:
-  - name: "Geierstanger BH"
-  - name: "Mrksich M"
-  - name: "Dervan PB"
-  - name: "Wemmer DE"
+  - name: "Bernhard H. Geierstanger"
+  - name: "Milan Mrksich"
+  - name: "Peter B. Dervan"
+  - name: "David E. Wemmer"
 doi: "10.1038/nsb0496-321"
 url: "https://doi.org/10.1038/nsb0496-321"
 publication_year: 1996
-journal: "Nature Structural & Molecular Biology"
-pip_litdb_status: needs_review
+journal: "Nature Structural Biology"
+pip_litdb_status: verified

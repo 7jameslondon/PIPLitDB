@@ -11,4 +11,7 @@ doi: "10.1021/ja029196o"
 url: "https://doi.org/10.1021/ja029196o"
 publication_year: 2003
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+related_papers:
+  - pip_litdb_id: "00463"
+    relationship_type: is_version_of
+pip_litdb_status: verified

@@ -4,13 +4,13 @@ title: "Novel platinum(ii)-based anticancer complexes and molecular hosts as the
 authors:
   - name: "Nial J. Wheate"
   - name: "Robin I. Taleb"
-  - name: "Anwen M. Krause-Heuer"
+  - name: "Anwen Michele Krause-Heuer"
   - name: "Rebekah L. Cook"
   - name: "Shaoyu Wang"
-  - name: "Vincent J. Higgins"
-  - name: "Janice R. Aldrich-Wright"
+  - name: "Vincent James Higgins"
+  - name: "Janice Rae Aldrich-Wright"
 doi: "10.1039/b704973k"
 url: "https://doi.org/10.1039/b704973k"
 publication_year: 2007
 journal: "Dalton Transactions"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -2,14 +2,14 @@ document_type: research_article
 publication_stage: publication
 title: "Sequence-specific alkylation by a tandem motif of pyrrole-imidazole CBI conjugate"
 authors:
-  - name: "S. Sasaki"
-  - name: "M. Minoshima"
-  - name: "J. Fujimoto"
-  - name: "K.-i. Shinohara"
-  - name: "T. Bando"
-  - name: "H. Sugiyama"
+  - name: "Shunta Sasaki"
+  - name: "Masafumi Minoshima"
+  - name: "Jun Fujimoto"
+  - name: "Ken-ichi Shinohara"
+  - name: "Toshikazu Bando"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nass/nrm133"
 url: "https://doi.org/10.1093/nass/nrm133"
 publication_year: 2007
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

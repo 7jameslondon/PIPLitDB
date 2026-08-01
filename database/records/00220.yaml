@@ -8,11 +8,11 @@ authors:
   - name: "Toni Brown"
   - name: "Jerome Kluza"
   - name: "Binh Nguyen"
-  - name: "W. Wilson"
+  - name: "W. David Wilson"
   - name: "Moses Lee"
-  - name: "John Hartley"
+  - name: "John A. Hartley"
 doi: "10.2174/157340609788185945"
 url: "https://doi.org/10.2174/157340609788185945"
 publication_year: 2009
 journal: "Medicinal Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

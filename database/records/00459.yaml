@@ -2,15 +2,15 @@ document_type: research_article
 publication_stage: publication
 title: "DNA Binding Hairpin Polyamides with Antifungal Activity"
 authors:
-  - name: "Marini NJ"
-  - name: "Baliga R"
-  - name: "Taylor MJ"
-  - name: "White S"
-  - name: "Simpson P"
-  - name: "Tsai L"
-  - name: "Baird EE"
+  - name: "Nicholas J. Marini"
+  - name: "Ramesh Baliga"
+  - name: "Matthew J. Taylor"
+  - name: "Sarah White"
+  - name: "Paul Simpson"
+  - name: "Luong Tsai"
+  - name: "Eldon E. Baird"
 doi: "10.1016/s1074-5521(03)00148-0"
 url: "https://doi.org/10.1016/s1074-5521(03)00148-0"
 publication_year: 2003
 journal: "Chemistry & Biology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

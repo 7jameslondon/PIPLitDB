@@ -13,4 +13,4 @@ doi: "10.1002/chem.201501870"
 url: "https://doi.org/10.1002/chem.201501870"
 publication_year: 2015
 journal: "Chemistry - A European Journal"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

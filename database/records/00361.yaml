@@ -2,16 +2,16 @@ document_type: research_article
 publication_stage: publication
 title: "Targeted Chemical Wedges Reveal the Role of Allosteric DNA Modulation in Protein−DNA Assembly"
 authors:
-  - name: "Moretti R"
-  - name: "Donato LJ"
-  - name: "Brezinski ML"
-  - name: "Stafford RL"
-  - name: "Hoff H"
-  - name: "Thorson JS"
-  - name: "Dervan PB"
-  - name: "Ansari AZ"
+  - name: "Rocco Moretti"
+  - name: "Leslie J. Donato"
+  - name: "Mary L. Brezinski"
+  - name: "Ryan L. Stafford"
+  - name: "Helena Hoff"
+  - name: "Jon S. Thorson"
+  - name: "Peter B. Dervan"
+  - name: "Aseem Z. Ansari"
 doi: "10.1021/cb700258r"
 url: "https://doi.org/10.1021/cb700258r"
 publication_year: 2008
 journal: "ACS Chemical Biology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

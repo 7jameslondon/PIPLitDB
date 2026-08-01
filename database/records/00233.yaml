@@ -1,12 +1,12 @@
 document_type: research_article
 publication_stage: publication
-title: "Synthesis of oligonucleotide conjugated pyrrolepolyamide- and pyrrole-imidazole polyamide-2'-deoxyguanosine hybrids as novel gene expression control compounds."
+title: "Synthesis of oligonucleotide conjugated pyrrolepolyamide- and pyrrole-imidazole polyamide-2'-deoxyguanosine hybrids as novel gene expression control compounds"
 authors:
-  - name: "E. Kawashima"
-  - name: "Y. Ohba"
-  - name: "K. Kamaike"
+  - name: "Etsuko Kawashima"
+  - name: "Yusuke Ohba"
+  - name: "Kazuo Kamaike"
 doi: "10.1093/nass/nrn197"
 url: "https://doi.org/10.1093/nass/nrn197"
 publication_year: 2008
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

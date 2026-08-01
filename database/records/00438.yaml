@@ -2,15 +2,15 @@ document_type: research_article
 publication_stage: publication
 title: "Inhibition of human papilloma virus E2 DNA binding protein by covalently linked polyamides"
 authors:
-  - name: "Schaal TD"
-  - name: "Mallet WG"
-  - name: "McMinn DL"
-  - name: "Nguyen NV"
-  - name: "Sopko MM"
-  - name: "John S"
-  - name: "Parekh BS"
+  - name: "Thomas D. Schaal"
+  - name: "William G. Mallet"
+  - name: "Dustin L. McMinn"
+  - name: "Nam V. Nguyen"
+  - name: "Michelle M. Sopko"
+  - name: "Sam John"
+  - name: "Bhavin S. Parekh"
 doi: "10.1093/nar/gkg206"
 url: "https://doi.org/10.1093/nar/gkg206"
 publication_year: 2003
 journal: "Nucleic Acids Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

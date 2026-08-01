@@ -2,12 +2,12 @@ document_type: research_article
 publication_stage: publication
 title: "Modulating Hypoxia-Inducible Transcription by Disrupting the HIF-1–DNA Interface"
 authors:
-  - name: "Nickols NG"
-  - name: "Jacobs CS"
-  - name: "Farkas ME"
-  - name: "Dervan PB"
+  - name: "Nicholas G. Nickols"
+  - name: "Claire S. Jacobs"
+  - name: "Michelle E. Farkas"
+  - name: "Peter B. Dervan"
 doi: "10.1021/cb700110z"
 url: "https://doi.org/10.1021/cb700110z"
 publication_year: 2007
 journal: "ACS Chemical Biology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

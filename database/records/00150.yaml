@@ -2,17 +2,17 @@ document_type: research_article
 publication_stage: publication
 title: "Inhibition of MMP-9 using a pyrrole-imidazole polyamide reduces cell invasion in renal cell carcinoma"
 authors:
-  - name: "AYA SATO"
-  - name: "HIROKI NAGASE"
-  - name: "DAISUKE OBINATA"
-  - name: "KYOKO FUJIWARA"
-  - name: "NOBORU FUKUDA"
-  - name: "MASAYOSHI SOMA"
-  - name: "KENYA YAMAGUCHI"
-  - name: "NOZOMU KAWATA"
-  - name: "SATORU TAKAHASHI"
+  - name: "Aya Sato"
+  - name: "Hiroki Nagase"
+  - name: "Daisuke Obinata"
+  - name: "Kyoko Fujiwara"
+  - name: "Noboru Fukuda"
+  - name: "Masayoshi Soma"
+  - name: "Kenya Yamaguchi"
+  - name: "Nozomu Kawata"
+  - name: "Satoru Takahashi"
 doi: "10.3892/ijo.2013.2073"
 url: "https://doi.org/10.3892/ijo.2013.2073"
 publication_year: 2013
 journal: "International Journal of Oncology"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
