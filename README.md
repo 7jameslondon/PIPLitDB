@@ -109,7 +109,6 @@ Run the complete validation locally with Python 3.12 or later:
 ```powershell
 python -m pip install -r requirements-validation.txt
 python -m unittest discover -s tests -v
-node --test tests/test_pr_status_decision.cjs
 python scripts/validate_metadata.py
 ```
 
@@ -123,39 +122,21 @@ python scripts/validate_metadata.py --base origin/main --head HEAD
 That default uses merge-base semantics to summarize a pull-request branch. For an exact transition,
 such as a pushed branch's before and after commits, add `--comparison direct`.
 
-Two isolated GitHub Actions workflows cover pull requests. The `Validate metadata` workflow's
-trusted job uses the workflow, dependencies, validator, schema, and controlled vocabularies from the
-base branch and treats the proposed pull-request checkout's records as data only. It resolves
-GitHub's pull-request merge ref with bounded retries, verifies that its parents are the event's exact
-base and head commits, and records the resulting tree identity before and after validation. A
-regenerated synthetic merge commit remains valid when its parents and tree are unchanged; changed
-content fails validation instead of publishing a stale result. The trusted job publishes the
-`Validate metadata records (main)` status on the stable pull-request head commit so GitHub's
-synthetic merge commit can be regenerated without losing the status. The status name is scoped to
-the protected base branch, and both pending and final writes verify the pull request's current state,
-base ref, base commit, and head commit. Opening, reopening, updating, or editing a pull request that
-targets `main` triggers validation. Relevant pushes to `main` immediately return every current open
-pull request to pending and revalidate its merge content with the new base and trusted rules. This
-also covers stacked pull requests whose head already contains the new `main` commit and therefore
-does not change when `main` advances. The pure status-decision logic is behaviorally tested; API calls
-remain in trusted workflow code.
+The `Validate metadata` GitHub Actions workflow runs for every pull request targeting `main`.
+GitHub checks out the proposed merge result, then the workflow validates the complete database and
+runs the validator's unit tests. The `Validate metadata` job should be a strict required check for
+`main`, so a pull request must be updated and checked again whenever the base branch changes. The
+same workflow validates metadata changes after they reach `main` and can also be run manually.
 
-This status should be a strict required check: branch rules must require the topic branch to be up to
-date with `main` before merging. A second pass, still using trusted executable code, verifies that
-proposed schema and vocabulary files remain present, parseable, symlink-safe, and internally
-consistent. It also requires the resolver, status-decision helper, validator, workflow, dependency
-manifest, tests, and `.github/CODEOWNERS` policy to remain regular files. The CODEOWNERS policy
-assigns those enforcement paths, the schema, and the controlled vocabularies to `@7jameslondon`;
-branch protection for `main` should require review from Code Owners so changes to the enforcement
-mechanism or its rules cannot approve themselves. The separate `Test metadata validator` workflow
-runs `Test proposed metadata validator` in the ordinary, read-only pull-request context to exercise
-validator and rule changes before they merge without creating the protected status name.
+The CODEOWNERS policy requests repository-owner review when validation workflows, schemas,
+controlled vocabularies, or validator code change. Because pull request authors cannot approve their
+own changes, Code Owner approval should only be made mandatory after another trusted reviewer is
+available.
 
-The trusted job validates the entire resulting database, not only changed files, so removing a
+The job validates the entire resulting database, not only changed files, so removing a
 referenced record or changing only one side of a relationship fails the check. It also adds a job
 summary with compact ID ranges, field-level modifications, errors, and non-blocking human-review
-warnings. The same trusted validation runs after metadata changes reach `main` and can be run
-manually.
+warnings.
 
 Search and export tools read the YAML files directly.
 

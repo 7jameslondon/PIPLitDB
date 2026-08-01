@@ -223,259 +223,85 @@ class MetadataValidationTests(unittest.TestCase):
             "artifact.missing", {finding.code for finding in missing_report.errors}
         )
 
-    def test_workflow_separates_trusted_enforcement_from_candidate_tests(self) -> None:
-        trusted_workflow_path = (
+    def test_workflow_runs_conventional_pull_request_validation(self) -> None:
+        workflow_path = (
             REPOSITORY_ROOT / ".github" / "workflows" / "validate-metadata.yml"
         )
-        trusted_workflow_source = trusted_workflow_path.read_text(encoding="utf-8")
-        trusted_workflow = yaml.load(
-            trusted_workflow_source, Loader=yaml.BaseLoader
-        )
-        self.assertNotIn("pull_request", trusted_workflow["on"])
-        self.assertIn("pull_request_target", trusted_workflow["on"])
-        pull_request_target = trusted_workflow["on"]["pull_request_target"]
-        self.assertEqual(pull_request_target["branches"], ["main"])
-        self.assertEqual(
-            pull_request_target["types"],
-            ["opened", "reopened", "synchronize", "edited"],
-        )
-        self.assertIn(
-            "github.event.pull_request.number",
-            trusted_workflow["concurrency"]["group"],
-        )
-        self.assertEqual(trusted_workflow["permissions"]["statuses"], "write")
-        self.assertEqual(
-            trusted_workflow["permissions"]["pull-requests"], "read"
-        )
-        self.assertIn(
-            ".github/CODEOWNERS",
-            trusted_workflow["on"]["push"]["paths"],
-        )
+        workflow_source = workflow_path.read_text(encoding="utf-8")
+        workflow = yaml.load(workflow_source, Loader=yaml.BaseLoader)
 
-        trusted_job = trusted_workflow["jobs"]["validate"]
-        self.assertEqual(trusted_job["name"], "Run trusted metadata validation")
-        self.assertNotIn("if", trusted_job)
-        steps = trusted_job["steps"]
+        self.assertIn("pull_request", workflow["on"])
+        self.assertNotIn("pull_request_target", workflow["on"])
+        self.assertEqual(workflow["on"]["pull_request"]["branches"], ["main"])
+        self.assertEqual(workflow["permissions"], {"contents": "read"})
+        self.assertIn(
+            "github.event.pull_request.number", workflow["concurrency"]["group"]
+        )
+        self.assertEqual(set(workflow["jobs"]), {"validate"})
+
+        job = workflow["jobs"]["validate"]
+        self.assertEqual(job["name"], "Validate metadata")
+        steps = job["steps"]
         steps_by_name = {step["name"]: step for step in steps}
-        trusted_checkout = steps_by_name["Check out trusted validator"]["with"]
-        self.assertIn(
-            "github.event.repository.default_branch", trusted_checkout["ref"]
-        )
-        self.assertNotIn("github.event.pull_request.base.sha", trusted_checkout["ref"])
-        self.assertEqual(trusted_checkout["path"], "trusted")
-        pending_status = steps_by_name[
-            "Publish pending trusted status on pull request head"
-        ]
-        self.assertEqual(pending_status["uses"], "actions/github-script@v8")
-        self.assertIn(
-            "decidePendingStatus", pending_status["with"]["script"]
-        )
-        self.assertIn("pulls.get", pending_status["with"]["script"])
-        self.assertIn(
-            "process.env.EXPECTED_HEAD_SHA", pending_status["with"]["script"]
-        )
-        self.assertIn("EXPECTED_BASE_REF", pending_status["env"])
 
-        merge_resolution_before = steps_by_name[
-            "Resolve pull request merge content before validation"
-        ]
-        merge_resolution_after = steps_by_name[
-            "Resolve pull request merge content after validation"
-        ]
-        self.assertEqual(merge_resolution_before["id"], "pr_merge_before")
-        self.assertEqual(merge_resolution_after["id"], "pr_merge_after")
-        for merge_resolution in (merge_resolution_before, merge_resolution_after):
-            self.assertIn(
-                "python scripts/resolve_pr_merge.py", merge_resolution["run"]
-            )
-            self.assertIn(
-                '--expected-base "${{ github.event.pull_request.base.sha }}"',
-                merge_resolution["run"],
-            )
-            self.assertIn(
-                '--expected-head "${{ github.event.pull_request.head.sha }}"',
-                merge_resolution["run"],
-            )
-            self.assertIn('--github-output "${GITHUB_OUTPUT}"', merge_resolution["run"])
+        checkout = steps_by_name["Check out repository"]["with"]
+        self.assertEqual(checkout["fetch-depth"], "0")
+        self.assertEqual(checkout["persist-credentials"], "false")
+        self.assertNotIn("ref", checkout)
+        self.assertNotIn("path", checkout)
 
-        candidate_materialization = steps_by_name[
-            "Materialize verified pull request result as data only"
-        ]
+        self.assertEqual(
+            steps_by_name["Install validation dependencies"]["id"], "install"
+        )
+        pull_request_validation = steps_by_name["Validate pull request result"]
+        self.assertIn(
+            "github.event_name == 'pull_request'", pull_request_validation["if"]
+        )
+        self.assertIn(
+            "python scripts/validate_metadata.py", pull_request_validation["run"]
+        )
+        self.assertIn(
+            '${{ github.event.pull_request.base.sha }}',
+            pull_request_validation["run"],
+        )
+        self.assertIn('${{ github.sha }}', pull_request_validation["run"])
+
+        validator_tests = steps_by_name["Test metadata validator"]
+        self.assertIn(
+            "python -m unittest discover --start-directory tests --verbose",
+            validator_tests["run"],
+        )
         self.assertLess(
-            steps.index(merge_resolution_before),
-            steps.index(candidate_materialization),
+            steps.index(pull_request_validation), steps.index(validator_tests)
         )
-        self.assertIn(
-            "git clone --no-checkout --no-local trusted candidate",
-            candidate_materialization["run"],
+
+        fetch_step = steps_by_name["Fetch pushed branch's previous tip"]
+        push_validation = steps_by_name[
+            "Validate pushed result and summarize record changes"
+        ]
+        self.assertIn("git fetch --no-tags origin", fetch_step["run"])
+        self.assertIn("${{ github.event.before }}", fetch_step["run"])
+        self.assertIn("--comparison direct", push_validation["run"])
+
+        self.assertNotIn("actions/github-script", workflow_source)
+        self.assertNotIn("createCommitStatus", workflow_source)
+        self.assertNotIn("merge_commit_sha", workflow_source)
+        self.assertFalse(
+            (
+                REPOSITORY_ROOT
+                / ".github"
+                / "workflows"
+                / "test-metadata-validator.yml"
+            ).exists()
         )
-        self.assertIn(
-            "steps.pr_merge_before.outputs.commit_sha",
-            candidate_materialization["run"],
-        )
-        self.assertEqual(
-            steps_by_name["Install trusted validation dependencies"].get("id"),
-            "trusted_install",
-        )
-        trusted_pr_validation = steps_by_name[
-            "Validate pull request with trusted validator"
-        ]["run"]
-        self.assertIn("python trusted/scripts/validate_metadata.py", trusted_pr_validation)
-        self.assertIn("--root candidate", trusted_pr_validation)
-        self.assertIn("--rules-root trusted", trusted_pr_validation)
-        self.assertEqual(
-            trusted_pr_validation.count("python trusted/scripts/validate_metadata.py"),
-            2,
-        )
-        self.assertNotIn("GITHUB_STEP_SUMMARY=", trusted_pr_validation)
-        self.assertIn(
-            '--summary-title "Trusted metadata result"', trusted_pr_validation
-        )
-        self.assertIn(
-            '--summary-title "Candidate rules and enforcement artifacts"',
-            trusted_pr_validation,
-        )
-        for artifact in (
-            ".github/CODEOWNERS",
-            ".github/workflows/validate-metadata.yml",
-            ".github/workflows/test-metadata-validator.yml",
-            "requirements-validation.txt",
-            "scripts/pr_status_decision.cjs",
-            "scripts/resolve_pr_merge.py",
-            "scripts/validate_metadata.py",
-            "tests/test_pr_status_decision.cjs",
-            "tests/test_resolve_pr_merge.py",
-            "tests/test_validate_metadata.py",
-        ):
-            with self.subTest(artifact=artifact):
-                self.assertIn(f"--require-artifact {artifact}", trusted_pr_validation)
+
         codeowners = (
             REPOSITORY_ROOT / ".github" / "CODEOWNERS"
         ).read_text(encoding="utf-8")
         self.assertIn("/.github/ @7jameslondon", codeowners)
         self.assertIn("/database/schema/ @7jameslondon", codeowners)
         self.assertIn("/database/vocabularies/ @7jameslondon", codeowners)
-        self.assertIn("/scripts/pr_status_decision.cjs @7jameslondon", codeowners)
-        self.assertIn("/scripts/resolve_pr_merge.py @7jameslondon", codeowners)
         self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
-        self.assertIn("/tests/test_pr_status_decision.cjs @7jameslondon", codeowners)
-        self.assertIn("/tests/test_resolve_pr_merge.py @7jameslondon", codeowners)
-        status_step = steps_by_name[
-            "Publish trusted status on pull request head"
-        ]
-        self.assertIn("always()", status_step["if"])
-        self.assertIn("!cancelled()", status_step["if"])
-        self.assertEqual(status_step["uses"], "actions/github-script@v8")
-        self.assertIn(
-            "sha: process.env.EXPECTED_HEAD_SHA",
-            status_step["with"]["script"],
-        )
-        self.assertIn("decideFinalStatus", status_step["with"]["script"])
-        self.assertIn("BEFORE_TREE_SHA", status_step["env"])
-        self.assertIn("AFTER_TREE_SHA", status_step["env"])
-        self.assertIn("EXPECTED_BASE_REF", status_step["env"])
-        self.assertIn("pulls.get", status_step["with"]["script"])
-        self.assertNotIn("merge_commit_sha", trusted_workflow_source)
-        self.assertIn("context: decision.context", status_step["with"]["script"])
-        self.assertFalse(
-            any(
-                "python candidate/" in step.get("run", "")
-                or step.get("working-directory") == "candidate"
-                for step in steps
-            )
-        )
-
-        fetch_step_name = "Fetch pushed branch's previous tip"
-        push_validation_step_name = (
-            "Validate pushed result and summarize record changes"
-        )
-        self.assertEqual(
-            steps_by_name[fetch_step_name].get("if"),
-            "${{ github.event_name == 'push' && github.event.before != "
-            "'0000000000000000000000000000000000000000' }}",
-        )
-        self.assertIn(
-            "git fetch --no-tags origin",
-            steps_by_name[fetch_step_name]["run"],
-        )
-        self.assertNotIn("--depth", steps_by_name[fetch_step_name]["run"])
-        self.assertIn(
-            "${{ github.event.before }}", steps_by_name[fetch_step_name]["run"]
-        )
-        self.assertLess(
-            steps.index(steps_by_name[fetch_step_name]),
-            steps.index(steps_by_name[push_validation_step_name]),
-        )
-        self.assertIn(
-            "--comparison direct",
-            steps_by_name[push_validation_step_name]["run"],
-        )
-
-        discover_job = trusted_workflow["jobs"][
-            "discover_open_main_pull_requests"
-        ]
-        self.assertEqual(discover_job["if"], "${{ github.event_name == 'push' }}")
-        discover_script = discover_job["steps"][1]["with"]["script"]
-        self.assertIn('base: "main"', discover_script)
-        self.assertIn("decidePendingStatus", discover_script)
-        self.assertIn("createCommitStatus", discover_script)
-        self.assertIn('core.setOutput("matrix"', discover_script)
-
-        revalidate_job = trusted_workflow["jobs"][
-            "revalidate_open_main_pull_requests"
-        ]
-        self.assertIn("validate", revalidate_job["needs"])
-        self.assertIn("discover_open_main_pull_requests", revalidate_job["needs"])
-        self.assertIn("matrix.pr_number", revalidate_job["concurrency"]["group"])
-        revalidate_steps_by_name = {
-            step["name"]: step for step in revalidate_job["steps"]
-        }
-        revalidate_status = revalidate_steps_by_name[
-            "Publish revalidated status on pull request head"
-        ]
-        self.assertIn("decideFinalStatus", revalidate_status["with"]["script"])
-        self.assertEqual(
-            revalidate_status["env"]["BASE_VALIDATION_OUTCOME"],
-            "${{ needs.validate.result }}",
-        )
-        self.assertIn(
-            "scripts/pr_status_decision.cjs",
-            revalidate_steps_by_name[
-                "Revalidate pull request with current main rules"
-            ]["run"],
-        )
-
-        candidate_workflow_path = (
-            REPOSITORY_ROOT
-            / ".github"
-            / "workflows"
-            / "test-metadata-validator.yml"
-        )
-        candidate_workflow = yaml.load(
-            candidate_workflow_path.read_text(encoding="utf-8"),
-            Loader=yaml.BaseLoader,
-        )
-        self.assertIn("pull_request", candidate_workflow["on"])
-        self.assertNotIn("pull_request_target", candidate_workflow["on"])
-        candidate_job = candidate_workflow["jobs"]["test-candidate"]
-        self.assertEqual(candidate_job["name"], "Test proposed metadata validator")
-        candidate_steps = candidate_job["steps"]
-        candidate_steps_by_name = {step["name"]: step for step in candidate_steps}
-        self.assertIn(
-            "node --test tests/test_pr_status_decision.cjs",
-            candidate_steps_by_name["Test proposed metadata validator"]["run"],
-        )
-        candidate_validation = candidate_steps_by_name[
-            "Exercise proposed validator against pull request result"
-        ]
-        candidate_tests = candidate_steps_by_name[
-            "Test proposed metadata validator"
-        ]
-        self.assertLess(
-            candidate_steps.index(candidate_validation),
-            candidate_steps.index(candidate_tests),
-        )
-        self.assertIn("candidate/scripts/validate_metadata.py", candidate_validation["run"])
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:
         self.write_record("00001", VALID_RECORD + "title: Duplicate key\n")
