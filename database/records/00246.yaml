@@ -2,10 +2,10 @@ document_type: research_article
 publication_stage: publication
 title: "The Reach of Linear Protein−DNA Dimerizers"
 authors:
-  - name: "Ryan L. Stafford"
-  - name: "Peter B. Dervan"
+  - name: "Ryan Leonard Stafford"
+  - name: "Peter Brendan Dervan"
 doi: "10.1021/ja075247b"
 url: "https://doi.org/10.1021/ja075247b"
 publication_year: 2007
 journal: "Journal of the American Chemical Society"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -18,4 +18,4 @@ doi: "10.1093/nar/gki238"
 url: "https://doi.org/10.1093/nar/gki238"
 publication_year: 2005
 journal: "Nucleic Acids Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

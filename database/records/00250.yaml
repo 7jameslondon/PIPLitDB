@@ -3,14 +3,14 @@ publication_stage: publication
 title: "Synthesis and biophysical evaluation of minor-groove binding C-terminus modified pyrrole and imidazole triamide analogs of distamycin"
 authors:
   - name: "Toni Brown"
-  - name: "Zarmeen Taherbhai"
-  - name: "Jim Sexton"
+  - name: "Zarmeen T. Taherbhai"
+  - name: "Jim S. Sexton"
   - name: "Arden Sutterfield"
   - name: "Mark Turlington"
-  - name: "Justin Jones"
+  - name: "Justin B. Jones"
   - name: "Lindsay Stallings"
   - name: "Michelle Stewart"
-  - name: "Karen Buchmueller"
+  - name: "Karen L. Buchmueller"
   - name: "Hilary Mackay"
   - name: "Caroline O’Hare"
   - name: "Jerome Kluza"
@@ -22,4 +22,4 @@ doi: "10.1016/j.bmc.2006.09.037"
 url: "https://doi.org/10.1016/j.bmc.2006.09.037"
 publication_year: 2007
 journal: "Bioorganic & Medicinal Chemistry"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -2,12 +2,12 @@ document_type: research_article
 publication_stage: publication
 title: "Synthesis of pyrrole-imidazole-duocarmycin polyamide and its sequence selective DNA alkylation"
 authors:
-  - name: "T. Fujiwara"
-  - name: "Z.-F. Tao"
-  - name: "I. Saito"
-  - name: "H. Sugiyama"
+  - name: "Tsuyoshi Fujiwara"
+  - name: "Zhi-Fu Tao"
+  - name: "Isao Saito"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nass/42.1.249"
 url: "https://doi.org/10.1093/nass/42.1.249"
 publication_year: 1999
 journal: "Nucleic Acids Symposium Series"
-pip_litdb_status: needs_review
+pip_litdb_status: verified

@@ -1,14 +1,14 @@
 document_type: research_article
 publication_stage: publication
-title: "Pyrrole-imidazole hairpin polyamides with high affinity at 5'-CGCG-3' DNA sequence; influence of cytosine methylation on binding"
+title: "Pyrrole-imidazole hairpin polyamides with high affinity at 5′–CGCG–3′ DNA sequence; influence of cytosine methylation on binding"
 authors:
-  - name: "M. Minoshima"
-  - name: "T. Bando"
-  - name: "S. Sasaki"
-  - name: "J. Fujimoto"
-  - name: "H. Sugiyama"
+  - name: "Masafumi Minoshima"
+  - name: "Toshikazu Bando"
+  - name: "Shunta Sasaki"
+  - name: "Jun Fujimoto"
+  - name: "Hiroshi Sugiyama"
 doi: "10.1093/nar/gkn116"
 url: "https://doi.org/10.1093/nar/gkn116"
 publication_year: 2008
 journal: "Nucleic Acids Research"
-pip_litdb_status: needs_review
+pip_litdb_status: verified
