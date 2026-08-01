@@ -232,6 +232,10 @@ class MetadataValidationTests(unittest.TestCase):
 
         self.assertIn("pull_request", workflow["on"])
         self.assertNotIn("pull_request_target", workflow["on"])
+        self.assertEqual(
+            workflow["on"]["pull_request"]["types"],
+            ["opened", "synchronize", "reopened", "edited"],
+        )
         self.assertEqual(workflow["on"]["pull_request"]["branches"], ["main"])
         self.assertEqual(workflow["permissions"], {"contents": "read"})
         self.assertIn(
