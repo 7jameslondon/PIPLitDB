@@ -127,7 +127,9 @@ trusted job uses the workflow, dependencies, validator, schema, and controlled v
 base branch and treats the proposed pull-request checkout's records as data only. It publishes the
 `Validate metadata records` status directly on the pull request's merge commit, so that status can be
 made a required branch-protection check without letting a pull request weaken the rules that judge
-it. A second pass, still using trusted executable code, verifies that proposed schema and vocabulary
+it. The trusted job resolves GitHub's pull-request merge ref with bounded retries and verifies that
+its parents are the event's exact base and head commits before validation or status publication. A
+second pass, still using trusted executable code, verifies that proposed schema and vocabulary
 files remain present, parseable, symlink-safe, and internally consistent. It also requires the
 validator, workflow, dependency manifest, tests, and `.github/CODEOWNERS` policy to remain regular
 files. The CODEOWNERS policy assigns those enforcement paths, the schema, and the controlled
