@@ -83,6 +83,15 @@ related_papers:
 
 Both entries must be added, changed, or removed together.
 
+### Record removal procedure
+
+To remove an article, delete its YAML record and add its DOI to
+`database/removed-dois.yaml` in the same change. Remove any `related_papers` entries
+in other records that reference the deleted record, but do not rename or renumber
+those records. PIP LitDB IDs are permanent: deleting a record does not shift later
+IDs, and the deleted ID must never be reused. The removed DOI prevents the article
+from being added again under a different ID.
+
 ### Validation
 
 Automated database validation checks:

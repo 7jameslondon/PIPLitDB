@@ -28,6 +28,7 @@ from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 
 RECORD_NAME_RE = re.compile(r"^(?P<id>[0-9]{5})\.yaml$")
+DOI_RE = re.compile(r"^10\.[0-9]{4,9}/\S+$")
 VOCABULARY_KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 IDENTITY_FIELDS = frozenset({"title", "authors", "doi"})
 ALLOWED_RECORD_DIRECTORY_FILES = frozenset({".gitkeep"})
@@ -269,6 +270,7 @@ class MetadataValidator:
         self.schema_validator: Any | None = None
         self.vocabularies: dict[str, dict[str, Any]] = {}
         self.vocabulary_lines: dict[str, dict[tuple[Any, ...], int]] = {}
+        self.removed_dois: set[str] = set()
         self.records: dict[str, dict[str, Any]] = {}
         self.record_paths: dict[str, str] = {}
         self.record_lines: dict[str, dict[tuple[Any, ...], int]] = {}
@@ -276,6 +278,7 @@ class MetadataValidator:
     def validate(self, required_artifacts: Sequence[str] = ()) -> None:
         self._load_schema()
         self._load_vocabularies()
+        self._load_removed_dois()
         self._load_records()
         self._validate_record_schema_and_values()
         self._validate_database_invariants()
@@ -608,6 +611,59 @@ class MetadataValidator:
                     relative,
                     self._line_for(lines, (relationship_type, "inverse")),
                 )
+
+    def _load_removed_dois(self) -> None:
+        path = self.root / "database" / "removed-dois.yaml"
+        relative = self._relative(path)
+        parsed = self._read_yaml(path, "removed_doi")
+        if parsed is None:
+            return
+        if not isinstance(parsed.value, list):
+            self.report.add(
+                "error",
+                "removed_doi.root",
+                "Removed DOI file must contain a YAML list.",
+                relative,
+                self._line_for(parsed.lines, ()),
+            )
+            return
+
+        seen: dict[str, int | None] = {}
+        for index, doi in enumerate(parsed.value):
+            line = self._line_for(parsed.lines, (index,))
+            if not isinstance(doi, str):
+                self.report.add(
+                    "error",
+                    "removed_doi.entry",
+                    f"Removed DOI entry {index + 1} must be a string.",
+                    relative,
+                    line,
+                )
+                continue
+            if not DOI_RE.fullmatch(doi):
+                self.report.add(
+                    "error",
+                    "removed_doi.syntax",
+                    f"Removed DOI entry {doi!r} must be a bare DOI without surrounding whitespace or a doi.org prefix.",
+                    relative,
+                    line,
+                )
+                continue
+
+            normalized_doi = _normalize_doi(doi)
+            if normalized_doi in seen:
+                first_line = seen[normalized_doi]
+                first_location = f" on line {first_line}" if first_line else ""
+                self.report.add(
+                    "error",
+                    "removed_doi.duplicate",
+                    f"Removed DOI {doi!r} duplicates an earlier entry{first_location}.",
+                    relative,
+                    line,
+                )
+                continue
+            seen[normalized_doi] = line
+            self.removed_dois.add(normalized_doi)
 
     def _load_records(self) -> None:
         directory = self.root / "database" / "records"
@@ -1196,7 +1252,16 @@ class MetadataValidator:
         for record_id, record in self.records.items():
             doi = record.get("doi")
             if isinstance(doi, str) and doi.strip():
-                dois[_normalize_doi(doi)].append(record_id)
+                normalized_doi = _normalize_doi(doi)
+                dois[normalized_doi].append(record_id)
+                if normalized_doi in self.removed_dois:
+                    self.report.add(
+                        "error",
+                        "database.removed_doi",
+                        f"DOI {doi!r} is present in the removed DOI list and must not be used by an active record.",
+                        self.record_paths.get(record_id),
+                        self._line_for(self.record_lines.get(record_id, {}), ("doi",)),
+                    )
             url = record.get("url")
             if isinstance(url, str) and url.strip():
                 urls[_normalize_url(url)].append(record_id)
