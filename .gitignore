@@ -1,5 +1,7 @@
 /papers (private)/*
+/papers (private).zip
 /temp/
+/tmp/
 __pycache__/
 *.py[cod]
 PLAN.md

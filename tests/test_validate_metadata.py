@@ -47,6 +47,9 @@ class MetadataValidationTests(unittest.TestCase):
         (self.root / "database" / "schema").mkdir(parents=True)
         (self.root / "database" / "vocabularies").mkdir(parents=True)
         (self.root / "database" / "records").mkdir(parents=True)
+        (self.root / "database" / "removed-dois.yaml").write_text(
+            "[]\n", encoding="utf-8"
+        )
         shutil.copy2(
             REPOSITORY_ROOT / "database" / "schema" / "paper.schema.json",
             self.root / "database" / "schema" / "paper.schema.json",
@@ -553,6 +556,46 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.write_record("00002", second)
         self.assertIn("database.duplicate_doi", self.error_codes())
+
+    def test_removed_doi_list_is_required(self) -> None:
+        (self.root / "database" / "removed-dois.yaml").unlink()
+        self.assertIn("removed_doi.missing", self.error_codes())
+
+    def test_removed_doi_file_must_contain_a_list_of_strings(self) -> None:
+        path = self.root / "database" / "removed-dois.yaml"
+        invalid_documents = (
+            ("{}\n", "removed_doi.root"),
+            ("- 123\n", "removed_doi.entry"),
+        )
+        for content, expected_code in invalid_documents:
+            with self.subTest(content=content):
+                path.write_text(content, encoding="utf-8")
+                self.assertIn(expected_code, self.error_codes())
+
+    def test_removed_doi_entries_must_use_bare_doi_syntax(self) -> None:
+        path = self.root / "database" / "removed-dois.yaml"
+        invalid_dois = (
+            "https://doi.org/10.1234/example.2",
+            "not-a-doi",
+            " 10.1234/example.2 ",
+        )
+        for doi in invalid_dois:
+            with self.subTest(doi=doi):
+                path.write_text(f'- "{doi}"\n', encoding="utf-8")
+                self.assertIn("removed_doi.syntax", self.error_codes())
+
+    def test_removed_doi_duplicates_are_case_insensitive(self) -> None:
+        path = self.root / "database" / "removed-dois.yaml"
+        path.write_text(
+            '- "10.1234/example.2"\n- "10.1234/EXAMPLE.2"\n',
+            encoding="utf-8",
+        )
+        self.assertIn("removed_doi.duplicate", self.error_codes())
+
+    def test_active_record_cannot_use_removed_doi(self) -> None:
+        path = self.root / "database" / "removed-dois.yaml"
+        path.write_text('- "10.1234/EXAMPLE.1"\n', encoding="utf-8")
+        self.assertIn("database.removed_doi", self.error_codes())
 
     def test_probable_duplicates_warn_without_failing(self) -> None:
         second = VALID_RECORD.replace("10.1234/example.1", "10.1234/example.2")

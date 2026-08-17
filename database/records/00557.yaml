@@ -15,3 +15,4 @@ url: "https://doi.org/10.1093/nar/gkh515"
 publication_year: 2004
 journal: "Nucleic Acids Research"
 pip_litdb_status: verified
+pip_litdb_notes: "Supplementary material is referenced by the publisher, but the supplementary file is missing from the publisher and is not archived locally."

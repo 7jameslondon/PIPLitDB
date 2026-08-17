@@ -9,4 +9,5 @@ doi: "10.1093/nass/3.1.119"
 url: "https://doi.org/10.1093/nass/3.1.119"
 publication_year: 2003
 journal: "Nucleic Acids Research Supplement"
+pip_litdb_notes: "The publisher provides this article only as a PDF; no full-text HTML version is available."
 pip_litdb_status: verified

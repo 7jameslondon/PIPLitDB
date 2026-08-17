@@ -83,6 +83,16 @@ related_papers:
 
 Both entries must be added, changed, or removed together.
 
+### Record removal procedure
+
+To remove an article, delete its YAML record, delete its corresponding
+`papers (private)/NNNNN` directory, and add its DOI to
+`database/removed-dois.yaml` in the same change. Remove any `related_papers` entries
+in other records that reference the deleted record, but do not rename or renumber
+those records. PIP LitDB IDs are permanent: deleting a record does not shift later
+IDs, and the deleted ID must never be reused. The removed DOI prevents the article
+from being added again under a different ID.
+
 ### Validation
 
 Automated database validation checks:
@@ -175,14 +185,14 @@ The interface displays only information from the public metadata database. It do
 
 ## Private Paper Copies and Extractions
 
-Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
+Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. For supplementary files sometime they are provided from the publisher in other formats such as .docx or .txt, what ever format it is in it should stay in and just go in the pdf sub-directory anyways. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
 
 ```text
 papers (private)/
 `-- 00001/
     |-- pdf/
     |   |-- main.pdf
-    |   `-- supplementary.pdf
+    |   `-- supplementary.docx
     |-- html/
     |   `-- main.html
     `-- extraction/

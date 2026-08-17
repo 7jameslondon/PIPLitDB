@@ -17,3 +17,4 @@ url: "https://doi.org/10.1002/jcp.30140"
 publication_year: 2021
 journal: "Journal of Cellular Physiology"
 pip_litdb_status: verified
+pip_litdb_notes: "The publisher lists a supplementary file named SupMat.docx, but its official download link returns a broken, unrelated legacy Word file rather than the listed DOCX; no valid copy is available from the publisher."
