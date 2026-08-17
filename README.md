@@ -85,7 +85,8 @@ Both entries must be added, changed, or removed together.
 
 ### Record removal procedure
 
-To remove an article, delete its YAML record and add its DOI to
+To remove an article, delete its YAML record, delete its corresponding
+`papers (private)/NNNNN` directory, and add its DOI to
 `database/removed-dois.yaml` in the same change. Remove any `related_papers` entries
 in other records that reference the deleted record, but do not rename or renumber
 those records. PIP LitDB IDs are permanent: deleting a record does not shift later
