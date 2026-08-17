@@ -15,3 +15,4 @@ url: "https://doi.org/10.1039/c6md00371k"
 publication_year: 2016
 journal: "MedChemComm"
 pip_litdb_status: verified
+pip_litdb_notes: "Publisher full-text HTML is unavailable through the current institutional access; an RSC-hosted accepted-manuscript PDF was obtainable, but the valid existing repository main is retained under the no-overwrite rule."

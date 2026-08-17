@@ -184,14 +184,14 @@ The interface displays only information from the public metadata database. It do
 
 ## Private Paper Copies and Extractions
 
-Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
+Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. For supplementary files sometime they are provided from the publisher in other formats such as .docx or .txt, what ever format it is in it should stay in and just go in the pdf sub-directory anyways. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
 
 ```text
 papers (private)/
 `-- 00001/
     |-- pdf/
     |   |-- main.pdf
-    |   `-- supplementary.pdf
+    |   `-- supplementary.docx
     |-- html/
     |   `-- main.html
     `-- extraction/
