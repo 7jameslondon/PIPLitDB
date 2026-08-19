@@ -221,6 +221,10 @@ def clean_html(
     # repeated "Download PDF" labels inside the archival fragment.
     noise_xpaths = (
         './/*[@data-testid="SmallButtonDetails"]',
+        # ScienceDirect's current article shell includes a duplicate outline,
+        # figure-thumbnail list, and table index in a div-based navigation
+        # block. The inline article body below already retains each item.
+        './/*[@role="navigation" and @aria-label="Table of contents"]',
         # Frontiers duplicates article figures in a separate outline rail.
         # Keep the numbered inline ArticleFigure blocks and discard this
         # navigation-only thumbnail list.

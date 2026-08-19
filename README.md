@@ -16,6 +16,10 @@
 
 The database includes published research articles, preprints, reviews, corrections, and books about PIPs. Only English-language articles should be included. Cover picture articles—that is, articles that only describe a cover picture or provide similar cover-related commentary—should not be included. The database accounts for relationships between works such as errata, preprints, and versions.
 
+Articles from problematic journals should not be included. The current list of problematic journals is:
+
+- *Medicinal Chemistry* (OMICS Publishing Group)
+
 The YAML files are the complete and only database. Each work is stored in its own YAML file in `database/records`. The filename is the authoritative PIP LitDB ID: for example, `00001.yaml` has PIP LitDB ID `00001`. The ID is not repeated as a field inside the YAML record. Search and export tools derive the ID from the filename and include it in exported data when appropriate.
 
 The database is organized as follows:
