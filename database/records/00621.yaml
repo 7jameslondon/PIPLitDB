@@ -9,4 +9,4 @@ publication_year: 2019
 journal: "Springer Theses"
 language_status: english
 pip_litdb_status: verified
-pip_litdb_notes: "Complete Springer Theses volume based on a doctoral thesis accepted by Kyoto University; eBook ISBN 978-981-13-6912-4. Its four individually citable chapters are represented separately in PIP LitDB records 00527, 00529, 00530, and 00526."
+pip_litdb_notes: "Complete Springer Theses volume based on a doctoral thesis accepted by Kyoto University; eBook ISBN 978-981-13-6912-4. The volume contains four individually citable chapters. The former separate PIP LitDB chapter records 00527, 00529, 00530, and 00526 were removed in favor of representing the complete volume with this single book record."

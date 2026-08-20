@@ -14,8 +14,5 @@ doi: "10.1021/jacs.6b09023"
 url: "https://doi.org/10.1021/jacs.6b09023"
 publication_year: 2016
 journal: "Journal of the American Chemical Society"
-related_papers:
-  - pip_litdb_id: "00526"
-    relationship_type: is_version_of
 language_status: english
 pip_litdb_status: verified
