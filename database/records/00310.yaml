@@ -11,4 +11,5 @@ journal: "Bioorganic & Medicinal Chemistry Letters"
 related_papers:
   - pip_litdb_id: "00607"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified

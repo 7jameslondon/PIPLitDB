@@ -12,5 +12,6 @@ journal: "Bioorganic & Medicinal Chemistry"
 related_papers:
   - pip_litdb_id: "00527"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 26, issue 8, pp. 1393-1411; PMID 29439914). The 2019 Springer chapter in record 00527 is reprinted and modified from this article."

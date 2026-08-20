@@ -7,5 +7,6 @@ doi: "10.1007/978-981-13-6912-4"
 url: "https://doi.org/10.1007/978-981-13-6912-4"
 publication_year: 2019
 journal: "Springer Theses"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Complete Springer Theses volume based on a doctoral thesis accepted by Kyoto University; eBook ISBN 978-981-13-6912-4. Its four individually citable chapters are represented separately in PIP LitDB records 00527, 00529, 00530, and 00526."

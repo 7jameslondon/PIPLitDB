@@ -11,5 +11,6 @@ journal: "Methods in Molecular Biology"
 related_papers:
   - pip_litdb_id: "00310"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Protocol chapter in Combinatorial Library Methods and Protocols (Methods in Molecular Biology, vol. 201), pp. 77–92; PMID 12357940, published 2002. It gives an expanded procedural treatment of the rapid OAt-activated solid-phase synthesis reported in the 2002 research article at PIP LitDB 00310. The local source is the complete 16-page Humana Press publisher version of record."

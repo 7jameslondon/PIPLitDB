@@ -10,5 +10,6 @@ doi: "10.1002/cbic.201600198"
 url: "https://doi.org/10.1002/cbic.201600198"
 publication_year: 2016
 journal: "ChemBioChem"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "This cyclic imidazole/lysine polyamide lacks pyrrole, but it is highly related to pyrrole–imidazole polyamides and is treated in PIP LitDB as essentially a PIP."

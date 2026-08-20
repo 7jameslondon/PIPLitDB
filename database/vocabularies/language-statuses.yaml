@@ -1,0 +1,15 @@
+english:
+  label: English
+  description: The publication has been checked and is written predominantly in English.
+
+non_english:
+  label: Non-English
+  description: The publication has been checked and is written predominantly in a language other than English.
+
+uncertain:
+  label: Uncertain
+  description: The available evidence is insufficient or conflicting, so the publication language could not be determined confidently.
+
+unchecked:
+  label: Unchecked
+  description: The publication language has not yet been checked.

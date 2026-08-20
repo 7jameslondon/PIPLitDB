@@ -7,5 +7,6 @@ doi: "10.1038/35026"
 url: "https://doi.org/10.1038/35026"
 publication_year: 1998
 journal: "Nature"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "News & Views commentary (vol. 391, issue 6666, pp. 436–438; PMID 9461206), published 1998-01-29. It comments on PIP LitDB 00568 (DOI 10.1038/35106); the relationship vocabulary has no commentary relation, so no related_papers link is encoded."

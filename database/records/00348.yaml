@@ -9,5 +9,6 @@ doi: "10.1016/s1074-5521(97)90243-x"
 url: "https://doi.org/10.1016/s1074-5521(97)90243-x"
 publication_year: 1997
 journal: "Chemistry & Biology"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

@@ -37,6 +37,7 @@ MAX_SCHEMA_NESTING_DEPTH = 100
 YAML_VALUE_ERRORS = (AttributeError, KeyError, TypeError, ValueError, OverflowError)
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
+    "language-statuses.yaml": frozenset({"label", "description"}),
     "publication-stages.yaml": frozenset({"label", "description"}),
     "record-statuses.yaml": frozenset({"label", "description"}),
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
@@ -875,6 +876,7 @@ class MetadataValidator:
 
     def _validate_record_schema_and_values(self) -> None:
         document_types = self.vocabularies.get("document-types.yaml", {})
+        language_statuses = self.vocabularies.get("language-statuses.yaml", {})
         publication_stages = self.vocabularies.get("publication-stages.yaml", {})
         record_statuses = self.vocabularies.get("record-statuses.yaml", {})
         relationship_types = self.vocabularies.get("relationship-types.yaml", {})
@@ -934,6 +936,9 @@ class MetadataValidator:
             self._check_vocab_value(
                 record, "publication_stage", publication_stages, relative, lines
             )
+            self._check_vocab_value(
+                record, "language_status", language_statuses, relative, lines
+            )
             if "pip_litdb_status" in record:
                 self._check_vocab_value(
                     record, "pip_litdb_status", record_statuses, relative, lines
@@ -942,6 +947,7 @@ class MetadataValidator:
             single_line_paths: list[tuple[Any, ...]] = [
                 ("document_type",),
                 ("publication_stage",),
+                ("language_status",),
                 ("title",),
                 ("doi",),
                 ("url",),

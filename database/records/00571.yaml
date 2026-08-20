@@ -9,5 +9,6 @@ doi: "10.1002/anie.200702767"
 url: "https://doi.org/10.1002/anie.200702767"
 publication_year: 2007
 journal: "Angewandte Chemie International Edition"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Communication (vol. 46, issue 42, pp. 7956-7959; PMID 17763481), published 2007-10-22. The indexed local PDF is Wiley's 13-page supporting information, not the article PDF. Wiley also registered a German-edition version (DOI 10.1002/ange.200702767; Angewandte Chemie 119:8102-8105), but no corresponding PIP LitDB record exists, so no related_papers link is encoded."

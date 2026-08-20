@@ -16,5 +16,6 @@ doi: "10.1016/j.bbrc.2022.06.090"
 url: "https://doi.org/10.1016/j.bbrc.2022.06.090"
 publication_year: 2022
 journal: "Biochemical and Biophysical Research Communications"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Original research article (vol. 620, pp. 150-157; PMID 35792512), published online 2022-06-28 and assigned to the 2022-09-10 issue. Elsevier published a separate corrigendum (DOI 10.1016/j.bbrc.2023.03.022; PMID 36966045; vol. 656, pp. 146-147), which is not represented by its own PIP LitDB record. The indexed local file is a complete ten-page repository-hosted Elsevier bundle containing the two-page corrigendum followed by the eight-page original version of record."

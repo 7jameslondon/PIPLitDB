@@ -36,6 +36,7 @@ doi: "10.1234/example.1"
 url: "https://doi.org/10.1234/example.1"
 publication_year: 2024
 journal: "Example Journal"
+language_status: unchecked
 pip_litdb_status: needs_review
 """
 
@@ -75,6 +76,20 @@ class MetadataValidationTests(unittest.TestCase):
                 book:
                   label: Book
                   description: A complete book-length work.
+            """,
+            "language-statuses.yaml": """
+                english:
+                  label: English
+                  description: Predominantly English.
+                non_english:
+                  label: Non-English
+                  description: Predominantly not English.
+                uncertain:
+                  label: Uncertain
+                  description: Language could not be determined confidently.
+                unchecked:
+                  label: Unchecked
+                  description: Language has not been checked.
             """,
             "publication-stages.yaml": """
                 preprint:
@@ -541,6 +556,13 @@ class MetadataValidationTests(unittest.TestCase):
         codes = self.error_codes()
         self.assertIn("schema.type", codes)
         self.assertIn("record.unknown_vocabulary_value", codes)
+
+    def test_language_status_controlled_vocabulary_is_enforced(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("language_status: unchecked", "language_status: invented_status"),
+        )
+        self.assertIn("record.unknown_vocabulary_value", self.error_codes())
 
     def test_unhashable_invalid_year_is_reported_without_crashing(self) -> None:
         self.write_record(

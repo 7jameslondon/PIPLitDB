@@ -14,5 +14,6 @@ journal: "Nucleic Acids Research Supplement"
 related_papers:
   - pip_litdb_id: "00300"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

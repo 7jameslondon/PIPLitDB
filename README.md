@@ -34,6 +34,7 @@ database/
 │   └── paper.schema.json
 └── vocabularies/
     ├── document-types.yaml
+    ├── language-statuses.yaml
     ├── publication-stages.yaml
     ├── relationship-types.yaml
     └── record-statuses.yaml
@@ -45,6 +46,7 @@ The database records the following fields for each work:
 
 - Document type (`document_type`): The kind of document. Allowed values are `research_article`, `review`, `correction`, and `book`.
 - Publication stage (`publication_stage`): The publication stage of the document. Allowed values are `preprint` and `publication`.
+- Language status (`language_status`): The result of checking the publication's primary language. Allowed values are `english`, `non_english`, `uncertain`, and `unchecked`.
 - Title
 - Authors: An ordered list of author names, ideally using each author's full name
 - DOI
@@ -72,6 +74,7 @@ doi: "10.1234/example.123"
 url: "https://doi.org/10.1234/example.123"
 publication_year: 2024
 journal: "BioRxiv"
+language_status: unchecked
 related_papers:
   - pip_litdb_id: "00002"
     relationship_type: is_preprint_of
@@ -102,7 +105,7 @@ from being added again under a different ID.
 Automated database validation checks:
 
 - Every record follows `paper.schema.json`.
-- Every `document_type` and `publication_stage` value is defined in its corresponding vocabulary file.
+- Every `document_type`, `publication_stage`, and `language_status` value is defined in its corresponding vocabulary file.
 - Every record filename matches the five-digit format `NNNNN.yaml`, begins at `00001`, and uniquely determines that record's PIP LitDB ID.
 - Duplicate DOIs.
 - Related-paper IDs and relationship types.

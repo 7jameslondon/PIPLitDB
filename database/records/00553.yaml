@@ -13,5 +13,6 @@ doi: "10.1016/j.chembiol.2004.09.004"
 url: "https://doi.org/10.1016/j.chembiol.2004.09.004"
 publication_year: 2004
 journal: "Chemistry & Biology"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Original article (vol. 11, issue 11, pp. 1583–1594; PMID 15556009), published in November 2004. The indexed publisher PDF is the complete article with Elsevier's appended 2006 erratum (DOI 10.1016/j.chembiol.2006.02.006), which corrects the Figure 1 structures while stating that the conclusions are unchanged; the erratum is not currently represented by its own PIP LitDB record. Supplement 1 (mmc1.pdf) was recovered from the exact publisher asset, validated as a seven-page PDF, and archived locally as supplementary.pdf."

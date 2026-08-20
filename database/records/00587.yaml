@@ -11,5 +11,6 @@ doi: "10.1002/0471142700.nc0811s63"
 url: "https://doi.org/10.1002/0471142700.nc0811s63"
 publication_year: 2015
 journal: "Current Protocols in Nucleic Acid Chemistry"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Protocol article (vol. 63, pp. 8.11.1-8.11.14), published December 2015; PMID 26623976. The indexed local PDF is the complete 14-page Wiley publisher version of record. This automated solid-phase synthesis protocol is distinct from the companion manual synthesis protocol (PIP LitDB 00537; DOI 10.1002/0471142700.nc0810s63)."

@@ -10,5 +10,6 @@ journal: "Sequence-Specific DNA Binders for the Therapy of Mitochondrial Disease
 related_papers:
   - pip_litdb_id: "00522"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Book chapter (pp. 67-91). Springer states that this chapter republishes, with permission, the 2020 Chemical Communications article with DOI 10.1039/d0cc05158f."
