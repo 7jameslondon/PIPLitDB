@@ -11,7 +11,8 @@
     "title",
     "authors",
     "publication_year",
-    "journal"
+    "journal",
+    "language_status"
   ],
   "properties": {
     "document_type": {
@@ -55,6 +56,11 @@
       "type": "string",
       "minLength": 1,
       "description": "The full journal name, book series or publisher, or preprint server name."
+    },
+    "language_status": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A value defined in database/vocabularies/language-statuses.yaml."
     },
     "related_papers": {
       "type": "array",

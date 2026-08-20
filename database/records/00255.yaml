@@ -16,4 +16,5 @@ related_papers:
   - pip_litdb_id: "00248"
     relationship_type: is_version_of
 pip_litdb_notes: "The publisher provides this article only as a PDF; no full-text HTML version is available."
+language_status: english
 pip_litdb_status: verified

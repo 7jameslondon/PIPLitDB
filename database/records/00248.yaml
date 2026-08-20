@@ -16,4 +16,5 @@ journal: "Journal of the American Chemical Society"
 related_papers:
   - pip_litdb_id: "00255"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified

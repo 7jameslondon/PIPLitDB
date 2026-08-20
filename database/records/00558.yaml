@@ -8,5 +8,6 @@ doi: "10.1016/s0959-440x(03)00081-2"
 url: "https://doi.org/10.1016/s0959-440x(03)00081-2"
 publication_year: 2003
 journal: "Current Opinion in Structural Biology"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 13, issue 3, pp. 284-299; PMID 12831879), published in June 2003. The local source is the complete 16-page Elsevier publisher version of record."

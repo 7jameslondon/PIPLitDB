@@ -10,5 +10,6 @@ journal: "Synthesis and Biological Evaluation of Pyrrole–Imidazole Polyamide P
 related_papers:
   - pip_litdb_id: "00534"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Book chapter (pp. 89–119) in the Springer Theses series. Springer states that this chapter is reprinted and modified with permission from the 2016 Journal of the American Chemical Society article with DOI 10.1021/jacs.6b09023."

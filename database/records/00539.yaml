@@ -16,5 +16,6 @@ journal: "Chemical Science"
 related_papers:
   - pip_litdb_id: "00530"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Original article (vol. 6, issue 4, pp. 2307–2312; PMID 29308145; PMCID PMC5645774), first published online 2015-01-20. The local source is the complete six-page article PDF from PubMed Central. The 2019 Springer Theses chapter at PIP LitDB 00530 states that it is reprinted from this article."

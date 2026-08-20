@@ -15,5 +15,6 @@ journal: "Chemical Communications"
 related_papers:
   - pip_litdb_id: "00517"
     relationship_type: is_version_of
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Research communication (vol. 56, issue 82, pp. 12371-12374). Springer states that its 2022 chapter with DOI 10.1007/978-981-16-8436-4_4 republishes this article with permission of the Royal Society of Chemistry. The user does not currently have RSC access to the main article full text; the publisher page exposes only the metadata, abstract, and references. The supplementary-information PDF remains accessible and is archived locally as the complete 16-page supplementary.pdf from the exact RSC asset https://pubs.rsc.org/cc/article-supplement/676299/pdf/d0cc05158f1_suppl/."

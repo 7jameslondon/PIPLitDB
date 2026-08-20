@@ -12,5 +12,6 @@ doi: "10.1016/s0040-4039(00)88790-0"
 url: "https://doi.org/10.1016/s0040-4039(00)88790-0"
 publication_year: 1990
 journal: "Tetrahedron Letters"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher provides this article only as a PDF; no full-text HTML version is available."

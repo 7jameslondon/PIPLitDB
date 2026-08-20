@@ -11,6 +11,7 @@
     "url",
     "publication_year",
     "journal",
+    "language_status",
     "related_papers",
     "pip_litdb_status",
     "pip_litdb_notes",
@@ -304,7 +305,13 @@
   }
 
   async function loadVocabularies(readVocabulary) {
-    const names = ["document-types", "publication-stages", "record-statuses", "relationship-types"];
+    const names = [
+      "document-types",
+      "language-statuses",
+      "publication-stages",
+      "record-statuses",
+      "relationship-types",
+    ];
     const entries = await Promise.all(
       names.map(async (name) => {
         try {
@@ -627,6 +634,7 @@
         record.publication_year,
         record.document_type,
         record.publication_stage,
+        record.language_status,
         record.pip_litdb_status,
         record.pip_litdb_notes,
         ...(Array.isArray(record.authors) ? record.authors.map((author) => author?.name) : []),
@@ -810,6 +818,11 @@
       overviewGrid,
       "Publication stage",
       labelFor(vocabulary["publication-stages"], record.publication_stage),
+    );
+    appendMetadata(
+      overviewGrid,
+      "Language status",
+      labelFor(vocabulary["language-statuses"], record.language_status),
     );
     appendMetadata(
       overviewGrid,

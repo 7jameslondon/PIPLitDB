@@ -10,5 +10,6 @@ doi: "10.1093/nar/30.8.1834"
 url: "https://doi.org/10.1093/nar/30.8.1834"
 publication_year: 2002
 journal: "Nucleic Acids Research"
+language_status: english
 pip_litdb_status: verified
 pip_litdb_notes: "Journal article (vol. 30, issue 8, pp. 1834-1841; PMID 11937638, PMCID PMC113203), published 2002-04-15. The local source is the complete eight-page Oxford University Press publisher version of record. Supplementary material is referenced by the publisher, but the supplementary file is missing from the publisher and is not archived locally."
