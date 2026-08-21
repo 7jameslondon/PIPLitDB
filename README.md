@@ -207,34 +207,39 @@ The interface displays only information from the public metadata database. It do
 
 ## Private Paper Copies and Extractions
 
-Users with authorized access to papers may store PDF or HTML copies of the main manuscript and supplementary files in the `papers (private)` directory. For supplementary files sometime they are provided from the publisher in other formats such as .docx or .txt, what ever format it is in it should stay in and just go in the pdf sub-directory anyways. Markdown extractions and extracted figure images may also be stored there. Files should be organized as follows:
+Users with authorized access may store source documents and generated
+extractions under `papers (private)`. Main articles, supplementary sources, and
+generated outputs are kept separate:
 
 ```text
 papers (private)/
+|-- staging/                     # Temporary private extraction work
 `-- 00001/
     |-- pdf/
-    |   |-- main.pdf
-    |   `-- supplementary.docx
+    |   `-- main.pdf
     |-- html/
     |   `-- main.html
-    `-- extraction/
-        |-- main.md
-        |-- supplementary.md
-        |-- figures/
-        |   |-- main/
-        |   `-- supplementary/
-        |-- tables/
-        |   |-- main/
-        |   `-- supplementary/
-        `-- metadata/
-            |-- main/
-            |   |-- manifest.json
-            |   |-- chunks.jsonl
-            |   |-- figures.jsonl
-            |   |-- tables.jsonl
-            |   `-- text_repairs.jsonl
-            `-- supplementary/
+    |-- supplementary/           # Untouched supplementary source files
+    |   |-- original-name.docx
+    |   `-- original-name.ext
+    |-- extraction_old/          # Temporary legacy comparison baseline
+    |-- extraction/              # Polished machine-ready output
+    `-- extraction_diagnostic/   # Technical reports and review material
 ```
+
+Store every supplementary source file in the record's `supplementary/`
+directory, regardless of format. Preserve its original filename, extension,
+and bytes; do not place supplementary files in `pdf/` or `html/`. The source
+directories are inputs and must not be modified by the extraction pipeline.
+
+The existing `extraction_old/` directories contain imperfect legacy outputs.
+They may be used only for comparison and are not authoritative publication
+sources. They will eventually be deleted through a separate, explicitly
+authorized cleanup after their replacements have been approved.
+
+The detailed structure and behavior of new `extraction/` and
+`extraction_diagnostic/` outputs will be documented separately. Empty or
+not-yet-generated directories do not need to be created as placeholders.
 
 When both a publisher copy and a PubMed Central copy of the same manuscript are available, retain
 the publisher copy as `main.pdf`; retain the PubMed Central copy only when no publisher copy is
