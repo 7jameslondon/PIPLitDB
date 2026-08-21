@@ -11,4 +11,9 @@ url: "https://doi.org/10.1093/nar/gkl1042"
 publication_year: 2007
 journal: "Nucleic Acids Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplement_1.zip' was extracted into the private-paper PDF directory; its extracted contents are 'nar-02215-c-2006-File013.doc', 'nar-02215-c-2006-File010.doc', 'nar-02215-c-2006-File012.doc', and 'nar-02215-c-2006-File011.doc'."

@@ -20,5 +20,9 @@ url: "https://doi.org/10.1248/bpb.b12-00614"
 publication_year: 2012
 journal: "Biological and Pharmaceutical Bulletin"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "J-STAGE does not provide a full-text HTML version for this article; the complete publisher article is available only as a PDF."

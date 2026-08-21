@@ -11,5 +11,9 @@ url: "https://doi.org/10.1021/ol0156796"
 publication_year: 2001
 journal: "Organic Letters"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
-pip_litdb_notes: "Letter (vol. 3, issue 8, pp. 1201-1203; PMID 11348194), published online 2001-03-28 with issue date 2001-04-19. The indexed local PDF is the six-page supporting information (complete experimental details and product characterization), not the article PDF; this record represents the DOI-identified article."
+pip_litdb_notes: "Letter (vol. 3, issue 8, pp. 1201-1203; PMID 11348194), published online 2001-03-28 with issue date 2001-04-19. ACS also provides six-page supporting information with complete experimental details and product characterization."

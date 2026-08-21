@@ -17,4 +17,8 @@ url: "https://doi.org/10.1016/j.ejmech.2020.112704"
 publication_year: 2020
 journal: "European Journal of Medicinal Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

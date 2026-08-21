@@ -37,6 +37,10 @@ url: "https://doi.org/10.1234/example.1"
 publication_year: 2024
 journal: "Example Journal"
 language_status: unchecked
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked
 pip_litdb_status: needs_review
 """
 
@@ -76,6 +80,32 @@ class MetadataValidationTests(unittest.TestCase):
                 book:
                   label: Book
                   description: A complete book-length work.
+            """,
+            "file-statuses.yaml": """
+                unchecked:
+                  label: Unchecked
+                  description: Holdings have not been assessed.
+                present:
+                  label: Present
+                  description: Material is present and valid.
+                needed:
+                  label: Needed
+                  description: Material still needs to be acquired.
+                partial:
+                  label: Partial
+                  description: Some expected material is present.
+                error:
+                  label: Error
+                  description: Stored material failed validation.
+                uncertain:
+                  label: Uncertain
+                  description: Material status could not be determined.
+                not_available:
+                  label: Not available
+                  description: Material cannot be obtained from an allowed source.
+                not_applicable:
+                  label: Not applicable
+                  description: The publication does not provide this material.
             """,
             "language-statuses.yaml": """
                 english:
@@ -563,6 +593,20 @@ class MetadataValidationTests(unittest.TestCase):
             VALID_RECORD.replace("language_status: unchecked", "language_status: invented_status"),
         )
         self.assertIn("record.unknown_vocabulary_value", self.error_codes())
+
+    def test_file_status_controlled_vocabulary_is_enforced(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("main_pdf: unchecked", "main_pdf: invented_status"),
+        )
+        self.assertIn("record.unknown_vocabulary_value", self.error_codes())
+
+    def test_all_file_status_members_are_required(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("  full_text_html: unchecked\n", ""),
+        )
+        self.assertIn("schema.required", self.error_codes())
 
     def test_unhashable_invalid_year_is_reported_without_crashing(self) -> None:
         self.write_record(

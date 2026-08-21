@@ -12,4 +12,8 @@ url: "https://doi.org/10.1021/bi301327v"
 publication_year: 2012
 journal: "Biochemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: needed
+  full_text_html: present
 pip_litdb_status: verified

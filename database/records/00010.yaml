@@ -15,4 +15,8 @@ url: "https://doi.org/10.1016/j.bbrc.2022.07.042"
 publication_year: 2022
 journal: "Biochemical and Biophysical Research Communications"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

@@ -10,5 +10,9 @@ url: "https://doi.org/10.1016/j.jbiotec.2004.03.018"
 publication_year: 2004
 journal: "Journal of Biotechnology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 112, issues 1–2, pp. 195–220; PMID 15288953), published 2004-08-26. It is distinct from the identically titled 2004 book chapter by different authors (DOI 10.1002/3527601902.ch3)."

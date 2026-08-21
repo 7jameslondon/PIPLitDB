@@ -12,5 +12,9 @@ url: "https://doi.org/10.1016/j.bmc.2006.07.004"
 publication_year: 2007
 journal: "Bioorganic & Medicinal Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 15, issue 1, pp. 17–35; PMID 17081759), available online 2006-11-01 with a 2007-01-01 issue date. The indexed local PDF is the Elsevier version of record."

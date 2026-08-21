@@ -11,5 +11,9 @@ url: "https://doi.org/10.1046/j.1432-1327.1999.00515.x"
 publication_year: 1999
 journal: "European Journal of Biochemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher HTML is missing the article figures."

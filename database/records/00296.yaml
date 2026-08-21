@@ -10,4 +10,8 @@ publication_year: 2003
 journal: "Organic & Biomolecular Chemistry"
 pip_litdb_notes: "Publisher full-text HTML is unavailable through the current institutional access."
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified

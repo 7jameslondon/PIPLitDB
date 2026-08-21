@@ -10,4 +10,8 @@ url: "https://doi.org/10.3762/bjoc.12.128"
 publication_year: 2016
 journal: "Beilstein Journal of Organic Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

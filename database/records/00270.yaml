@@ -13,4 +13,8 @@ url: "https://doi.org/10.1021/jp045277q"
 publication_year: 2005
 journal: "The Journal of Physical Chemistry B"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

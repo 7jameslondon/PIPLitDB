@@ -16,4 +16,9 @@ url: "https://doi.org/10.1093/nar/gkn231"
 publication_year: 2008
 journal: "Nucleic Acids Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplement_1.zip' was extracted into the private-paper PDF directory; its extracted content is 'nar-00385-c-2008-File002.doc'."

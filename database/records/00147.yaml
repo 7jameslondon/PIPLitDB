@@ -14,4 +14,8 @@ url: "https://doi.org/10.1002/anie.201305489"
 publication_year: 2013
 journal: "Angewandte Chemie International Edition"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

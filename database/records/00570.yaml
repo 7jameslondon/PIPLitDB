@@ -9,5 +9,9 @@ url: "https://doi.org/10.1016/s0959-440x(97)80051-6"
 publication_year: 1997
 journal: "Current Opinion in Structural Biology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 7, issue 3, pp. 355-361; PMID 9204277), published in June 1997. The indexed local PDF is the complete seven-page publisher version of record."

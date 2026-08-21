@@ -22,4 +22,8 @@ url: "https://doi.org/10.1016/j.bbrc.2021.07.077"
 publication_year: 2021
 journal: "Biochemical and Biophysical Research Communications"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

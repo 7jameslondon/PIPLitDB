@@ -15,5 +15,9 @@ related_papers:
   - pip_litdb_id: "00610"
     relationship_type: is_version_of
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Journal article (vol. 9, issue 4, pp. 592-600; PMID 17530904, PMCID PMC2518654), published in issue 2007-07-09 after online publication on 2007-05-27. The indexed local files are byte-identical copies of the complete 19-page NIH author manuscript. The same authors first reported this work in the shorter Angewandte communication at PIP LitDB 00610."

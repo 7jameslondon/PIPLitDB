@@ -12,4 +12,8 @@ url: "https://doi.org/10.1016/j.chembiol.2021.08.003"
 publication_year: 2022
 journal: "Cell Chemical Biology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

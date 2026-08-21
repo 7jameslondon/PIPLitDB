@@ -11,4 +11,8 @@ url: "https://doi.org/10.1021/ol9015139"
 publication_year: 2009
 journal: "Organic Letters"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

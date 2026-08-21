@@ -10,5 +10,9 @@ url: "https://doi.org/10.1002/(sici)1521-3765(19980515)4:5%3C796::aid-chem796%3E
 publication_year: 1998
 journal: "Chemistry – A European Journal"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

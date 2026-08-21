@@ -15,4 +15,9 @@ url: "https://doi.org/10.1111/cas.70043"
 publication_year: 2025
 journal: "Cancer Science"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplementary.zip' was extracted into the private-paper PDF directory; its extracted contents are 'cas70043-sup-0001-AppendixS1.docx' and 'cas70043-sup-0002-AppendixS2.pdf'."

@@ -37,6 +37,7 @@ MAX_SCHEMA_NESTING_DEPTH = 100
 YAML_VALUE_ERRORS = (AttributeError, KeyError, TypeError, ValueError, OverflowError)
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
+    "file-statuses.yaml": frozenset({"label", "description"}),
     "language-statuses.yaml": frozenset({"label", "description"}),
     "publication-stages.yaml": frozenset({"label", "description"}),
     "record-statuses.yaml": frozenset({"label", "description"}),
@@ -876,6 +877,7 @@ class MetadataValidator:
 
     def _validate_record_schema_and_values(self) -> None:
         document_types = self.vocabularies.get("document-types.yaml", {})
+        file_statuses = self.vocabularies.get("file-statuses.yaml", {})
         language_statuses = self.vocabularies.get("language-statuses.yaml", {})
         publication_stages = self.vocabularies.get("publication-stages.yaml", {})
         record_statuses = self.vocabularies.get("record-statuses.yaml", {})
@@ -943,6 +945,23 @@ class MetadataValidator:
                 self._check_vocab_value(
                     record, "pip_litdb_status", record_statuses, relative, lines
                 )
+            file_status = record.get("pip_litdb_file_status")
+            if isinstance(file_status, dict):
+                for material_name in (
+                    "main_pdf",
+                    "supplementary_material",
+                    "full_text_html",
+                ):
+                    value = file_status.get(material_name)
+                    if isinstance(value, str) and value not in file_statuses:
+                        value_path = ("pip_litdb_file_status", material_name)
+                        self.report.add(
+                            "error",
+                            "record.unknown_vocabulary_value",
+                            f"{_format_value_path(value_path)} value {value!r} is not defined in its vocabulary.",
+                            relative,
+                            self._line_for(lines, value_path),
+                        )
 
             single_line_paths: list[tuple[Any, ...]] = [
                 ("document_type",),
@@ -954,6 +973,14 @@ class MetadataValidator:
                 ("journal",),
                 ("pip_litdb_status",),
             ]
+            single_line_paths.extend(
+                ("pip_litdb_file_status", material_name)
+                for material_name in (
+                    "main_pdf",
+                    "supplementary_material",
+                    "full_text_html",
+                )
+            )
             authors = record.get("authors")
             if isinstance(authors, list):
                 single_line_paths.extend(("authors", index, "name") for index in range(len(authors)))

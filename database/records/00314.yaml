@@ -15,5 +15,9 @@ url: "https://doi.org/10.1128/mcb.22.6.1723-1733.2002"
 publication_year: 2002
 journal: "Molecular and Cellular Biology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "Full publisher HTML text is not archived because the user does not have access to it."

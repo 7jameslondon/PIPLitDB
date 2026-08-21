@@ -13,5 +13,9 @@ url: "https://doi.org/10.1016/j.biochi.2019.08.009"
 publication_year: 2019
 journal: "Biochimie"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: needed
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Research article (vol. 167, pp. 1-11), published online 2019-08-21 and in the December 2019 issue; PMID 31445072, PMCID PMC6883780. The indexed local PDF is the complete 24-page NIH author manuscript, made available in PMC on 2020-12-01."

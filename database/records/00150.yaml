@@ -16,4 +16,8 @@ url: "https://doi.org/10.3892/ijo.2013.2073"
 publication_year: 2013
 journal: "International Journal of Oncology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

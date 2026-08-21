@@ -11,5 +11,9 @@ url: "https://doi.org/10.1002/3527601783.ch15"
 publication_year: 2002
 journal: "Small Molecule DNA and RNA Binders"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
-pip_litdb_notes: "Review chapter in Small Molecule DNA and RNA Binders: From Synthesis to Nucleic Acid Complexes (1st ed., chapter 15, pp. 384-413; print ISBN 9783527305957, online ISBN 9783527601783), first published 2002-11-27 and released online 2004-04-06. The local source is the complete 30-page Wiley publisher version of record."
+pip_litdb_notes: "Review chapter in Small Molecule DNA and RNA Binders: From Synthesis to Nucleic Acid Complexes (1st ed., chapter 15, pp. 384-413; print ISBN 9783527305957, online ISBN 9783527601783), first published 2002-11-27 and released online 2004-04-06. The local source is the complete 30-page Wiley publisher version of record. The user does not have access to the publisher content."

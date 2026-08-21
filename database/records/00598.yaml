@@ -13,5 +13,9 @@ url: "https://doi.org/10.1016/j.bios.2023.115256"
 publication_year: 2023
 journal: "Biosensors and Bioelectronics"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 230, article 115256; PMID 36989663), issue-dated 2023-06-15 and available online 2023-03-21. The indexed local source is the complete 15-page Elsevier publisher version of record, distributed under the CC BY 4.0 license."

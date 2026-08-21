@@ -14,5 +14,9 @@ url: "https://doi.org/10.1021/ja0445140"
 publication_year: 2004
 journal: "Journal of the American Chemical Society"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Communication (vol. 126, issue 49, pp. 15940-15941; PMID 15584709), published online 2004-11-19. The indexed local PDF is ACS's three-page supporting information with detailed experimental procedures, not the article PDF; this record represents the DOI-identified article."

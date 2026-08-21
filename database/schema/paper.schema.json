@@ -12,7 +12,8 @@
     "authors",
     "publication_year",
     "journal",
-    "language_status"
+    "language_status",
+    "pip_litdb_file_status"
   ],
   "properties": {
     "document_type": {
@@ -62,6 +63,27 @@
       "minLength": 1,
       "description": "A value defined in database/vocabularies/language-statuses.yaml."
     },
+    "pip_litdb_file_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "main_pdf",
+        "supplementary_material",
+        "full_text_html"
+      ],
+      "properties": {
+        "main_pdf": {
+          "$ref": "#/$defs/fileStatus"
+        },
+        "supplementary_material": {
+          "$ref": "#/$defs/fileStatus"
+        },
+        "full_text_html": {
+          "$ref": "#/$defs/fileStatus"
+        }
+      },
+      "description": "Publicly committed statuses for source materials in the PIP LitDB project's private holdings."
+    },
     "related_papers": {
       "type": "array",
       "uniqueItems": true,
@@ -80,6 +102,11 @@
     }
   },
   "$defs": {
+    "fileStatus": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A value defined in database/vocabularies/file-statuses.yaml."
+    },
     "author": {
       "type": "object",
       "additionalProperties": false,

@@ -13,4 +13,8 @@ url: "https://doi.org/10.1021/acs.jmedchem.4c00315"
 publication_year: 2024
 journal: "Journal of Medicinal Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: partial
+  full_text_html: present
 pip_litdb_status: verified

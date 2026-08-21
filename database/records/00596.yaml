@@ -13,5 +13,9 @@ url: "https://doi.org/10.1093/nar/27.21.4183"
 publication_year: 1999
 journal: "Nucleic Acids Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Journal article (vol. 27, issue 21, pp. 4183-4190; PMID 10518609, PMCID PMC148692), published 1999-11-01. The indexed local source is the complete eight-page Oxford University Press version of record obtained from PMC."

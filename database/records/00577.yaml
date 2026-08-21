@@ -11,5 +11,9 @@ url: "https://doi.org/10.1021/ja021011q"
 publication_year: 2003
 journal: "Journal of the American Chemical Society"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Original article (vol. 125, issue 5, pp. 1195–1202; PMID 12553822), published online 2003-01-08. The indexed local PDF is the 14-page supporting information, not the article PDF. ACS published a separate correction (DOI 10.1021/ja033984b; vol. 125, issue 19, p. 6008), which is not currently represented by its own PIP LitDB record."

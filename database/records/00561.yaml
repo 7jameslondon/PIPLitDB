@@ -14,5 +14,9 @@ related_papers:
   - pip_litdb_id: "00563"
     relationship_type: is_version_of
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Full Paper (vol. 8, issue 20, pp. 4781–4790); version of record first published online 2002-10-14, with issue date 2002-10-18 (PMID 12561118). This expands the 2001 two-page proceedings article at PIP LitDB 00563. The local source is the complete 10-page Wiley publisher PDF."

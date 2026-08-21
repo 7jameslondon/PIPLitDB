@@ -14,4 +14,8 @@ url: "https://doi.org/10.1073/pnas.95.22.12890"
 publication_year: 1998
 journal: "Proceedings of the National Academy of Sciences"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

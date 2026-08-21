@@ -1,0 +1,31 @@
+unchecked:
+  label: Unchecked
+  description: The project's holdings for this material have not been assessed.
+
+present:
+  label: Present
+  description: All expected material of this kind is stored and has passed basic validation.
+
+needed:
+  label: Needed
+  description: The material is known to exist, is not stored, and still needs to be acquired.
+
+partial:
+  label: Partial
+  description: Some, but not all, expected material of this kind is stored.
+
+error:
+  label: Error
+  description: A stored copy exists but is corrupt, incorrect, incomplete, or otherwise fails validation.
+
+uncertain:
+  label: Uncertain
+  description: The material was investigated, but its existence, availability, or completeness could not be determined.
+
+not_available:
+  label: Not available
+  description: The material is known or expected to exist but cannot be obtained from an allowed source.
+
+not_applicable:
+  label: Not applicable
+  description: The publication is confirmed not to provide this material or format.

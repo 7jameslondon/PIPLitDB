@@ -12,4 +12,9 @@ url: "https://doi.org/10.1158/0008-5472.can-16-2503"
 publication_year: 2017
 journal: "Cancer Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archives were extracted into the private-paper PDF directory as follows: 'supplementary_2.zip' contains '00085472can162503-sup-171698_1_supp_3798002_2m21yt.eps'; 'supplementary_3.zip' contains '00085472can162503-sup-171698_1_supp_3810768_jmj1yv.eps'; 'supplementary_4.zip' contains '00085472can162503-sup-171698_1_supp_3810769_jmj1yw.eps'; 'supplementary_5.zip' contains '00085472can162503-sup-171698_1_supp_3810770_wmw1yw.eps'; 'supplementary_6.zip' contains '00085472can162503-sup-171698_1_supp_3810771_6m61yw.eps'; 'supplementary_7.zip' contains '00085472can162503-sup-171698_1_supp_3810772_tmt1yx.eps'; and 'supplementary_8.zip' contains '00085472can162503-sup-171698_1_supp_3810773_gmg1yx.eps'."

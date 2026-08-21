@@ -9,4 +9,8 @@ url: "https://doi.org/10.1016/s0968-0896(00)00182-6"
 publication_year: 2000
 journal: "Bioorganic & Medicinal Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
