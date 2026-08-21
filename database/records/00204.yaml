@@ -7,6 +7,7 @@ authors:
   - name: "Linghua Wang"
   - name: "Takayoshi Watanabe"
   - name: "Makoto T Kimura"
+    canonical_name: "Makoto T. Kimura"
   - name: "Jun Igarashi"
   - name: "Xiaofei Wang"
   - name: "Tohru Sakimoto"
@@ -14,7 +15,6 @@ authors:
   - name: "Mitsuru Sawa"
   - name: "Hiroki Nagase"
 doi: "10.1038/mt.2009.263"
-url: "https://doi.org/10.1038/mt.2009.263"
 publication_year: 2010
 journal: "Molecular Therapy"
 language_status: english

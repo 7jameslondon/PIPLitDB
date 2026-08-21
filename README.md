@@ -18,7 +18,7 @@ The database includes published research articles, preprints, reviews, correctio
 
 Articles from problematic journals should not be included. The current list of problematic journals is:
 
-- *Medicinal Chemistry* (OMICS Publishing Group)
+- *Medicinal Chemistry* (OMICS Publishing Group; ISSN 2161-0444)
 
 The YAML files are the complete and only database. Each work is stored in its own YAML file in `database/records`. The filename is the authoritative PIP LitDB ID: for example, `00001.yaml` has PIP LitDB ID `00001`. The ID is not repeated as a field inside the YAML record. Search and export tools derive the ID from the filename and include it in exported data when appropriate.
 
@@ -50,11 +50,10 @@ The database records the following fields for each work:
 - Language status (`language_status`): The result of checking the publication's primary language. Allowed values are `english`, `non_english`, `uncertain`, and `unchecked`.
 - PIP LitDB file status (`pip_litdb_file_status`): Publicly committed statuses for the project's private holdings of the main PDF, supplementary material, and full-text HTML. All three status fields are required.
 - Title
-- Authors: An ordered list of author names, ideally using each author's full name
-- DOI
-- URL: Ideally a DOI link; otherwise, a publisher link
+- Authors: One ordered list of author objects. `name` preserves the name as published in the work. Optional `canonical_name` records the project's normalized form of the same author's name and should be omitted when it is identical to `name`. ORCID identifiers are not stored.
+- DOI (`doi`): The required bare DOI without a `https://doi.org/` prefix. User-facing links are generated from this value.
 - Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper. Every relationship must be stored in both related records using inverse relationship types. For example, if one record uses `is_preprint_of`, the other must use `has_preprint`.
-- Publication year: The year used in the work's formal citation. For an issue-assigned publication, use the issue year even when the article was published online in an earlier year. Crossref's `published-print` year and PubMed's citation year are preferred authoritative sources when available. Do not substitute Crossref's generic `published` or `issued` year, or PubMed's `Epub` year, when those fields represent an earlier online-first publication. For a work without an issue assignment, use the year shown in the authoritative recommended citation.
+- Publication year: The year used in the work's formal citation. For an issue-assigned publication, use the issue year even when the article was published online in an earlier year. Crossref's `published-print` year and PubMed's citation year are preferred authoritative sources when available. Do not substitute Crossref's generic `published` or `issued` year, or PubMed's `Epub` year, when those fields represent an earlier online-first publication. For a work without an issue assignment, use the year shown in the authoritative recommended citation. Publication years must be 1800 or later and no more than two years after the current calendar year.
 - Journal or publication venue (`journal`): For an article, use the standard full journal name rather than an abbreviation. For a book, use its series name when available, otherwise its publisher or imprint. For a preprint, use the server name.
 - PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
@@ -81,10 +80,10 @@ document_type: research_article
 publication_stage: preprint
 title: "Example paper title"
 authors:
-  - name: "Alex Jones"
+  - name: "A. Jones"
+    canonical_name: "Alex Jones"
   - name: "Morgan Jane Smith"
 doi: "10.1234/example.123"
-url: "https://doi.org/10.1234/example.123"
 publication_year: 2024
 journal: "BioRxiv"
 language_status: unchecked
@@ -131,12 +130,11 @@ Automated database validation checks:
 
 It also rejects duplicate YAML/JSON keys, YAML aliases, symlinked database paths, malformed
 vocabulary definitions, blank or padded single-line values, duplicate authors within a record,
-DOI/DOI-URL mismatches, embedded URL credentials, non-public or unsupported URL targets,
-local/private filesystem references in public notes, self-relationships, missing relationship targets,
-reuse of a record ID found in base-branch history, and relationship vocabulary inverses that are not
-themselves reciprocal.
-Exact normalized title/year and URL collisions are reported as reviewer warnings because they can
-represent either accidental duplicates or legitimate separate versions.
+credentialed, non-public, or unsupported URLs in public notes, local/private filesystem references
+in public notes, self-relationships, missing relationship targets, reuse of a record ID found in
+base-branch history, and relationship vocabulary inverses that are not themselves reciprocal.
+Exact normalized title/year collisions are reported as reviewer warnings because they can represent
+either accidental duplicates or legitimate separate versions.
 
 Run the complete validation locally with Python 3.12 or later:
 

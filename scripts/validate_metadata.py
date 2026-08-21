@@ -13,9 +13,10 @@ import sys
 import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Any, Iterable, Sequence
-from urllib.parse import unquote, urlsplit
+from urllib.parse import urlsplit
 
 import yaml
 from jsonschema import FormatChecker
@@ -34,6 +35,7 @@ IDENTITY_FIELDS = frozenset({"title", "authors", "doi"})
 ALLOWED_RECORD_DIRECTORY_FILES = frozenset({".gitkeep"})
 MAX_YAML_NESTING_DEPTH = 100
 MAX_SCHEMA_NESTING_DEPTH = 100
+MAX_FUTURE_PUBLICATION_YEARS = 2
 YAML_VALUE_ERRORS = (AttributeError, KeyError, TypeError, ValueError, OverflowError)
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
@@ -140,6 +142,10 @@ PRIVATE_REFERENCE_PATTERNS = (
 POSSIBLE_DRIVE_RELATIVE_PATH_RE = re.compile(
     r"\b[A-Za-z]:(?![\\/])[^\s]+"
 )
+
+
+def _current_year() -> int:
+    return date.today().year
 
 
 class StrictSafeLoader(yaml.SafeLoader):
@@ -882,6 +888,7 @@ class MetadataValidator:
         publication_stages = self.vocabularies.get("publication-stages.yaml", {})
         record_statuses = self.vocabularies.get("record-statuses.yaml", {})
         relationship_types = self.vocabularies.get("relationship-types.yaml", {})
+        maximum_publication_year = _current_year() + MAX_FUTURE_PUBLICATION_YEARS
 
         for record_id, record in sorted(self.records.items()):
             relative = self.record_paths[record_id]
@@ -932,6 +939,31 @@ class MetadataValidator:
                             self._line_for(lines, value_path),
                         )
 
+            publication_year = record.get("publication_year")
+            normalized_publication_year: int | None = None
+            if isinstance(publication_year, int) and not isinstance(
+                publication_year, bool
+            ):
+                normalized_publication_year = publication_year
+            elif (
+                isinstance(publication_year, float)
+                and publication_year.is_integer()
+            ):
+                normalized_publication_year = int(publication_year)
+            if (
+                normalized_publication_year is not None
+                and normalized_publication_year > maximum_publication_year
+            ):
+                self.report.add(
+                    "error",
+                    "record.publication_year_future",
+                    f"$.publication_year must be no later than {maximum_publication_year} "
+                    f"(the current year plus {MAX_FUTURE_PUBLICATION_YEARS}); got "
+                    f"{normalized_publication_year}.",
+                    relative,
+                    self._line_for(lines, ("publication_year",)),
+                )
+
             self._check_vocab_value(
                 record, "document_type", document_types, relative, lines
             )
@@ -969,7 +1001,6 @@ class MetadataValidator:
                 ("language_status",),
                 ("title",),
                 ("doi",),
-                ("url",),
                 ("journal",),
                 ("pip_litdb_status",),
             ]
@@ -983,7 +1014,13 @@ class MetadataValidator:
             )
             authors = record.get("authors")
             if isinstance(authors, list):
-                single_line_paths.extend(("authors", index, "name") for index in range(len(authors)))
+                for index in range(len(authors)):
+                    single_line_paths.extend(
+                        (
+                            ("authors", index, "name"),
+                            ("authors", index, "canonical_name"),
+                        )
+                    )
             relationships = record.get("related_papers")
             if isinstance(relationships, list):
                 for index in range(len(relationships)):
@@ -1028,33 +1065,41 @@ class MetadataValidator:
                 for index, author in enumerate(authors):
                     if not isinstance(author, dict) or not isinstance(author.get("name"), str):
                         continue
-                    normalized = _normalize_text(author["name"])
+                    canonical_name = author.get("canonical_name")
+                    if isinstance(canonical_name, str) and canonical_name == author["name"]:
+                        self.report.add(
+                            "error",
+                            "record.redundant_canonical_name",
+                            "canonical_name is identical to name; omit canonical_name "
+                            "when it does not differ.",
+                            relative,
+                            self._line_for(lines, ("authors", index, "canonical_name")),
+                        )
+                    effective_name = (
+                        canonical_name if isinstance(canonical_name, str) else author["name"]
+                    )
+                    normalized = _normalize_text(effective_name)
                     if normalized in seen_authors:
                         self.report.add(
                             "error",
                             "record.duplicate_author",
-                            f"Author {author['name']!r} duplicates authors[{seen_authors[normalized]}].",
+                            f"Author {author['name']!r} duplicates "
+                            f"authors[{seen_authors[normalized]}] using effective name "
+                            f"{effective_name!r}.",
                             relative,
-                            self._line_for(lines, ("authors", index, "name")),
+                            self._line_for(
+                                lines,
+                                (
+                                    "authors",
+                                    index,
+                                    "canonical_name"
+                                    if isinstance(canonical_name, str)
+                                    else "name",
+                                ),
+                            ),
                         )
                     else:
                         seen_authors[normalized] = index
-
-            doi = record.get("doi")
-            url = record.get("url")
-            parsed_url = self._validate_url(url, relative, lines) if isinstance(url, str) else None
-            if isinstance(doi, str) and parsed_url is not None:
-                host = (parsed_url.hostname or "").casefold().rstrip(".")
-                if host in {"doi.org", "dx.doi.org"}:
-                    url_doi = unquote(parsed_url.path.lstrip("/"))
-                    if _normalize_doi(url_doi) != _normalize_doi(doi):
-                        self.report.add(
-                            "error",
-                            "record.doi_url_mismatch",
-                            f"The doi.org URL resolves {url_doi!r}, not the record DOI {doi!r}.",
-                            relative,
-                            self._line_for(lines, ("url",)),
-                        )
 
             if isinstance(relationships, list):
                 seen_relationships: set[tuple[str, str]] = set()
@@ -1222,64 +1267,8 @@ class MetadataValidator:
                 self._line_for(lines, (field_name,)),
             )
 
-    def _validate_url(
-        self,
-        url: str,
-        relative: str,
-        lines: dict[tuple[Any, ...], int],
-    ) -> Any | None:
-        if _url_has_unsafe_characters(url):
-            self.report.add(
-                "error",
-                "record.url_format",
-                "URL must not contain backslashes or whitespace/control characters.",
-                relative,
-                self._line_for(lines, ("url",)),
-            )
-            return None
-        try:
-            parsed = urlsplit(url)
-            # Accessing port catches malformed values that urlsplit otherwise accepts.
-            _ = parsed.port
-        except ValueError as exc:
-            self.report.add(
-                "error",
-                "record.url_format",
-                f"URL is malformed: {exc}.",
-                relative,
-                self._line_for(lines, ("url",)),
-            )
-            return None
-        if parsed.scheme.casefold() not in {"http", "https"} or not parsed.hostname:
-            self.report.add(
-                "error",
-                "record.url_format",
-                "URL must be an absolute http:// or https:// URL with a host.",
-                relative,
-                self._line_for(lines, ("url",)),
-            )
-            return None
-        if parsed.username is not None or parsed.password is not None:
-            self.report.add(
-                "error",
-                "record.url_credentials",
-                "Public metadata URLs must not contain embedded credentials.",
-                relative,
-                self._line_for(lines, ("url",)),
-            )
-        if _url_host_is_non_public(parsed.hostname):
-            self.report.add(
-                "error",
-                "record.url_private_host",
-                f"Public metadata URLs must not target non-public host {parsed.hostname!r}.",
-                relative,
-                self._line_for(lines, ("url",)),
-            )
-        return parsed
-
     def _validate_database_invariants(self) -> None:
         dois: dict[str, list[str]] = defaultdict(list)
-        urls: dict[str, list[str]] = defaultdict(list)
         title_years: dict[tuple[str, int], list[str]] = defaultdict(list)
 
         for record_id, record in self.records.items():
@@ -1295,9 +1284,6 @@ class MetadataValidator:
                         self.record_paths.get(record_id),
                         self._line_for(self.record_lines.get(record_id, {}), ("doi",)),
                     )
-            url = record.get("url")
-            if isinstance(url, str) and url.strip():
-                urls[_normalize_url(url)].append(record_id)
             title = record.get("title")
             publication_year = record.get("publication_year")
             normalized_year: int | None = None
@@ -1329,18 +1315,6 @@ class MetadataValidator:
                         f"DOI {normalized_doi!r} is shared by records {joined}.",
                         self.record_paths.get(record_id),
                         self._line_for(self.record_lines.get(record_id, {}), ("doi",)),
-                    )
-
-        for normalized_url, record_ids in sorted(urls.items()):
-            if len(record_ids) > 1:
-                joined = ", ".join(record_ids)
-                for record_id in record_ids:
-                    self.report.add(
-                        "warning",
-                        "database.duplicate_url",
-                        f"URL {normalized_url!r} is shared by records {joined}; confirm they are distinct papers.",
-                        self.record_paths.get(record_id),
-                        self._line_for(self.record_lines.get(record_id, {}), ("url",)),
                     )
 
         for (_normalized_title, year), record_ids in sorted(title_years.items()):
@@ -1614,19 +1588,6 @@ def _normalize_title(value: str) -> str:
 
 def _normalize_doi(value: str) -> str:
     return unicodedata.normalize("NFKC", value).strip().casefold()
-
-
-def _normalize_url(value: str) -> str:
-    value = unicodedata.normalize("NFKC", value).strip()
-    try:
-        parsed = urlsplit(value)
-        parsed_port = parsed.port
-    except ValueError:
-        return value.casefold()
-    host = (parsed.hostname or "").casefold().rstrip(".")
-    port = f":{parsed_port}" if parsed_port is not None else ""
-    path = parsed.path.rstrip("/") or "/"
-    return f"{parsed.scheme.casefold()}://{host}{port}{path}?{parsed.query}".rstrip("?")
 
 
 def _git_command(root: Path, *arguments: str) -> subprocess.CompletedProcess[bytes]:

@@ -8,7 +8,6 @@
     "title",
     "authors",
     "doi",
-    "url",
     "publication_year",
     "journal",
     "language_status",
@@ -630,14 +629,15 @@
         record.title,
         record.journal,
         record.doi,
-        record.url,
         record.publication_year,
         record.document_type,
         record.publication_stage,
         record.language_status,
         record.pip_litdb_status,
         record.pip_litdb_notes,
-        ...(Array.isArray(record.authors) ? record.authors.map((author) => author?.name) : []),
+        ...(Array.isArray(record.authors)
+          ? record.authors.flatMap((author) => [author?.name, author?.canonical_name])
+          : []),
       ]
         .filter(Boolean)
         .join(" "),
@@ -684,7 +684,7 @@
       }),
       journal,
     ]);
-    const doiUrl = safeHttpUrl(record.doi ? `https://doi.org/${record.doi}` : null);
+    const doiUrl = doiResolverUrl(record.doi);
     if (doiUrl) {
       journalRow.append(
         element("span", {
@@ -831,8 +831,7 @@
         ? labelFor(vocabulary["record-statuses"], record.pip_litdb_status)
         : "Not specified",
     );
-    appendLinkMetadata(overviewGrid, "DOI", record.doi, record.doi ? `https://doi.org/${record.doi}` : null);
-    appendLinkMetadata(overviewGrid, "Source URL", record.url ? "Open source page" : null, record.url);
+    appendLinkMetadata(overviewGrid, "DOI", record.doi, doiResolverUrl(record.doi));
     overview.append(overviewGrid);
     fragment.append(overview);
 
@@ -842,7 +841,18 @@
       );
       const authorList = element("ol", { className: "author-list" });
       record.authors.forEach((author) => {
-        authorList.append(element("li", { text: author?.name || "Unnamed author" }));
+        const authorEntry = element("div", { className: "author-entry" }, [
+          element("span", { text: author?.name || "Unnamed author" }),
+        ]);
+        if (author?.canonical_name && author.canonical_name !== author.name) {
+          authorEntry.append(
+            element("span", {
+              className: "author-canonical",
+              text: `Canonical: ${author.canonical_name}`,
+            }),
+          );
+        }
+        authorList.append(element("li", {}, [authorEntry]));
       });
       authorsSection.append(authorList);
       fragment.append(authorsSection);
@@ -958,6 +968,23 @@
     try {
       const url = new URL(value, document.baseURI);
       return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function doiResolverUrl(doi) {
+    if (!doi) return null;
+    const separator = doi.indexOf("/");
+    if (separator <= 0 || separator === doi.length - 1) return null;
+    try {
+      const prefix = encodeURIComponent(doi.slice(0, separator));
+      const suffix = doi
+        .slice(separator + 1)
+        .split("/")
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
+      return safeHttpUrl(`https://doi.org/${prefix}/${suffix}`);
     } catch {
       return null;
     }

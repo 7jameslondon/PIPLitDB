@@ -11,6 +11,7 @@ authors:
   - name: "James P. Lajiness"
   - name: "Jerome Kluza"
   - name: "Caroline O’Hare"
+    canonical_name: "Caroline O'Hare"
   - name: "Binh Nguyen"
   - name: "Zach Davis"
   - name: "Chrystal Bruce"
@@ -18,7 +19,6 @@ authors:
   - name: "John A. Hartley"
   - name: "Moses Lee"
 doi: "10.1016/j.bmc.2008.09.034"
-url: "https://doi.org/10.1016/j.bmc.2008.09.034"
 publication_year: 2008
 journal: "Bioorganic & Medicinal Chemistry"
 language_status: english

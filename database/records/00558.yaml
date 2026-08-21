@@ -3,9 +3,10 @@ publication_stage: publication
 title: "Recognition of the DNA minor groove by pyrrole-imidazole polyamides"
 authors:
   - name: "Peter B Dervan"
+    canonical_name: "Peter B. Dervan"
   - name: "Benjamin S Edelson"
+    canonical_name: "Benjamin S. Edelson"
 doi: "10.1016/s0959-440x(03)00081-2"
-url: "https://doi.org/10.1016/s0959-440x(03)00081-2"
 publication_year: 2003
 journal: "Current Opinion in Structural Biology"
 language_status: english

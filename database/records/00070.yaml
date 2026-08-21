@@ -10,9 +10,8 @@ authors:
   - name: "Danith H. Ly"
   - name: "Hiroshi Sugiyama"
 doi: "10.1002/chem.201801961"
-url: "https://doi.org/10.1002/chem.201801961"
 publication_year: 2018
-journal: "Chemistry - A European Journal"
+journal: "Chemistry – A European Journal"
 language_status: english
 pip_litdb_file_status:
   main_pdf: present

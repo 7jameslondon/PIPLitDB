@@ -10,6 +10,7 @@
     "publication_stage",
     "title",
     "authors",
+    "doi",
     "publication_year",
     "journal",
     "language_status",
@@ -43,15 +44,9 @@
       "pattern": "^10\\.[0-9]{4,9}/\\S+$",
       "description": "A DOI without a https://doi.org/ prefix."
     },
-    "url": {
-      "type": "string",
-      "format": "uri",
-      "pattern": "^https?://"
-    },
     "publication_year": {
       "type": "integer",
-      "minimum": 1800,
-      "maximum": 3000
+      "minimum": 1800
     },
     "journal": {
       "type": "string",
@@ -117,6 +112,11 @@
         "name": {
           "type": "string",
           "minLength": 1
+        },
+        "canonical_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "An optional project-wide canonical form of the author name; omit when identical to name."
         }
       }
     },

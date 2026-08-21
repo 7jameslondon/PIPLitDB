@@ -10,9 +10,8 @@ authors:
   - name: "Hiroki Nagase"
   - name: "Hiroshi Sugiyama"
 doi: "10.1002/chem.201501870"
-url: "https://doi.org/10.1002/chem.201501870"
 publication_year: 2015
-journal: "Chemistry - A European Journal"
+journal: "Chemistry – A European Journal"
 language_status: english
 pip_litdb_file_status:
   main_pdf: present

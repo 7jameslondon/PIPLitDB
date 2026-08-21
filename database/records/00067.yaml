@@ -8,9 +8,8 @@ authors:
   - name: "Thomas Welte"
   - name: "Glenn A. Burley"
 doi: "10.1002/chem.201805338"
-url: "https://doi.org/10.1002/chem.201805338"
 publication_year: 2019
-journal: "Chemistry - A European Journal"
+journal: "Chemistry – A European Journal"
 language_status: english
 pip_litdb_file_status:
   main_pdf: present

@@ -938,7 +938,7 @@ input:focus-visible {
 .author-list li {
   display: grid;
   grid-template-columns: 1.7rem 1fr;
-  align-items: baseline;
+  align-items: start;
   line-height: 1.45;
   counter-increment: authors;
 }
@@ -949,6 +949,12 @@ input:focus-visible {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.68rem;
   font-weight: 800;
+}
+
+.author-canonical {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
 }
 
 .relationship-list {
