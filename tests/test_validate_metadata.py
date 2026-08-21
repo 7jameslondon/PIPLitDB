@@ -33,7 +33,6 @@ title: "A valid paper"
 authors:
   - name: "Alex Example"
 doi: "10.1234/example.1"
-url: "https://doi.org/10.1234/example.1"
 publication_year: 2024
 journal: "Example Journal"
 language_status: unchecked
@@ -587,6 +586,65 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("schema.type", codes)
         self.assertIn("record.unknown_vocabulary_value", codes)
 
+    def test_doi_is_required(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace('doi: "10.1234/example.1"\n', ""),
+        )
+        self.assertIn("schema.required", self.error_codes())
+
+    def test_record_url_field_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                'doi: "10.1234/example.1"',
+                'doi: "10.1234/example.1"\nurl: "https://doi.org/10.1234/example.1"',
+            ),
+        )
+        self.assertIn("schema.additionalProperties", self.error_codes())
+
+    def test_publication_year_before_1800_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("publication_year: 2024", "publication_year: 1799"),
+        )
+        self.assertIn("schema.minimum", self.error_codes())
+
+    def test_publication_year_schema_has_no_static_maximum(self) -> None:
+        schema = yaml.safe_load(
+            (self.root / "database" / "schema" / "paper.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        year_schema = schema["properties"]["publication_year"]
+        self.assertEqual(year_schema["minimum"], 1800)
+        self.assertNotIn("maximum", year_schema)
+
+    @patch("scripts.validate_metadata._current_year", return_value=2026)
+    def test_publication_year_current_year_plus_two_is_allowed(
+        self, _current_year_mock: object
+    ) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace("publication_year: 2024", "publication_year: 2028"),
+        )
+        report = validate_repository(self.root)
+        self.assertTrue(report.passed, report.findings)
+
+    @patch("scripts.validate_metadata._current_year", return_value=2026)
+    def test_publication_year_more_than_two_years_ahead_is_rejected(
+        self, _current_year_mock: object
+    ) -> None:
+        for value in ("2029", "2029.0"):
+            with self.subTest(value=value):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        "publication_year: 2024", f"publication_year: {value}"
+                    ),
+                )
+                self.assertIn("record.publication_year_future", self.error_codes())
+
     def test_language_status_controlled_vocabulary_is_enforced(self) -> None:
         self.write_record(
             "00001",
@@ -715,85 +773,78 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("record.whitespace", codes)
         self.assertIn("record.duplicate_author", codes)
 
-    def test_doi_url_must_agree(self) -> None:
+    def test_optional_canonical_author_name_is_allowed(self) -> None:
         self.write_record(
             "00001",
             VALID_RECORD.replace(
-                "https://doi.org/10.1234/example.1",
-                "https://doi.org/10.1234/different",
+                '  - name: "Alex Example"',
+                '  - name: "A. Example"\n    canonical_name: "Alex Example"',
             ),
         )
-        self.assertIn("record.doi_url_mismatch", self.error_codes())
 
-    def test_url_credentials_are_rejected(self) -> None:
+        report = validate_repository(self.root)
+
+        self.assertTrue(report.passed, report.findings)
+
+    def test_author_name_remains_required(self) -> None:
         self.write_record(
             "00001",
             VALID_RECORD.replace(
-                "https://doi.org/10.1234/example.1",
-                "https://user:secret@example.test/paper",
+                '  - name: "Alex Example"',
+                '  - canonical_name: "Alex Example"',
             ),
         )
-        self.assertIn("record.url_credentials", self.error_codes())
+        self.assertIn("schema.required", self.error_codes())
 
-    def test_private_url_hosts_are_rejected(self) -> None:
-        urls_and_codes = (
-            ("http://localhost/paper", "record.url_private_host"),
-            ("http://intranet/paper", "record.url_private_host"),
-            ("http://127.0.0.1/paper", "record.url_private_host"),
-            ("http://127.1/paper", "record.url_private_host"),
-            ("http://0177.0.0.1/paper", "record.url_private_host"),
-            ("http://0x7f.0x0.0x0.0x1/paper", "record.url_private_host"),
-            ("http://１２７.０.０.１/paper", "record.url_private_host"),
-            ("http://０１７７.０.０.１/paper", "record.url_private_host"),
-            ("http://archive.ｌｏｃａｌ/paper", "record.url_private_host"),
-            ("http://metadata.ｌｏｃａｌｈｏｓｔ/paper", "record.url_private_host"),
-            ("https://service.test/paper", "record.url_private_host"),
-            ("https://service.invalid/paper", "record.url_private_host"),
-            ("https://service.example/paper", "record.url_private_host"),
-            ("https://service.onion/paper", "record.url_private_host"),
-            ("http://169.254.169.254/paper", "record.url_private_host"),
-            ("http://10.0.0.1/paper", "record.url_private_host"),
-            ("http://172.16.0.1/paper", "record.url_private_host"),
-            ("http://192.168.0.1/paper", "record.url_private_host"),
-            ("http://224.0.0.1/paper", "record.url_private_host"),
-            ("http://[::1]/paper", "record.url_private_host"),
-            ("http://[fe80::1]/paper", "record.url_private_host"),
-            ("http://[ff02::1]/paper", "record.url_private_host"),
-            (r"http://127.0.0.1\private.pdf", "record.url_format"),
-            ("http://example.test\t.internal/paper", "record.url_format"),
-            ("https://example.test/\t/tmp/private.pdf", "record.url_format"),
-            ("https://example.test/\u00a0/tmp/private.pdf", "record.url_format"),
+    def test_orcid_author_property_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                '  - name: "Alex Example"',
+                '  - name: "Alex Example"\n    orcid: "0000-0000-0000-0000"',
+            ),
         )
-        for url, expected_code in urls_and_codes:
-            with self.subTest(url=url):
+        self.assertIn("schema.additionalProperties", self.error_codes())
+
+    def test_canonical_author_name_is_a_trimmed_nonblank_single_line_string(self) -> None:
+        invalid_values = (
+            ('"   "', "record.blank_string"),
+            ('" Alex Example "', "record.whitespace"),
+            ('"Alex\\nExample"', "record.multiline_value"),
+            ("[]", "schema.type"),
+        )
+        for value, expected_code in invalid_values:
+            with self.subTest(value=value):
                 self.write_record(
                     "00001",
                     VALID_RECORD.replace(
-                        'url: "https://doi.org/10.1234/example.1"',
-                        f"url: '{url}'",
+                        '  - name: "Alex Example"',
+                        f'  - name: "A. Example"\n    canonical_name: {value}',
                     ),
                 )
                 self.assertIn(expected_code, self.error_codes())
 
-    def test_public_url_hosts_are_accepted(self) -> None:
-        urls = (
-            "https://example.com/paper",
-            "https://例え.テスト/paper",
-            "https://8.8.8.8/paper",
-            "https://[2606:4700:4700::1111]/paper",
+    def test_redundant_canonical_author_name_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                '  - name: "Alex Example"',
+                '  - name: "Alex Example"\n    canonical_name: "Alex Example"',
+            ),
         )
-        for url in urls:
-            with self.subTest(url=url):
-                self.write_record(
-                    "00001",
-                    VALID_RECORD.replace(
-                        'url: "https://doi.org/10.1234/example.1"',
-                        f"url: '{url}'",
-                    ),
-                )
-                codes = self.error_codes()
-                self.assertNotIn("record.url_format", codes)
-                self.assertNotIn("record.url_private_host", codes)
+        self.assertIn("record.redundant_canonical_name", self.error_codes())
+
+    def test_duplicate_author_uses_canonical_name_fallback(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                '  - name: "Alex Example"',
+                '  - name: "A. Example"\n'
+                '    canonical_name: "Alex Example"\n'
+                '  - name: "alex example"',
+            ),
+        )
+        self.assertIn("record.duplicate_author", self.error_codes())
 
     def test_missing_relationship_target_is_rejected(self) -> None:
         self.write_record(

@@ -4,6 +4,7 @@ title: "Region-specific alteration of histone modification by LSD1 inhibitor con
 authors:
   - name: "Kokiladevi Alagarswamy"
   - name: "Ken-Ichi Shinohara"
+    canonical_name: "Ken-ichi Shinohara"
   - name: "Shihori Takayanagi"
   - name: "Masaki Fukuyo"
   - name: "Atsushi Okabe"
@@ -18,7 +19,6 @@ authors:
   - name: "Tetsuhiro Nemoto"
   - name: "Atsushi Kaneda"
 doi: "10.18632/oncotarget.25451"
-url: "https://doi.org/10.18632/oncotarget.25451"
 publication_year: 2018
 journal: "Oncotarget"
 language_status: english

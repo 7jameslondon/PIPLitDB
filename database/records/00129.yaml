@@ -6,6 +6,7 @@ authors:
   - name: "Akiko Ito"
   - name: "Kyoko Fujiwara"
   - name: "Ken‐Ichi Takayama"
+    canonical_name: "Kenichi Takayama"
   - name: "Daisaku Ashikari"
   - name: "Yasutaka Murata"
   - name: "Kenya Yamaguchi"
@@ -18,7 +19,6 @@ authors:
   - name: "Satoshi Inoue"
   - name: "Satoru Takahashi"
 doi: "10.1111/cas.12493"
-url: "https://doi.org/10.1111/cas.12493"
 publication_year: 2014
 journal: "Cancer Science"
 language_status: english

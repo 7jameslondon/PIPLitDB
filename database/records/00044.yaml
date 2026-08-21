@@ -9,11 +9,12 @@ authors:
   - name: "Yan-Ling Wu"
   - name: "Annoor Awadasseid"
   - name: "Xiao-Yin Zhao"
+    canonical_name: "Xiaoyin Zhao"
   - name: "Xu-Qiong Xiong"
+    canonical_name: "Xuqiong Xiong"
   - name: "Hiroshi Sugiyama"
   - name: "Wen Zhang"
 doi: "10.1016/j.ejmech.2020.112704"
-url: "https://doi.org/10.1016/j.ejmech.2020.112704"
 publication_year: 2020
 journal: "European Journal of Medicinal Chemistry"
 language_status: english

@@ -6,9 +6,8 @@ authors:
   - name: "Eldon Eugene Baird"
   - name: "Peter Brendan Dervan"
 doi: "10.1002/(sici)1521-3765(19990301)5:3<975::aid-chem975>3.0.co;2-t"
-url: "https://doi.org/10.1002/(sici)1521-3765(19990301)5:3%3C975::aid-chem975%3E3.0.co;2-t"
 publication_year: 1999
-journal: "Chemistry - A European Journal"
+journal: "Chemistry – A European Journal"
 language_status: english
 pip_litdb_file_status:
   main_pdf: present

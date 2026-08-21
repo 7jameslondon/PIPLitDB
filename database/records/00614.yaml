@@ -3,13 +3,15 @@ publication_stage: publication
 title: "Synthesis of polyamide containing pyrrole and imidazole amino acids"
 authors:
   - name: "Jun-Hua Xiao"
+    canonical_name: "Junhua Xiao"
   - name: "Wei-Qiang Huang"
+    canonical_name: "Weiqiang Huang"
   - name: "Fei-Li Tang"
+    canonical_name: "Feili Tang"
   - name: "Gu Yuan"
   - name: "Albert S. C. Chan"
   - name: "K.-L. Daniel Lee"
 doi: "10.1002/cjoc.20000180428"
-url: "https://doi.org/10.1002/cjoc.20000180428"
 publication_year: 2000
 journal: "Chinese Journal of Chemistry"
 language_status: english

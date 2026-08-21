@@ -7,11 +7,11 @@ authors:
   - name: "Minh Le"
   - name: "Kari K. Cox"
   - name: "Caroline O’Hare"
+    canonical_name: "Caroline O'Hare"
   - name: "John A. Hartley"
   - name: "Moses Lee"
   - name: "W. David Wilson"
 doi: "10.1093/nar/gkh515"
-url: "https://doi.org/10.1093/nar/gkh515"
 publication_year: 2004
 journal: "Nucleic Acids Research"
 language_status: english

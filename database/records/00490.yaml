@@ -3,11 +3,12 @@ publication_stage: publication
 title: "Binding of AR‐1‐144, a tri‐imidazole DNA minor groove binder, to CCGG sequence analyzed by NMR spectroscopy"
 authors:
   - name: "Xiang‐Lei Yang"
+    canonical_name: "Xiang-Lei Yang"
   - name: "Crystal Kaenzig"
   - name: "Moses Lee"
   - name: "Andrew H.‐J. Wang"
+    canonical_name: "Andrew H.-J. Wang"
 doi: "10.1046/j.1432-1327.1999.00515.x"
-url: "https://doi.org/10.1046/j.1432-1327.1999.00515.x"
 publication_year: 1999
 journal: "European Journal of Biochemistry"
 language_status: english
