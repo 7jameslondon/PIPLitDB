@@ -15,5 +15,9 @@ url: "https://doi.org/10.1093/nar/gkh515"
 publication_year: 2004
 journal: "Nucleic Acids Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_available
+  full_text_html: present
 pip_litdb_status: verified
-pip_litdb_notes: "Supplementary material is referenced by the publisher, but the supplementary file is missing from the publisher and is not archived locally."
+pip_litdb_notes: "The Oxford Academic article is open access, and the complete publisher HTML and PDF are archived locally. Its legacy supplementary section states only that supplementary material is available at NAR Online; the rendered page, link inventory, and observed Oxford assets expose no supplementary file. The referenced supplement is therefore unavailable from an allowed publisher source and is not archived locally."

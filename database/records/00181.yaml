@@ -10,4 +10,9 @@ url: "https://doi.org/10.1093/nar/gkr970"
 publication_year: 2012
 journal: "Nucleic Acids Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplementary_data.zip' was extracted into the private-paper PDF directory; its extracted contents are 'JM_DM_-_NAR_Final_SI_2-22-12.doc' and 'nar-02259-f-2011-File010.doc'."

@@ -11,4 +11,8 @@ url: "https://doi.org/10.1016/s0968-0896(00)00219-4"
 publication_year: 2001
 journal: "Bioorganic & Medicinal Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: needed
+  full_text_html: present
 pip_litdb_status: verified

@@ -30,6 +30,8 @@ REMOVED_TAGS = (
     "button",
     "select",
     "textarea",
+    "nav",
+    "search",
 )
 
 # Some publisher article bodies keep scientific fallback images inside
@@ -122,6 +124,45 @@ def remove_element(element: etree._Element) -> None:
     parent.remove(element)
 
 
+def serialize_body_fragment(root: etree._Element) -> str:
+    """Serialize one archival body without nesting a complete HTML document."""
+    root_tag = etree.QName(root).localname.lower()
+
+    if root_tag == "html":
+        bodies = root.xpath("./body")
+        if len(bodies) != 1:
+            raise ValueError(
+                "A complete HTML document must contain exactly one body element."
+            )
+        root = bodies[0]
+        root_tag = "body"
+
+    if root_tag == "body":
+        parts = [root.text or ""]
+        parts.extend(
+            html.tostring(child, encoding="unicode", method="html")
+            for child in root
+        )
+        serialized = "".join(parts)
+    else:
+        serialized = html.tostring(root, encoding="unicode", method="html")
+
+    output = f"<body>\n{serialized}\n</body>"
+    if re.search(r"<!doctype\b", output, flags=re.IGNORECASE):
+        raise ValueError("Archival HTML must not contain a doctype declaration.")
+    for tag in ("html", "head"):
+        if re.search(rf"</?{tag}\b", output, flags=re.IGNORECASE):
+            raise ValueError(f"Archival HTML must not contain a nested <{tag}> element.")
+    if len(re.findall(r"<body(?:\s[^>]*)?>", output, flags=re.IGNORECASE)) != 1:
+        raise ValueError("Archival HTML must contain exactly one opening body tag.")
+    if len(re.findall(r"</body>", output, flags=re.IGNORECASE)) != 1:
+        raise ValueError("Archival HTML must contain exactly one closing body tag.")
+    for tag in REMOVED_TAGS:
+        if re.search(rf"<{tag}\b", output, flags=re.IGNORECASE):
+            raise ValueError(f"Archival HTML must not contain a <{tag}> element.")
+    return output
+
+
 def clean_html(
     source_path: Path,
     manifest_path: Path,
@@ -136,6 +177,17 @@ def clean_html(
     source = re.sub(r"</?noscript\b[^>]*>", "", source, flags=re.IGNORECASE)
     parser = html.HTMLParser(encoding="utf-8", remove_comments=True)
     root = html.fromstring(source, parser=parser)
+
+    # ScienceDirect and Cell Press expose the complete article in a semantic
+    # article element. Select it before stripping the surrounding global
+    # header, navigation, recommendations, and account controls.
+    sciencedirect_articles = root.xpath(
+        './/article[.//*[@id="abstracts"] and .//*[@id="body"]]'
+    )
+    if sciencedirect_articles:
+        root = copy.deepcopy(
+            max(sciencedirect_articles, key=lambda element: len(" ".join(element.itertext())))
+        )
 
     # J-STAGE's downloadable HTML is a complete site shell.  Its article
     # metadata and full scientific content live in two publisher-observed
@@ -184,6 +236,21 @@ def clean_html(
     if oup_articles:
         root = copy.deepcopy(oup_articles[0])
 
+    # ACS and older Silverchair/Oxford templates place the article record in
+    # a stable ContentColumn container even when no semantic article wrapper
+    # is present. It contains the title, body, figures, and references while
+    # excluding the journal shell around it.
+    content_columns = root.xpath(
+        './/*[@id="ContentColumn" and .//h1 and '
+        '(.//*[contains(translate(normalize-space(string(.)), '
+        '"ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "references")] '
+        'or .//*[@id="references"])]'
+    )
+    if content_columns:
+        root = copy.deepcopy(
+            max(content_columns, key=lambda element: len(" ".join(element.itertext())))
+        )
+
     # Wiley's semantic article encloses the full scientific record while the
     # body also contains journal navigation, cookie controls, and AI widgets.
     wiley_articles = root.xpath(
@@ -221,6 +288,9 @@ def clean_html(
     # repeated "Download PDF" labels inside the archival fragment.
     noise_xpaths = (
         './/*[@data-testid="SmallButtonDetails"]',
+        # LibKey Nomad injects empty per-citation wrappers after DOI links in
+        # the publisher DOM. They are browser-extension UI, not article text.
+        './/*[starts-with(@id, "libkey-nomad-")]',
         # ScienceDirect's current article shell includes a duplicate outline,
         # figure-thumbnail list, and table index in a div-based navigation
         # block. The inline article body below already retains each item.
@@ -255,6 +325,15 @@ def clean_html(
         # ScienceDirect appends a cited-by preview containing unrelated
         # downstream article titles after the article references.
         './/*[@id="section-cited-by"]',
+        # Oxford's comment form and toolbars are publisher interaction UI,
+        # not part of the scientific article record.
+        './/*[@id="usercomments"]',
+        './/*[@id="divCommentModal"]',
+        './/*[@id="Toolbar"]',
+        # Older Wiley pages retain cloned article/section navigation panels
+        # inside the otherwise correct article container.
+        './/*[@id="article_Pop"]',
+        './/*[@id="sections_Pop"]',
         './/*[@id="recommended-articles"]',
         './/*[@id="cited-by"]',
         './/*[@id="metrics"]',
@@ -310,7 +389,7 @@ def clean_html(
         './/img[@alt="Processing..." or @alt="Advertisement" or @alt="Account"'
         ' or @alt="Facebook icon" or @alt="X icon" or @alt="LinkedIn icon"'
         ' or @alt="Corresponding address" or @alt="Popup Image"'
-        ' or @alt="Plum X logo"]',
+        ' or @alt="Plum X logo" or @alt="PlumX Metrics Logo"]',
         './/img[starts-with(@alt, "The cover image for ")]',
         './/img[starts-with(@alt, "Creative Common License - ")]',
         './/img[@alt="Supplementary material: PDF"'
@@ -853,8 +932,7 @@ def clean_html(
                 del element.attrib[attribute]
                 removed_attributes += 1
 
-    serialized = html.tostring(root, encoding="unicode", method="html")
-    output = f"<body>\n{serialized}\n</body>"
+    output = serialize_body_fragment(root)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(output, encoding="utf-8", newline="\n")
 

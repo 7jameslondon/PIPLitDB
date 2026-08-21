@@ -7,5 +7,9 @@ url: "https://www.ncbi.nlm.nih.gov/books/NBK23276/"
 publication_year: 2008
 journal: "Molecular Imaging and Contrast Agent Database"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: needed
 pip_litdb_status: verified
 pip_litdb_notes: "MICAD review (Bookshelf ID NBK23276; PMID 20641478), created 2008-11-04 and updated 2008-12-01. The local source is the complete four-page NCBI Bookshelf PDF."

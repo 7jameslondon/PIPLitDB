@@ -17,4 +17,8 @@ url: "https://doi.org/10.1155/2012/715928"
 publication_year: 2012
 journal: "Journal of Biomedicine and Biotechnology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

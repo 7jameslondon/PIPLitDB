@@ -12,4 +12,8 @@ url: "https://doi.org/10.1016/j.jphs.2023.11.001"
 publication_year: 2024
 journal: "Journal of Pharmacological Sciences"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

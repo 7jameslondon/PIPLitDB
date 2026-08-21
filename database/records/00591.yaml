@@ -10,5 +10,9 @@ url: "https://doi.org/10.1002/med.21548"
 publication_year: 2019
 journal: "Medicinal Research Reviews"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 39, issue 3, pp. 910-960; PMID 30565725, PMCID PMC6608750), first published online 2018-11-22 and issue-assigned May 2019. The indexed local PDF is the complete 71-page NIH author manuscript of the same published article."

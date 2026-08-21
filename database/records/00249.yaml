@@ -11,4 +11,8 @@ url: "https://doi.org/10.1002/chem.200601486"
 publication_year: 2007
 journal: "Chemistry – A European Journal"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

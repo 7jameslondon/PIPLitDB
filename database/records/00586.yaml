@@ -15,5 +15,9 @@ url: "https://doi.org/10.1002/cbic.201800273"
 publication_year: 2018
 journal: "ChemBioChem"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Research article (vol. 19, issue 18, pp. 1979-1987; PMID 29974647, PMCID PMC6398938), Version of Record published online 2018-08-15 and issue published online 2018-09-18. The indexed local PDF is the complete 20-page NIH author manuscript, made available in PMC on 2019-09-17."

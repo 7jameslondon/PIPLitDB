@@ -10,5 +10,9 @@ url: "https://doi.org/10.1021/ja0213221"
 publication_year: 2003
 journal: "Journal of the American Chemical Society"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Original article (vol. 125, issue 16, pp. 4741-4751; PMID 12696892), published online 2003-03-29 with issue date 2003-04-23. The indexed local PDF is ACS's two-page supporting information (Figures S1-S2), not the article PDF; this record represents the DOI-identified article."

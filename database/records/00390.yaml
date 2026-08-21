@@ -10,5 +10,9 @@ url: "https://doi.org/10.1002/1522-2675(20000906)83:9%3C2197::aid-hlca2197%3E3.0
 publication_year: 2000
 journal: "Helvetica Chimica Acta"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

@@ -10,5 +10,9 @@ url: "https://doi.org/10.1016/j.bmc.2018.01.026"
 publication_year: 2018
 journal: "Bioorganic & Medicinal Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: needed
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 26, issue 8, pp. 1393-1411; PMID 29439914)."

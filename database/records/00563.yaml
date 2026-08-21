@@ -14,5 +14,9 @@ related_papers:
   - pip_litdb_id: "00561"
     relationship_type: is_version_of
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "Two-page proceedings article (vol. 1, issue 1, pp. 225–226), published 2001-11-01 (PMID 12836346); expanded as the 2002 full paper at PIP LitDB 00561. Oxford exposes only the abstract in HTML; the complete article is available through the publisher PDF at https://academic.oup.com/nass/article-pdf/1/1/225/6188584/11225.pdf. No supplementary material is listed or exposed by the publisher. The local source is the complete Oxford publisher PDF."

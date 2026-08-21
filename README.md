@@ -4,7 +4,7 @@
 
 ## ARD
 
-- Anyone can clone and use the public database without possessing any source documents. The private copies can be moved or deleted without affecting the database.
+- Anyone can clone and use the public database without possessing any source documents. The private copies remain untracked, but their publicly committed `pip_litdb_file_status` values must be updated when the project's holdings change.
 
 - The only private untracked part of the project are the paper copies and extractions. The public database of metadata, the tools for the public database, the tools for the private database, and the extraction tools, are all tracked and public.
 
@@ -34,6 +34,7 @@ database/
 │   └── paper.schema.json
 └── vocabularies/
     ├── document-types.yaml
+    ├── file-statuses.yaml
     ├── language-statuses.yaml
     ├── publication-stages.yaml
     ├── relationship-types.yaml
@@ -47,6 +48,7 @@ The database records the following fields for each work:
 - Document type (`document_type`): The kind of document. Allowed values are `research_article`, `review`, `correction`, and `book`.
 - Publication stage (`publication_stage`): The publication stage of the document. Allowed values are `preprint` and `publication`.
 - Language status (`language_status`): The result of checking the publication's primary language. Allowed values are `english`, `non_english`, `uncertain`, and `unchecked`.
+- PIP LitDB file status (`pip_litdb_file_status`): Publicly committed statuses for the project's private holdings of the main PDF, supplementary material, and full-text HTML. All three status fields are required.
 - Title
 - Authors: An ordered list of author names, ideally using each author's full name
 - DOI
@@ -56,6 +58,17 @@ The database records the following fields for each work:
 - Journal or publication venue (`journal`): For an article, use the standard full journal name rather than an abbreviation. For a book, use its series name when available, otherwise its publisher or imprint. For a preprint, use the server name.
 - PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
+
+File status values are defined in `database/vocabularies/file-statuses.yaml`:
+
+- `unchecked`: The project's holdings for this material have not been assessed.
+- `present`: All expected material of this kind is stored and has passed basic validation.
+- `needed`: The material is known to exist, is not stored, and still needs to be acquired.
+- `partial`: Some, but not all, expected material of this kind is stored.
+- `error`: A stored copy exists but is corrupt, incorrect, incomplete, or otherwise fails validation.
+- `uncertain`: The material was investigated, but its existence, availability, or completeness could not be determined.
+- `not_available`: The material is known or expected to exist but cannot be obtained from an allowed source.
+- `not_applicable`: The publication is confirmed not to provide this material or format.
 
 Document type and publication stage describe independent characteristics. For example, a preprint and its corresponding published article may both have `document_type: research_article`, while the preprint has `publication_stage: preprint` and the published article has `publication_stage: publication`. They remain separate records and are connected using the appropriate related-paper relationship.
 
@@ -75,6 +88,10 @@ url: "https://doi.org/10.1234/example.123"
 publication_year: 2024
 journal: "BioRxiv"
 language_status: unchecked
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked
 related_papers:
   - pip_litdb_id: "00002"
     relationship_type: is_preprint_of
@@ -105,7 +122,7 @@ from being added again under a different ID.
 Automated database validation checks:
 
 - Every record follows `paper.schema.json`.
-- Every `document_type`, `publication_stage`, and `language_status` value is defined in its corresponding vocabulary file.
+- Every `document_type`, `publication_stage`, `language_status`, and `pip_litdb_file_status` value is defined in its corresponding vocabulary file.
 - Every record filename matches the five-digit format `NNNNN.yaml`, begins at `00001`, and uniquely determines that record's PIP LitDB ID.
 - Duplicate DOIs.
 - Related-paper IDs and relationship types.

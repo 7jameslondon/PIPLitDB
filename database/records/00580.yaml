@@ -10,5 +10,9 @@ url: "https://doi.org/10.1021/ja9737228"
 publication_year: 1998
 journal: "Journal of the American Chemical Society"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Research article (vol. 120, issue 7, pp. 1382-1391), published online 1998-02-07 and in issue 1998-02-01; no direct PubMed record was located. The indexed local PDF is the complete ten-page ACS publisher version of record."

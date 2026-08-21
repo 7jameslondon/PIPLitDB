@@ -8,5 +8,9 @@ url: "https://doi.org/10.1002/1097-0282%281999%2952%3A4%3C197%3A%3Aaid-bip1004%3
 publication_year: 1999
 journal: "Biopolymers"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Review article (vol. 52, issue 4, pp. 197-211; PMID 11295751). Wiley's citation year is 1999, while the complete 15-page Wiley publisher version of record was first published online 2001-03-29 and carries a 2001 copyright."

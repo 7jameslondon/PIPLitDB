@@ -14,4 +14,9 @@ url: "https://doi.org/10.3390/cancers14040951"
 publication_year: 2022
 journal: "Cancers"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplementary.zip' was extracted into the private-paper PDF directory; its extracted content is 'cancers-1576861-supplementary.pdf'."

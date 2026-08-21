@@ -17,4 +17,8 @@ related_papers:
   - pip_litdb_id: "00255"
     relationship_type: is_version_of
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

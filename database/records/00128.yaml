@@ -15,4 +15,9 @@ url: "https://doi.org/10.1093/nar/gku866"
 publication_year: 2014
 journal: "Nucleic Acids Research"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplementary.zip' was extracted into the private-paper PDF directory; its extracted content is 'nar-01068-h-2014-File008.pdf'."

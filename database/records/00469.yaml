@@ -12,4 +12,8 @@ url: "https://doi.org/10.1021/jo000135n"
 publication_year: 2000
 journal: "The Journal of Organic Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: needed
+  full_text_html: present
 pip_litdb_status: verified

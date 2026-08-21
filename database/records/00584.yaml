@@ -18,5 +18,9 @@ url: "https://doi.org/10.1021/jacs.3c06297"
 publication_year: 2023
 journal: "Journal of the American Chemical Society"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Research article (vol. 145, issue 45, pp. 24568-24579), published online 2023-11-03 and in issue 2023-11-15; PMID 37923569, PMCID PMC11957383. The indexed local PDF is the complete 23-page NIH author manuscript, made available in PMC on 2025-05-03."

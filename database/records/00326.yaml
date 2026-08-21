@@ -10,4 +10,8 @@ url: "https://doi.org/10.1016/s1097-2765(00)00099-x"
 publication_year: 2000
 journal: "Molecular Cell"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified

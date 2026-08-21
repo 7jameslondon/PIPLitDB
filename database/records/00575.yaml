@@ -14,5 +14,9 @@ url: "https://doi.org/10.1021/ja0373622"
 publication_year: 2004
 journal: "Journal of the American Chemical Society"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Research article (vol. 126, issue 25, pp. 7958-7966; PMID 15212545), published online 2004-06-02 and in issue 2004-06-30. The indexed local PDF is the three-page ACS supporting information, not the article PDF."

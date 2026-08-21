@@ -30,4 +30,8 @@ url: "https://doi.org/10.1016/j.chembiol.2008.06.006"
 publication_year: 2008
 journal: "Chemistry & Biology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

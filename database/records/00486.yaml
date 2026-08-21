@@ -10,5 +10,9 @@ url: "https://doi.org/10.1002/(sici)1097-458x(199612)34:13%3Cs55::aid-omr38%3E3.
 publication_year: 1996
 journal: "Magnetic Resonance in Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

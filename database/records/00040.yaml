@@ -16,4 +16,9 @@ url: "https://doi.org/10.3390/ijms22094741"
 publication_year: 2021
 journal: "International Journal of Molecular Sciences"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: needed
 pip_litdb_status: verified
+pip_litdb_notes: "The local supplementary archive 'supplementary.zip' was extracted into the private-paper PDF directory; its extracted content is 'ijms-1053194-supplementary.pdf'."

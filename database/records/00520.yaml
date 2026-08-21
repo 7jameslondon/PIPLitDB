@@ -10,5 +10,9 @@ url: "https://doi.org/10.1007/978-1-0716-1262-0_13"
 publication_year: 2021
 journal: "Methods in Molecular Biology"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Book chapter in Mitochondrial Medicine, Volume 1: Targeting Mitochondria (Methods in Molecular Biology, vol. 2275), pp. 217-225; PMID 34118040."

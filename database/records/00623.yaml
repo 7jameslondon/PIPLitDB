@@ -9,5 +9,9 @@ url: "https://doi.org/10.1246/bcsj.20160062"
 publication_year: 2016
 journal: "Bulletin of the Chemical Society of Japan"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Accounts review (vol. 89, issue 8, pp. 843-868), received 2016-02-23, accepted 2016-03-18, and published online 2016-08-15. The indexed local source is the complete 26-page publisher version of record."

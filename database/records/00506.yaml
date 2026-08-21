@@ -11,5 +11,9 @@ url: "https://doi.org/10.1006/bbrc.2000.2437"
 publication_year: 2000
 journal: "Biochemical and Biophysical Research Communications"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
-pip_litdb_notes: "The publisher provides this article only as a PDF; no full-text HTML version is available."
+pip_litdb_notes: "The publisher provides only the main article PDF; no full-text HTML version or supplementary material is available from the publisher."

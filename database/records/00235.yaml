@@ -18,4 +18,8 @@ url: "https://doi.org/10.1161/hypertensionaha.108.112797"
 publication_year: 2008
 journal: "Hypertension"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

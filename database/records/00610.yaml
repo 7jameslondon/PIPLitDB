@@ -15,5 +15,9 @@ related_papers:
   - pip_litdb_id: "00600"
     relationship_type: is_version_of
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Communication (vol. 46, issue 16, pp. 2865–2868; PMID 17351994), version of record published online 2007-03-12 and assigned to the 2007-04-13 issue. This shorter report was expanded in the Journal of Combinatorial Chemistry article at PIP LitDB 00600. The local source is the complete four-page Wiley publisher version of record."

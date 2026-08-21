@@ -13,4 +13,8 @@ url: "https://doi.org/10.1186/s13072-021-00421-8"
 publication_year: 2021
 journal: "Epigenetics & Chromatin"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
 pip_litdb_status: verified

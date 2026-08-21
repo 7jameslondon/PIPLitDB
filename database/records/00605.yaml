@@ -10,5 +10,9 @@ url: "https://doi.org/10.1023/a:1024965604896"
 publication_year: 2003
 journal: "Russian Journal of Bioorganic Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
-pip_litdb_notes: "Letters to the Editor article (vol. 29, issue 4, pp. 402–404), published July 2003. This is the English translation of the Bioorganicheskaya Khimiya article (vol. 29, issue 4, pp. 442–444). The local source is the complete three-page Springer publisher version of record."
+pip_litdb_notes: "Letters to the Editor article (vol. 29, issue 4, pp. 402–404), published July 2003. This is the English translation of the Bioorganicheskaya Khimiya article (vol. 29, issue 4, pp. 442–444). The local source is the complete three-page Springer publisher version of record. The publisher provides no full-text HTML, and no supplementary materials are listed."

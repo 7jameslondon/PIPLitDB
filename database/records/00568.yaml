@@ -12,5 +12,9 @@ url: "https://doi.org/10.1038/35106"
 publication_year: 1998
 journal: "Nature"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: partial
+  full_text_html: present
 pip_litdb_status: verified
 pip_litdb_notes: "Letter (vol. 391, issue 6666, pp. 468-471; PMID 9461213), published 1998-01-29. The indexed local PDF is Nature's one-page supplementary information (Table S1), not the article PDF; this record represents the DOI-identified article."

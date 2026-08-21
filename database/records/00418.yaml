@@ -10,5 +10,9 @@ url: "https://doi.org/10.1073/pnas.92.22.10389"
 publication_year: 1995
 journal: "Proceedings of the National Academy of Sciences"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

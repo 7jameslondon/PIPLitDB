@@ -8,4 +8,8 @@ url: "https://doi.org/10.14348/molcells.2019.0268"
 publication_year: 2020
 journal: "Molecules and Cells"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: needed
 pip_litdb_status: verified

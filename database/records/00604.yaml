@@ -11,5 +11,9 @@ url: "https://doi.org/10.1023/b:rubi.0000043796.25692.99"
 publication_year: 2004
 journal: "Russian Journal of Bioorganic Chemistry"
 language_status: english
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: not_available
 pip_litdb_status: verified
-pip_litdb_notes: "English-language journal translation (vol. 30, issue 5, pp. 502–504), issue-dated September 2004; the Russian original in Bioorganicheskaya Khimiya (vol. 30, issue 5, pp. 558–560) is indexed as PMID 15562979. The indexed local source is the complete three-page Springer publisher version of record."
+pip_litdb_notes: "English-language journal translation (vol. 30, issue 5, pp. 502–504), issue-dated September 2004; the Russian original in Bioorganicheskaya Khimiya (vol. 30, issue 5, pp. 558–560) is indexed as PMID 15562979. The indexed local source is the complete three-page Springer publisher version of record. The publisher provides no full-text HTML, and no supplementary materials are listed."
