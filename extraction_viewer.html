@@ -1,0 +1,2112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src blob:; media-src blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>PIP LitDB Extraction Viewer</title>
+  <style>
+    :root {
+      --paper: #fffef9;
+      --canvas: #eef2f0;
+      --ink: #17201e;
+      --muted: #61706b;
+      --line: #d8dfdc;
+      --soft-line: #e8ecea;
+      --accent: #116b62;
+      --accent-dark: #094e47;
+      --accent-soft: #dff0ec;
+      --warm: #956114;
+      --warm-soft: #fff2d5;
+      --danger: #9d2c2c;
+      --danger-soft: #fff0ef;
+      --shadow: 0 18px 45px rgba(26, 43, 38, .09);
+      --radius: 16px;
+      --reading-width: 820px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 9% -10%, rgba(17, 107, 98, .11), transparent 28rem),
+        var(--canvas);
+    }
+
+    button, input { font: inherit; }
+
+    button, .button {
+      align-items: center;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      cursor: pointer;
+      display: inline-flex;
+      font-weight: 680;
+      gap: .45rem;
+      justify-content: center;
+      line-height: 1;
+      min-height: 2.5rem;
+      padding: .7rem .95rem;
+      text-decoration: none;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease;
+    }
+
+    button:hover, .button:hover { transform: translateY(-1px); }
+    button:focus-visible, .button:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(17, 107, 98, .28);
+      outline-offset: 2px;
+    }
+
+    .button-primary { background: var(--accent); color: #fff; }
+    .button-primary:hover { background: var(--accent-dark); }
+    .button-secondary { background: #fff; border-color: var(--line); color: var(--ink); }
+    .button-secondary:hover { background: #f5f8f7; border-color: #bdc9c5; }
+    .button-quiet { background: transparent; color: var(--muted); }
+    .button-quiet:hover { background: rgba(255, 255, 255, .65); color: var(--ink); }
+
+    .topbar {
+      align-items: center;
+      backdrop-filter: blur(16px);
+      background: rgba(238, 242, 240, .91);
+      border-bottom: 1px solid rgba(184, 198, 192, .75);
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      min-height: 68px;
+      padding: .7rem clamp(1rem, 3vw, 2.5rem);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand { align-items: center; display: flex; gap: .75rem; min-width: 0; }
+    .brand-mark {
+      align-items: center;
+      background: var(--accent);
+      border-radius: 11px;
+      color: #fff;
+      display: inline-flex;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      height: 2.35rem;
+      justify-content: center;
+      letter-spacing: -.04em;
+      width: 2.35rem;
+    }
+    .brand-copy { min-width: 0; }
+    .brand-title { font-size: .98rem; font-weight: 760; line-height: 1.2; }
+    .brand-subtitle { color: var(--muted); font-size: .75rem; margin-top: .12rem; }
+
+    .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: .45rem; justify-content: flex-end; }
+    .toolbar .button { min-height: 2.25rem; padding: .6rem .75rem; }
+    .offline-badge {
+      align-items: center;
+      color: var(--muted);
+      display: inline-flex;
+      font-size: .75rem;
+      gap: .38rem;
+      margin-right: .2rem;
+    }
+    .offline-dot { background: #3e9684; border-radius: 50%; height: .48rem; width: .48rem; }
+
+    .shell { margin: 0 auto; max-width: 1580px; padding: clamp(1rem, 2.5vw, 2.4rem); }
+
+    .landing {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      margin: clamp(1rem, 6vh, 4.5rem) auto;
+      max-width: 780px;
+      overflow: hidden;
+      padding: clamp(2rem, 6vw, 4.5rem);
+      position: relative;
+    }
+
+    .landing::before {
+      background: linear-gradient(90deg, var(--accent), #51a592);
+      content: "";
+      height: 7px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .landing h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      font-weight: 500;
+      letter-spacing: -.035em;
+      line-height: 1.06;
+      margin: .6rem 0 1rem;
+    }
+
+    .landing > p { color: var(--muted); font-size: 1.04rem; line-height: 1.7; margin: 0 0 1.7rem; }
+    .load-actions { display: flex; flex-wrap: wrap; gap: .7rem; }
+    .load-note {
+      background: #f3f7f5;
+      border: 1px solid var(--soft-line);
+      border-radius: 11px;
+      color: var(--muted);
+      font-size: .83rem;
+      line-height: 1.55;
+      margin-top: 1.4rem;
+      padding: .9rem 1rem;
+    }
+
+    .message {
+      border: 1px solid;
+      border-radius: 10px;
+      font-size: .87rem;
+      line-height: 1.45;
+      margin-top: 1rem;
+      padding: .8rem .95rem;
+    }
+    .message-error { background: var(--danger-soft); border-color: #efc4c0; color: #7c2222; }
+    .message-warning { background: var(--warm-soft); border-color: #efd69e; color: #70490f; }
+    .message-info { background: var(--accent-soft); border-color: #bfddd6; color: var(--accent-dark); }
+    .operation-status { margin: 0 auto 1rem; max-width: 1100px; }
+    .operation-status:empty { display: none; }
+
+    .library {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      margin: 0 auto;
+      max-width: 1100px;
+      overflow: hidden;
+    }
+    .library-header {
+      align-items: end;
+      background: linear-gradient(145deg, #fffef9 60%, #edf7f4);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 1.5rem;
+      justify-content: space-between;
+      padding: clamp(1.4rem, 4vw, 2.6rem);
+    }
+    .library-header h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 500;
+      letter-spacing: -.025em;
+      margin: .35rem 0 .35rem;
+    }
+    .library-summary { color: var(--muted); font-size: .86rem; line-height: 1.5; }
+    .library-search { flex: 0 1 360px; }
+    .library-search label { color: var(--muted); display: block; font-size: .74rem; font-weight: 760; margin-bottom: .4rem; }
+    .library-search input {
+      background: #fff;
+      border: 1px solid #bfcac6;
+      border-radius: 9px;
+      color: var(--ink);
+      min-height: 2.65rem;
+      padding: .65rem .8rem;
+      width: 100%;
+    }
+    .library-search input:focus { border-color: var(--accent); outline: 3px solid rgba(17, 107, 98, .18); }
+    .library-status { padding: 0 clamp(1rem, 4vw, 2.6rem); }
+    .record-list { display: grid; list-style: none; margin: 0; padding: 0 0 1rem; }
+    .record-row { border-bottom: 1px solid var(--soft-line); margin: 0 clamp(1rem, 4vw, 2.6rem); }
+    .record-row:last-child { border-bottom: 0; }
+    .record-select {
+      align-items: start;
+      background: transparent;
+      border: 0;
+      border-radius: 10px;
+      color: inherit;
+      display: grid;
+      gap: .35rem 1rem;
+      grid-template-columns: 5.1rem minmax(0, 1fr);
+      justify-content: stretch;
+      line-height: 1.4;
+      min-height: 0;
+      padding: 1rem .8rem;
+      text-align: left;
+      width: 100%;
+    }
+    .record-select:hover { background: #f2f7f5; transform: none; }
+    .record-list-id { color: var(--accent); font-size: .78rem; font-weight: 800; grid-row: 1 / span 3; letter-spacing: .06em; padding-top: .13rem; }
+    .record-list-title { font-family: Georgia, "Times New Roman", serif; font-size: 1.05rem; font-weight: 600; }
+    .record-list-authors { color: #45534e; font-size: .82rem; overflow-wrap: anywhere; }
+    .record-list-citation { color: var(--muted); font-size: .75rem; overflow-wrap: anywhere; }
+    .record-problem {
+      background: var(--danger-soft);
+      border: 1px solid #efc7c2;
+      border-radius: 10px;
+      color: #762626;
+      line-height: 1.45;
+      margin: .75rem 0;
+      padding: .85rem;
+    }
+    .record-problem strong { display: block; font-size: .82rem; margin-bottom: .2rem; }
+    .record-problem span { font-size: .78rem; }
+    .library-empty { color: var(--muted); padding: clamp(2rem, 8vw, 5rem) 1rem; text-align: center; }
+    .progress-line { color: var(--muted); font-size: .82rem; padding: .9rem 0; }
+
+    .workspace-grid { align-items: start; display: grid; gap: 1.25rem; grid-template-columns: 250px minmax(0, 1fr); }
+    .sidebar {
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 88px;
+    }
+    .sidecard {
+      background: rgba(255, 254, 249, .8);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+    }
+    .sidecard + .sidecard { margin-top: .75rem; }
+    .side-label { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .toc { list-style: none; margin: .55rem 0 0; padding: 0; }
+    .toc li { margin: .08rem 0; }
+    .toc a {
+      border-left: 2px solid transparent;
+      color: #41514c;
+      display: block;
+      font-size: .82rem;
+      line-height: 1.35;
+      padding: .37rem .3rem .37rem .65rem;
+      text-decoration: none;
+    }
+    .toc a:hover { border-left-color: var(--accent); color: var(--accent-dark); }
+    .toc .toc-level-3 a { padding-left: 1.25rem; }
+    .record-chip { color: var(--muted); font-size: .78rem; line-height: 1.45; margin-top: .45rem; overflow-wrap: anywhere; }
+
+    .document, .raw-panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .document { overflow: hidden; }
+    .article-header {
+      background: linear-gradient(145deg, #fffef9 55%, #edf7f4);
+      border-bottom: 1px solid var(--line);
+      padding: clamp(2rem, 6vw, 4.5rem) clamp(1.25rem, 7vw, 5.5rem) clamp(2rem, 5vw, 3.5rem);
+    }
+    .record-id { color: var(--accent); font-size: .73rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .article-title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 4.4vw, 3.7rem);
+      font-weight: 500;
+      letter-spacing: -.025em;
+      line-height: 1.08;
+      margin: .6rem 0 1rem;
+      max-width: 1000px;
+    }
+    .authors { color: #35443f; font-size: 1.02rem; line-height: 1.6; }
+    .citation-line { color: var(--muted); font-size: .88rem; line-height: 1.55; margin-top: .85rem; }
+    .metadata-grid {
+      display: grid;
+      gap: 0;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      margin-top: 1.55rem;
+      max-width: 900px;
+    }
+    .metadata-item { border-left: 1px solid var(--line); min-width: 0; padding: .4rem 1rem; }
+    .metadata-item:first-child { border-left: 0; padding-left: 0; }
+    .metadata-term { color: var(--muted); font-size: .68rem; font-weight: 760; letter-spacing: .06em; text-transform: uppercase; }
+    .metadata-value { font-size: .87rem; line-height: 1.4; margin-top: .23rem; overflow-wrap: anywhere; }
+
+    .article-body { margin: 0 auto; max-width: calc(var(--reading-width) + 11rem); padding: clamp(1.5rem, 6vw, 5rem) clamp(1.1rem, 7vw, 5.5rem); }
+    .content-section { margin: 0 auto 3.2rem; max-width: var(--reading-width); scroll-margin-top: 90px; }
+    .content-section > h2 {
+      border-bottom: 1px solid var(--line);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.72rem;
+      font-weight: 500;
+      letter-spacing: -.015em;
+      margin: 0 0 1.25rem;
+      padding-bottom: .55rem;
+    }
+    .content-section > h3, .section-heading-level-3 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin: 2rem 0 .85rem;
+    }
+    .section-heading-level-4 { font-size: 1.04rem; margin: 1.6rem 0 .7rem; }
+    .text-block { color: #26332f; font-family: Georgia, "Times New Roman", serif; font-size: 1.035rem; line-height: 1.76; margin: 0 0 1.08rem; }
+    .text-block sub, td sub, th sub { font-size: .74em; }
+    .text-block sup, td sup, th sup { font-size: .7em; }
+    .text-block code { background: #eef2f0; border-radius: 4px; font-family: ui-monospace, monospace; font-size: .86em; padding: .08em .28em; }
+    .text-block mark { background: #fff0a8; }
+    .block-id { scroll-margin-top: 90px; }
+    blockquote.text-block { border-left: 4px solid #b7d8d1; color: #485650; margin-left: 0; padding-left: 1rem; }
+    .equation-block {
+      background: #f6f8f7;
+      border: 1px solid var(--soft-line);
+      border-radius: 9px;
+      font-family: "Cambria Math", Georgia, serif;
+      margin: 1.3rem 0;
+      overflow-x: auto;
+      padding: 1rem 1.2rem;
+      text-align: center;
+    }
+    .code-block { background: #17201e; border-radius: 9px; color: #edf4f1; overflow-x: auto; padding: 1rem; white-space: pre-wrap; }
+    .list-block { color: #26332f; font-family: Georgia, "Times New Roman", serif; line-height: 1.7; padding-left: 1.5rem; }
+    .list-block li { margin-bottom: .42rem; }
+
+    .front-matter-list { display: grid; gap: .85rem; }
+    .front-block { border-left: 3px solid #c8ddd8; padding-left: .95rem; }
+    .front-kind { color: var(--muted); font-size: .7rem; font-weight: 760; letter-spacing: .07em; margin-bottom: .25rem; text-transform: uppercase; }
+    .front-block .text-block { font-size: .95rem; margin: 0; }
+
+    .asset-index {
+      background: #f3f8f6;
+      border: 1px solid #d9e7e3;
+      border-radius: 13px;
+      margin-bottom: 3rem;
+      max-width: var(--reading-width);
+      padding: 1.05rem 1.15rem;
+    }
+    .asset-index-title { font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .asset-index-list { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .7rem; }
+    .asset-index a {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--accent-dark);
+      font-size: .78rem;
+      font-weight: 680;
+      padding: .45rem .7rem;
+      text-decoration: none;
+    }
+    .asset-index a:hover { border-color: #80b7ab; }
+
+    .media-grid { display: grid; gap: 1.35rem; }
+    .media-card {
+      background: #fbfcfa;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      scroll-margin-top: 90px;
+    }
+    .media-stage {
+      align-items: center;
+      background:
+        linear-gradient(45deg, #eef1ef 25%, transparent 25%),
+        linear-gradient(-45deg, #eef1ef 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eef1ef 75%),
+        linear-gradient(-45deg, transparent 75%, #eef1ef 75%),
+        #f8faf9;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+      background-size: 16px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+      padding: 1rem;
+    }
+    .media-stage img { display: block; height: auto; max-height: 75vh; max-width: 100%; object-fit: contain; }
+    .media-stage video { background: #121817; max-height: 70vh; max-width: 100%; width: 100%; }
+    .media-stage audio { max-width: 650px; width: 100%; }
+    .media-caption { padding: .95rem 1.05rem 1.05rem; }
+    .media-label { font-size: .82rem; font-weight: 800; margin-bottom: .35rem; }
+    .media-caption .text-block { font-size: .94rem; line-height: 1.55; margin: 0; }
+    .media-path { color: var(--muted); font-family: ui-monospace, monospace; font-size: .68rem; margin-top: .55rem; overflow-wrap: anywhere; }
+
+    .asset-error {
+      align-items: flex-start;
+      background: var(--danger-soft);
+      border: 1px solid #efc7c2;
+      border-radius: 9px;
+      color: #7d2727;
+      display: flex;
+      flex-direction: column;
+      font-size: .82rem;
+      gap: .28rem;
+      line-height: 1.45;
+      margin: .75rem;
+      padding: .8rem .9rem;
+      width: 100%;
+    }
+    .asset-error strong { font-size: .84rem; }
+    .asset-error code { overflow-wrap: anywhere; }
+
+    .table-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 1.7rem;
+      overflow: hidden;
+      scroll-margin-top: 90px;
+    }
+    .table-heading { background: #f3f7f5; border-bottom: 1px solid var(--line); padding: .9rem 1rem; }
+    .table-label { font-size: .8rem; font-weight: 800; }
+    .table-title { color: #44534e; font-family: Georgia, "Times New Roman", serif; font-size: .95rem; line-height: 1.5; margin-top: .25rem; }
+    .table-scroll { overflow-x: auto; }
+    table { border-collapse: collapse; font-size: .84rem; line-height: 1.42; min-width: 100%; }
+    th, td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--soft-line); padding: .62rem .72rem; text-align: left; vertical-align: top; }
+    th:last-child, td:last-child { border-right: 0; }
+    th { background: #edf4f1; color: #24342f; font-weight: 750; }
+    tr:last-child td, tr:last-child th { border-bottom: 0; }
+    .table-part + .table-part { border-top: 4px solid var(--line); }
+    .table-part-label { background: #fafbf9; color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .05em; padding: .45rem .7rem; text-transform: uppercase; }
+    .table-footnotes { border-top: 1px solid var(--line); color: #4a5853; font-family: Georgia, "Times New Roman", serif; font-size: .8rem; line-height: 1.5; padding: .7rem 1rem; }
+    .table-footnotes p { margin: .28rem 0; }
+    .cell-structure { border-top: 1px solid var(--soft-line); margin-top: .5rem; padding-top: .5rem; }
+    .cell-structure img { display: block; height: auto; max-height: 110px; max-width: 160px; object-fit: contain; }
+    .table-structure-grid { background: #fafbf9; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .7rem; padding: .8rem 1rem; }
+    .table-structure-item { background: #fff; border: 1px solid var(--soft-line); border-radius: 7px; padding: .5rem; }
+    .table-structure-item img { display: block; height: auto; max-height: 130px; max-width: 180px; object-fit: contain; }
+    .table-structure-label { color: var(--muted); font-size: .67rem; font-weight: 700; margin-top: .3rem; text-align: center; }
+    details.source-image { border-top: 1px solid var(--line); padding: .7rem 1rem 1rem; }
+    details.source-image summary { color: var(--accent-dark); cursor: pointer; font-size: .79rem; font-weight: 700; }
+    details.embedded-assets { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: .8rem; }
+    details.embedded-assets > summary { color: var(--accent-dark); cursor: pointer; font-size: .84rem; font-weight: 760; }
+    .embedded-assets-list { display: grid; gap: .8rem; margin-top: .9rem; }
+
+    .download-list { display: grid; gap: .65rem; }
+    .download-card {
+      align-items: center;
+      background: #fbfcfa;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      display: flex;
+      gap: .8rem;
+      justify-content: space-between;
+      min-width: 0;
+      padding: .75rem .85rem;
+      scroll-margin-top: 90px;
+    }
+    .download-info { min-width: 0; }
+    .download-name { font-size: .87rem; font-weight: 720; overflow-wrap: anywhere; }
+    .download-meta { color: var(--muted); font-size: .7rem; margin-top: .2rem; overflow-wrap: anywhere; }
+    .download-card .button { flex: 0 0 auto; min-height: 2rem; padding: .5rem .65rem; }
+
+    .supplement-card { border: 1px solid var(--line); border-radius: 11px; margin-bottom: 1rem; padding: 1rem; scroll-margin-top: 90px; }
+    .supplement-title { font-size: .94rem; font-weight: 780; margin-bottom: .65rem; }
+    .supplement-card .download-card { margin-bottom: 1rem; }
+    .supplement-data { background: #f7faf8; border: 1px solid var(--line); border-radius: 10px; margin: 1rem 0; padding: .85rem; }
+    .supplement-data-title { color: var(--accent-dark); font-size: .78rem; font-weight: 800; letter-spacing: .035em; margin-bottom: .65rem; text-transform: uppercase; }
+    .supplement-data .download-card:last-child { margin-bottom: 0; }
+
+    .reference-list { counter-reset: references; display: grid; gap: .8rem; }
+    .reference-item { counter-increment: references; display: grid; font-family: Georgia, "Times New Roman", serif; font-size: .86rem; gap: .65rem; grid-template-columns: 2.1rem 1fr; line-height: 1.55; }
+    .reference-item::before { color: var(--muted); content: counter(references) "."; font-family: ui-sans-serif, system-ui, sans-serif; font-size: .75rem; padding-top: .15rem; text-align: right; }
+    .reference-item.source-numbered { grid-template-columns: 1fr; }
+    .reference-item.source-numbered::before { display: none; }
+    .reference-item .text-block { font-size: inherit; line-height: inherit; margin: 0; }
+
+    .raw-panel { overflow: hidden; }
+    .raw-header { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 1rem 1.2rem; }
+    .raw-title { font-weight: 780; }
+    .raw-subtitle { color: var(--muted); font-size: .76rem; margin-top: .18rem; }
+    .raw-json { background: #17201e; color: #e7efec; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .78rem; line-height: 1.55; margin: 0; max-height: calc(100vh - 150px); overflow: auto; padding: 1.2rem; tab-size: 2; white-space: pre; }
+
+    .empty-state { color: var(--muted); font-size: .86rem; font-style: italic; }
+    .visually-hidden { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0 0 0 0); white-space: nowrap; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 900px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .metadata-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metadata-item:nth-child(odd) { border-left: 0; padding-left: 0; }
+      .topbar { align-items: flex-start; }
+      .brand-subtitle, .offline-badge { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      .topbar { align-items: center; }
+      .brand-copy { display: none; }
+      .toolbar #print-button { display: none; }
+      .shell { padding: .65rem; }
+      .landing { border-radius: 16px; margin-top: 1rem; padding: 2rem 1.25rem; }
+      .load-actions { align-items: stretch; flex-direction: column; }
+      .library-header { align-items: stretch; flex-direction: column; }
+      .library-search { flex-basis: auto; }
+      .record-select { grid-template-columns: 1fr; }
+      .record-list-id { grid-row: auto; }
+      .article-header { padding: 2rem 1.2rem; }
+      .article-body { padding: 1.5rem 1rem; }
+      .metadata-grid { grid-template-columns: 1fr; }
+      .metadata-item, .metadata-item:nth-child(odd) { border-left: 0; border-top: 1px solid var(--line); padding: .65rem 0; }
+      .metadata-item:first-child { border-top: 0; }
+      .download-card { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media print {
+      :root { --paper: #fff; --canvas: #fff; }
+      .topbar, .sidebar, .asset-index, .raw-panel, .landing, .library { display: none !important; }
+      .shell { max-width: none; padding: 0; }
+      .workspace-grid { display: block; }
+      .document { border: 0; box-shadow: none; }
+      .article-header, .article-body { padding-left: 0; padding-right: 0; }
+      .content-section { break-inside: auto; }
+      .media-card, .table-card, .supplement-card { break-inside: avoid; }
+      .media-stage img { max-height: 8in; }
+      .button { display: none !important; }
+    }
+  </style>
+</head>
+<body data-viewer-state="empty">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">P</span>
+      <div class="brand-copy">
+        <div class="brand-title">PIP LitDB Extraction Viewer</div>
+        <div class="brand-subtitle">Browse private extractions locally</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <span class="offline-badge" title="The viewer contains no external dependencies">
+        <span class="offline-dot"></span> Offline viewer
+      </span>
+      <button class="button button-secondary" id="back-to-records" type="button" hidden>← All records</button>
+      <button class="button button-secondary" id="refresh-records" type="button" hidden>Refresh records</button>
+      <button class="button button-secondary" id="change-root" type="button" hidden>Change private folder</button>
+      <button class="button button-quiet" id="view-toggle" type="button" hidden>View raw JSON</button>
+      <button class="button button-quiet" id="print-button" type="button" hidden>Print</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="operation-status" id="operation-status" aria-live="polite"></div>
+    <section class="landing" id="landing">
+      <div class="eyebrow">Private, local, structured</div>
+      <h1>Browse private extractions.</h1>
+      <p>Choose the <strong>papers (private)</strong> folder once. The viewer will find its completed extractions and let you move between records while keeping every file on your computer.</p>
+      <div class="load-actions">
+        <button class="button button-primary" id="choose-root" type="button">Choose papers (private)</button>
+      </div>
+      <div class="load-note">
+        Read-only and offline. Folder access lasts only for this browser session; nothing is uploaded or stored by the viewer.
+      </div>
+      <div id="landing-message" aria-live="polite"></div>
+    </section>
+
+    <section class="library" id="library" aria-labelledby="library-title" hidden>
+      <header class="library-header">
+        <div>
+          <div class="eyebrow">Private extraction library</div>
+          <h1 id="library-title" tabindex="-1">Extracted records</h1>
+          <div class="library-summary" id="library-summary"></div>
+        </div>
+        <div class="library-search">
+          <label for="record-search">Search records</label>
+          <input id="record-search" type="search" placeholder="ID, title, author, journal, year, or DOI" autocomplete="off">
+        </div>
+      </header>
+      <div class="library-status" id="library-status" aria-live="polite"></div>
+      <ol class="record-list" id="record-list"></ol>
+      <div class="library-empty" id="library-empty" hidden></div>
+    </section>
+
+    <section id="workspace" hidden>
+      <div id="schema-message" aria-live="polite"></div>
+      <div class="workspace-grid">
+        <aside class="sidebar">
+          <div class="sidecard">
+            <div class="side-label">Contents</div>
+            <ol class="toc" id="toc"></ol>
+          </div>
+          <div class="sidecard">
+            <div class="side-label">Loaded record</div>
+            <div class="record-chip" id="loaded-record"></div>
+          </div>
+        </aside>
+
+        <div>
+          <article class="document" id="document-view" aria-label="Extracted record">
+            <header class="article-header" id="article-header"></header>
+            <div class="article-body" id="article-body"></div>
+          </article>
+          <section class="raw-panel" id="raw-view" aria-label="Raw record JSON" hidden>
+            <div class="raw-header">
+              <div>
+                <div class="raw-title">Canonical record.json</div>
+                <div class="raw-subtitle">Exactly as loaded; no presentation fields added</div>
+              </div>
+              <button class="button button-secondary" id="copy-json" type="button">Copy JSON</button>
+            </div>
+            <pre class="raw-json" id="raw-json"></pre>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const EXPECTED_SCHEMA_VERSION = "1.1";
+    const SUPPORTED_SCHEMA_VERSIONS = new Set(["1.0", EXPECTED_SCHEMA_VERSION]);
+    const EXPECTED_ASSET_BASE = "extraction_root";
+    const METADATA_PREFIX_MAX_BYTES = 1024 * 1024;
+    const ALLOWED_HTML = new Set([
+      "a", "abbr", "b", "br", "code", "em", "i", "li", "ol", "span",
+      "strong", "sub", "sup", "u", "ul"
+    ]);
+    const DROP_CONTENT_HTML = new Set([
+      "embed", "iframe", "noscript", "object", "script", "style", "svg", "template"
+    ]);
+
+    const dom = {
+      body: document.body,
+      operationStatus: document.getElementById("operation-status"),
+      landing: document.getElementById("landing"),
+      landingMessage: document.getElementById("landing-message"),
+      chooseRoot: document.getElementById("choose-root"),
+      library: document.getElementById("library"),
+      libraryTitle: document.getElementById("library-title"),
+      librarySummary: document.getElementById("library-summary"),
+      libraryStatus: document.getElementById("library-status"),
+      recordSearch: document.getElementById("record-search"),
+      recordList: document.getElementById("record-list"),
+      libraryEmpty: document.getElementById("library-empty"),
+      workspace: document.getElementById("workspace"),
+      schemaMessage: document.getElementById("schema-message"),
+      articleHeader: document.getElementById("article-header"),
+      articleBody: document.getElementById("article-body"),
+      toc: document.getElementById("toc"),
+      loadedRecord: document.getElementById("loaded-record"),
+      documentView: document.getElementById("document-view"),
+      rawView: document.getElementById("raw-view"),
+      rawJson: document.getElementById("raw-json"),
+      viewToggle: document.getElementById("view-toggle"),
+      printButton: document.getElementById("print-button"),
+      copyJson: document.getElementById("copy-json"),
+      backToRecords: document.getElementById("back-to-records"),
+      refreshRecords: document.getElementById("refresh-records"),
+      changeRoot: document.getElementById("change-root")
+    };
+
+    const state = {
+      rootHandle: null,
+      rootName: "",
+      records: [],
+      record: null,
+      rawText: "",
+      resolver: null,
+      objectUrls: [],
+      view: "document",
+      screen: "landing",
+      search: "",
+      libraryScroll: 0,
+      returnFocusId: "",
+      scanToken: 0,
+      recordOpenToken: 0,
+      selectionToken: 0
+    };
+
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    }
+
+    function append(parent, ...children) {
+      for (const child of children) {
+        if (child === null || child === undefined) continue;
+        parent.append(child);
+      }
+      return parent;
+    }
+
+    function isObject(value) {
+      return value !== null && typeof value === "object" && !Array.isArray(value);
+    }
+
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function firstDefined(...values) {
+      return values.find(value => value !== undefined && value !== null && value !== "");
+    }
+
+    function richPlain(value) {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string" || typeof value === "number") return String(value);
+      if (Array.isArray(value)) return value.map(richPlain).filter(Boolean).join(", ");
+      if (isObject(value)) {
+        return String(firstDefined(value.plain_text, value.text, value.name, value.label, value.title, ""));
+      }
+      return String(value);
+    }
+
+    function safeContentHref(value) {
+      const href = String(value || "").trim();
+      if (/^#[A-Za-z0-9_.:-]+$/.test(href)) return href;
+      let parsed;
+      try { parsed = new URL(href); }
+      catch (_) { return null; }
+      return ["http:", "https:", "mailto:"].includes(parsed.protocol) ? parsed.href : null;
+    }
+
+    function sanitizeMarkup(markup) {
+      // DOMParser creates an inert document. Source markup is never assigned to
+      // innerHTML, and only explicitly allowed elements are copied out.
+      const parsed = new DOMParser().parseFromString(String(markup || ""), "text/html");
+
+      function cleanNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || "");
+        if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+
+        const tag = node.localName.toLowerCase();
+        if (DROP_CONTENT_HTML.has(tag)) return document.createDocumentFragment();
+        if (!ALLOWED_HTML.has(tag)) {
+          const flattened = document.createDocumentFragment();
+          for (const child of node.childNodes) flattened.append(cleanNode(child));
+          return flattened;
+        }
+
+        const clean = document.createElement(tag);
+        if (tag === "abbr" && node.hasAttribute("title")) {
+          clean.setAttribute("title", node.getAttribute("title"));
+        } else if (tag === "a" && node.hasAttribute("href")) {
+          const href = safeContentHref(node.getAttribute("href"));
+          if (href) {
+            clean.setAttribute("href", href);
+            if (!href.startsWith("#")) {
+              clean.setAttribute("target", "_blank");
+              clean.setAttribute("rel", "noopener noreferrer");
+            }
+          }
+        }
+        for (const child of node.childNodes) clean.append(cleanNode(child));
+        return clean;
+      }
+
+      const fragment = document.createDocumentFragment();
+      for (const child of parsed.body.childNodes) fragment.append(cleanNode(child));
+      return fragment;
+    }
+
+    function richFragment(value) {
+      if (value === null || value === undefined) return document.createDocumentFragment();
+      if (typeof value === "string" || typeof value === "number") return document.createTextNode(String(value));
+      if (isObject(value)) {
+        const markup = value.html;
+        if (typeof markup === "string" && markup !== "") return sanitizeMarkup(markup);
+        return document.createTextNode(richPlain(value));
+      }
+      return document.createTextNode(richPlain(value));
+    }
+
+    function richElement(tag, value, className) {
+      const node = element(tag, className);
+      node.append(richFragment(value));
+      return node;
+    }
+
+    function safeDomId(prefix, value) {
+      const clean = String(value || "item").normalize("NFKC").replace(/[^A-Za-z0-9_.:-]+/g, "-").replace(/^-+|-+$/g, "");
+      return `${prefix}-${clean || "item"}`;
+    }
+
+    function normalizeRelativePath(value) {
+      if (typeof value !== "string" || !value.trim()) throw new Error("Asset path is missing.");
+      if (value !== value.trim()) throw new Error("Asset path must not have leading or trailing whitespace.");
+      const raw = value;
+      if (/[\u0000-\u001f\u007f]/.test(raw)) throw new Error("Asset path contains a control character.");
+      if (raw.includes("\\")) throw new Error("Asset path must use forward slashes.");
+      if (raw.startsWith("/") || raw.startsWith("//") || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(raw)) {
+        throw new Error("Asset path must be relative to the extraction root.");
+      }
+      const parts = raw.split("/");
+      if (parts.some(part => !part || part === "." || part === "..")) {
+        throw new Error("Asset path contains an unsafe segment.");
+      }
+      return parts.join("/");
+    }
+
+    function clearObjectUrls() {
+      for (const url of state.objectUrls) URL.revokeObjectURL(url);
+      state.objectUrls = [];
+    }
+
+    function handleResolver(extractionHandle, description, token) {
+      const cache = new Map();
+      return {
+        mode: "private-library",
+        description,
+        resolve(path) {
+          let safe;
+          try { safe = normalizeRelativePath(path); }
+          catch (error) { return Promise.resolve({ ok: false, path: String(path || ""), reason: error.message }); }
+          if (cache.has(safe)) return cache.get(safe);
+          const pending = (async () => {
+            try {
+              const parts = safe.split("/");
+              let directory = extractionHandle;
+              for (const segment of parts.slice(0, -1)) directory = await directory.getDirectoryHandle(segment);
+              const fileHandle = await directory.getFileHandle(parts[parts.length - 1]);
+              const file = await fileHandle.getFile();
+              if (token !== state.selectionToken) return { ok: false, path: safe, stale: true, reason: "Record changed before this asset loaded." };
+              const url = URL.createObjectURL(file);
+              state.objectUrls.push(url);
+              return { ok: true, path: safe, url, file, downloadName: file.name };
+            } catch (error) {
+              return { ok: false, path: safe, reason: error && error.name === "NotFoundError" ? "File is not present in this extraction." : `Could not read this local file: ${error.message || error}` };
+            }
+          })();
+          cache.set(safe, pending);
+          return pending;
+        }
+      };
+    }
+
+    function message(type, text) {
+      return element("div", `message message-${type}`, text);
+    }
+
+    function assetError(path, reason) {
+      const box = element("div", "asset-error");
+      append(box, element("strong", "", "Asset unavailable"), element("span", "", reason));
+      if (path) append(box, element("code", "", path));
+      return box;
+    }
+
+    function recordAssetMap(record) {
+      const map = new Map();
+      for (const asset of asArray(record.assets)) {
+        if (isObject(asset) && typeof asset.asset_id === "string") map.set(asset.asset_id, asset);
+      }
+      return map;
+    }
+
+    function assetFromFigure(figure, assetMap) {
+      if (!figure || !figure.asset_id) return null;
+      return assetMap.get(figure.asset_id) || null;
+    }
+
+    function referencedAssets(record) {
+      const ids = new Set();
+      const paths = new Set();
+      const assetMap = recordAssetMap(record);
+      function useId(assetId) {
+        if (!assetId) return;
+        ids.add(assetId);
+        const asset = assetMap.get(assetId);
+        const path = assetPath(asset);
+        if (path) paths.add(path);
+      }
+      for (const figure of asArray(record.figures)) useId(figure.asset_id);
+      for (const table of asArray(record.tables)) {
+        if (table.source_image) paths.add(table.source_image);
+        if (isObject(table.structure_assets)) for (const path of Object.values(table.structure_assets)) paths.add(path);
+      }
+      for (const supplement of asArray(record.supplements)) {
+        if (supplement.file && supplement.file.path) paths.add(supplement.file.path);
+        for (const figure of asArray(supplement.figures)) useId(figure.asset_id);
+        for (const assetId of asArray(supplement.asset_ids)) useId(assetId);
+        for (const table of asArray(supplement.tables)) {
+          if (table.source_image) paths.add(table.source_image);
+          if (isObject(table.structure_assets)) for (const path of Object.values(table.structure_assets)) paths.add(path);
+        }
+      }
+      return { ids, paths };
+    }
+
+    function assetPath(asset) {
+      if (!asset) return "";
+      return firstDefined(asset.path, asset.file && asset.file.path, "");
+    }
+
+    function assetMediaType(asset, path = "") {
+      const declared = firstDefined(asset && asset.media_type, asset && asset.file && asset.file.media_type, "");
+      if (declared) return String(declared).toLowerCase();
+      const extension = String(path).toLowerCase().split(".").pop();
+      const known = {
+        png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", tif: "image/tiff", tiff: "image/tiff", svg: "image/svg+xml",
+        emf: "image/emf", wmf: "image/wmf", wdp: "image/vnd.ms-photo", jxr: "image/vnd.ms-photo", hdp: "image/vnd.ms-photo",
+        mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+        mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/mp4", ogg: "audio/ogg",
+        pdf: "application/pdf", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel",
+        csv: "text/csv", tsv: "text/tab-separated-values", json: "application/json", txt: "text/plain", zip: "application/zip"
+      };
+      return known[extension] || "application/octet-stream";
+    }
+
+    function browserCanDisplayImage(type) {
+      return new Set([
+        "image/avif", "image/bmp", "image/gif", "image/jpeg", "image/png",
+        "image/webp"
+      ]).has(String(type || "").toLowerCase());
+    }
+
+    function attachRuntimeFailure(media, stage, resolved) {
+      media.addEventListener("error", () => {
+        media.hidden = true;
+        if (!stage.querySelector(".asset-error")) stage.append(assetError(resolved.path, "The browser could not display this local file."));
+      }, { once: true });
+    }
+
+    function resolveForNode(path, node, onResolved, preResolved = null) {
+      const resolver = state.resolver;
+      const token = state.selectionToken;
+      let pending;
+      try { pending = preResolved || resolver.resolve(path); }
+      catch (error) { pending = { ok: false, path: String(path || ""), reason: error.message }; }
+      Promise.resolve(pending).then(resolved => {
+        if (token !== state.selectionToken || resolver !== state.resolver || !node.isConnected || resolved.stale) return;
+        onResolved(resolved);
+      }).catch(error => {
+        if (token !== state.selectionToken || resolver !== state.resolver || !node.isConnected) return;
+        onResolved({ ok: false, path: String(path || ""), reason: error.message || String(error) });
+      });
+    }
+
+    function mediaStage(asset, options = {}) {
+      const stage = element("div", "media-stage");
+      const path = assetPath(asset);
+      if (!path) {
+        stage.append(assetError("", options.missingReason || "No file path is declared in record.json."));
+        return stage;
+      }
+      const type = assetMediaType(asset, path);
+      stage.append(element("span", "progress-line", "Loading local file…"));
+      resolveForNode(path, stage, resolved => {
+        stage.replaceChildren();
+        if (!resolved.ok) {
+          stage.append(assetError(resolved.path, resolved.reason));
+        } else if (browserCanDisplayImage(type)) {
+          const image = element("img");
+          image.src = resolved.url;
+          image.alt = options.alt || richPlain(asset.label) || "Extracted image";
+          image.loading = "lazy";
+          attachRuntimeFailure(image, stage, resolved);
+          stage.append(image);
+        } else if (type.startsWith("video/")) {
+          const video = element("video");
+          video.src = resolved.url;
+          video.controls = true;
+          video.preload = "metadata";
+          attachRuntimeFailure(video, stage, resolved);
+          stage.append(video);
+        } else if (type.startsWith("audio/")) {
+          const audio = element("audio");
+          audio.src = resolved.url;
+          audio.controls = true;
+          audio.preload = "metadata";
+          attachRuntimeFailure(audio, stage, resolved);
+          stage.append(audio);
+        } else {
+          stage.append(downloadCard(asset, resolved));
+        }
+      });
+      return stage;
+    }
+
+    function downloadCard(asset, preResolved = null, id = "") {
+      const path = assetPath(asset);
+      const card = element("div", "download-card");
+      if (id) card.id = id;
+      const info = element("div", "download-info");
+      const label = firstDefined(asset && asset.label, asset && asset.name, path && path.split("/").pop(), "Supporting file");
+      append(info, element("div", "download-name", richPlain(label)));
+      const type = assetMediaType(asset, path);
+      append(info, element("div", "download-meta", [type, path].filter(Boolean).join(" · ")));
+      card.append(info);
+
+      if (!path) {
+        card.append(assetError("", "No file path is declared in record.json."));
+        return card;
+      }
+      const pending = element("span", "progress-line", "Preparing file…");
+      card.append(pending);
+      resolveForNode(path, card, resolved => {
+        pending.remove();
+        if (!resolved.ok) {
+          card.append(assetError(resolved.path, resolved.reason));
+          return;
+        }
+        const link = element("a", "button button-secondary", "Open / download");
+        link.href = resolved.url;
+        link.download = resolved.downloadName || "";
+        card.append(link);
+      }, preResolved);
+      return card;
+    }
+
+    function blockContent(block) {
+      if (!isObject(block)) return block;
+      return firstDefined(block.content, block.text, block.title, "");
+    }
+
+    function renderBlock(block, options = {}) {
+      if (!isObject(block)) return richElement("p", block, "text-block");
+      const kind = String(firstDefined(block.kind, block.type, "paragraph")).toLowerCase();
+      const content = blockContent(block);
+      let node;
+      if (kind.includes("heading")) {
+        const level = Math.min(6, Math.max(3, Number(block.level) || 3));
+        node = richElement(`h${level}`, content, `section-heading-level-${level}`);
+      } else if (kind === "quote" || kind === "blockquote") {
+        node = richElement("blockquote", content, "text-block");
+      } else if (kind === "equation" || kind === "display_equation" || kind === "math") {
+        node = richElement("div", content, "equation-block text-block");
+      } else if (kind === "code" || kind === "preformatted") {
+        node = element("pre", "code-block", richPlain(content));
+      } else if (kind.includes("list")) {
+        const ordered = kind.includes("ordered") && !kind.includes("unordered");
+        node = element(ordered ? "ol" : "ul", "list-block");
+        const html = isObject(content) ? content.html : "";
+        if (typeof html === "string" && /<\s*(?:ul|ol|li)\b/i.test(html)) {
+          node = element("div", "list-block");
+          node.append(sanitizeMarkup(html));
+        } else {
+          const plain = isObject(content) ? firstDefined(content.plain_text, "") : String(content || "");
+          const lines = plain.split(/\r?\n/).map(line => line.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, "")).filter(line => line.trim());
+          for (const line of lines) node.append(richElement("li", line, ""));
+        }
+      } else {
+        node = richElement("p", content, "text-block");
+      }
+      if (block.block_id) {
+        node.id = safeDomId("block", block.block_id);
+        node.classList.add("block-id");
+      }
+      return node;
+    }
+
+    function renderBlocks(blocks, parent, options = {}) {
+      for (const block of asArray(blocks)) parent.append(renderBlock(block, options));
+    }
+
+    function sectionHeadingText(section) {
+      return richPlain(firstDefined(section && section.heading, section && section.title, "Untitled section"));
+    }
+
+    function renderSection(section, index) {
+      const sectionNode = element("section", "content-section");
+      sectionNode.id = safeDomId("section", firstDefined(section.section_id, index + 1));
+      const level = Math.min(4, Math.max(2, Number(section.level) || 2));
+      const heading = richElement(`h${level}`, firstDefined(section.heading, section.title, `Section ${index + 1}`), level > 2 ? `section-heading-level-${level}` : "");
+      heading.dataset.tocLabel = sectionHeadingText(section);
+      sectionNode.append(heading);
+      renderBlocks(section.blocks, sectionNode);
+      for (const child of asArray(section.sections || section.children)) sectionNode.append(renderSection(child, index));
+      return sectionNode;
+    }
+
+    function metadataPair(term, value) {
+      const item = element("div", "metadata-item");
+      append(item, element("div", "metadata-term", term), element("div", "metadata-value", richPlain(value)));
+      return item;
+    }
+
+    function renderHeader(record) {
+      const metadata = isObject(record.record) ? record.record : {};
+      const id = firstDefined(metadata.record_id, metadata.id, "Unknown record");
+      dom.articleHeader.append(element("div", "record-id", `Record ${id}`));
+      dom.articleHeader.append(richElement("h1", firstDefined(metadata.title, "Untitled record"), "article-title"));
+
+      const authors = asArray(metadata.authors).map(author => richPlain(firstDefined(author && author.name, author))).filter(Boolean);
+      if (authors.length) dom.articleHeader.append(element("div", "authors", authors.join(", ")));
+
+      const journal = firstDefined(metadata.journal, metadata.bibliographic && metadata.bibliographic.journal);
+      const year = firstDefined(metadata.publication_year, metadata.year, metadata.bibliographic && metadata.bibliographic.publication_year);
+      const citation = [richPlain(journal), richPlain(year)].filter(Boolean).join(" · ");
+      if (citation) dom.articleHeader.append(element("div", "citation-line", citation));
+
+      const grid = element("div", "metadata-grid");
+      const bibliographic = isObject(metadata.bibliographic) ? metadata.bibliographic : {};
+      const fields = [
+        ["DOI", firstDefined(metadata.doi, bibliographic.doi)],
+        ["Document type", firstDefined(metadata.document_type, bibliographic.document_type)],
+        ["Volume", firstDefined(metadata.volume, bibliographic.volume)],
+        ["Issue", firstDefined(metadata.issue, bibliographic.issue)],
+        ["Pages", firstDefined(metadata.pages, bibliographic.pages, bibliographic.page_range)],
+        ["Publication date", firstDefined(metadata.publication_date, bibliographic.publication_date)]
+      ];
+      for (const [term, value] of fields) if (value !== undefined && value !== null && value !== "") grid.append(metadataPair(term, value));
+      if (grid.childElementCount) dom.articleHeader.append(grid);
+    }
+
+    function renderFrontMatter(record, body) {
+      const blocks = asArray(record.front_matter);
+      if (!blocks.length) return;
+      const section = element("section", "content-section");
+      section.id = "front-matter";
+      const heading = element("h2", "", "Front matter");
+      heading.dataset.tocLabel = "Front matter";
+      section.append(heading);
+      const list = element("div", "front-matter-list");
+      for (const block of blocks) {
+        const item = element("div", "front-block");
+        if (isObject(block) && block.kind) item.append(element("div", "front-kind", String(block.kind).replace(/_/g, " ")));
+        item.append(renderBlock(block));
+        list.append(item);
+      }
+      section.append(list);
+      body.append(section);
+    }
+
+    function renderAssetIndex(record, body) {
+      const entries = [];
+      for (const figure of asArray(record.figures)) {
+        entries.push({ id: safeDomId("figure", figure.figure_id), label: firstDefined(figure.label, figure.kind, "Figure") });
+      }
+      for (const table of asArray(record.tables)) entries.push({ id: safeDomId("table", table.table_id), label: firstDefined(table.label, "Table") });
+      for (const supplement of asArray(record.supplements)) entries.push({ id: safeDomId("supplement", supplement.supplement_id), label: supplementDisplayLabel(supplement) });
+      const referenced = referencedAssets(record);
+      for (const asset of asArray(record.assets)) {
+        if (!asset || referenced.ids.has(asset.asset_id) || referenced.paths.has(assetPath(asset))) continue;
+        entries.push({ id: safeDomId("asset", asset.asset_id), label: firstDefined(asset.label, asset.kind, asset.asset_id, "Asset") });
+      }
+      if (!entries.length) return;
+      const index = element("nav", "asset-index");
+      index.setAttribute("aria-label", "Extracted assets");
+      append(index, element("div", "asset-index-title", "Figures, tables & supporting files"));
+      const list = element("div", "asset-index-list");
+      for (const entry of entries) {
+        const link = element("a", "", richPlain(entry.label));
+        link.href = `#${entry.id}`;
+        list.append(link);
+      }
+      index.append(list);
+      body.append(index);
+    }
+
+    function renderFigures(record, body) {
+      const figures = asArray(record.figures);
+      if (!figures.length) return;
+      const assetMap = recordAssetMap(record);
+      const section = element("section", "content-section");
+      section.id = "figures-and-schemes";
+      const heading = element("h2", "", "Figures and schemes");
+      heading.dataset.tocLabel = "Figures and schemes";
+      section.append(heading);
+      const grid = element("div", "media-grid");
+      for (const figure of figures) {
+        const card = element("figure", "media-card");
+        card.id = safeDomId("figure", figure.figure_id);
+        const asset = assetFromFigure(figure, assetMap);
+        const label = firstDefined(figure.label, figure.kind, "Figure");
+        if (!asset) {
+          const stage = element("div", "media-stage");
+          stage.append(assetError(figure.asset_id || "", figure.asset_id ? "The referenced asset_id is not present in record.json assets." : "No image was supplied by the source."));
+          card.append(stage);
+        } else {
+          card.append(mediaStage(asset, { alt: `${richPlain(label)}. ${richPlain(figure.caption)}`.trim() }));
+        }
+        const caption = element("figcaption", "media-caption");
+        caption.append(element("div", "media-label", richPlain(label)));
+        if (figure.caption) caption.append(richElement("div", figure.caption, "text-block"));
+        const path = assetPath(asset);
+        if (path) caption.append(element("div", "media-path", path));
+        card.append(caption);
+        grid.append(card);
+      }
+      section.append(grid);
+      body.append(section);
+    }
+
+    function tableCellStructure(cell, structureAssets, displayedStructures) {
+      const cellText = richPlain(firstDefined(cell && cell.plain_text, cell && cell.text, ""));
+      const normalized = cellText.replace(/\s+/g, "").toLocaleLowerCase();
+      const entry = Object.entries(structureAssets).find(([key]) => key.replace(/\s+/g, "").toLocaleLowerCase() === normalized);
+      if (!entry) return null;
+      const [key, path] = entry;
+      displayedStructures.add(key);
+      const wrapper = element("div", "cell-structure");
+      wrapper.append(element("span", "progress-line", "Loading structure…"));
+      resolveForNode(path, wrapper, resolved => {
+        wrapper.replaceChildren();
+        if (!resolved.ok) wrapper.append(assetError(resolved.path, resolved.reason));
+        else if (!browserCanDisplayImage(assetMediaType({ path }, path))) {
+          wrapper.append(downloadCard({ path, media_type: assetMediaType({ path }, path), label: `Structure ${key}` }, resolved));
+        } else {
+          const image = element("img");
+          image.src = resolved.url;
+          image.alt = `Structure ${key}`;
+          image.loading = "lazy";
+          attachRuntimeFailure(image, wrapper, resolved);
+          wrapper.append(image);
+        }
+      });
+      return wrapper;
+    }
+
+    function renderTablePart(part, index, total, structureAssets, displayedStructures) {
+      const wrapper = element("div", "table-part");
+      if (total > 1) wrapper.append(element("div", "table-part-label", firstDefined(part.part_id, `Part ${index + 1}`)));
+      const scroll = element("div", "table-scroll");
+      const table = element("table");
+      const tbody = element("tbody");
+      for (const row of asArray(part.rows)) {
+        const tr = element("tr");
+        for (const cell of asArray(row)) {
+          const td = element(cell && cell.header ? "th" : "td");
+          if (cell && cell.header) td.scope = "col";
+          const rowspan = Number(cell && cell.rowspan);
+          const colspan = Number(cell && cell.colspan);
+          if (Number.isInteger(rowspan) && rowspan > 1) td.rowSpan = rowspan;
+          if (Number.isInteger(colspan) && colspan > 1) td.colSpan = colspan;
+          if (cell && typeof cell.html === "string" && cell.html) td.append(sanitizeMarkup(cell.html));
+          else td.append(richFragment(firstDefined(cell && cell.plain_text, cell && cell.text, "")));
+          const structure = tableCellStructure(cell, structureAssets, displayedStructures);
+          if (structure) td.append(structure);
+          tr.append(td);
+        }
+        tbody.append(tr);
+      }
+      table.append(tbody);
+      scroll.append(table);
+      wrapper.append(scroll);
+      return wrapper;
+    }
+
+    function renderRemainingTableStructures(structureAssets, displayedStructures) {
+      const remaining = Object.entries(structureAssets).filter(([key]) => !displayedStructures.has(key));
+      if (!remaining.length) return null;
+      const grid = element("div", "table-structure-grid");
+      for (const [key, path] of remaining) {
+        const item = element("div", "table-structure-item");
+        const holder = element("div", "", "Loading structure…");
+        item.append(holder);
+        resolveForNode(path, holder, resolved => {
+          holder.replaceChildren();
+          if (!resolved.ok) holder.append(assetError(resolved.path, resolved.reason));
+          else if (!browserCanDisplayImage(assetMediaType({ path }, path))) {
+            holder.append(downloadCard({ path, media_type: assetMediaType({ path }, path), label: `Structure ${key}` }, resolved));
+          } else {
+            const image = element("img");
+            image.src = resolved.url;
+            image.alt = `Structure ${key}`;
+            image.loading = "lazy";
+            attachRuntimeFailure(image, holder, resolved);
+            holder.append(image);
+          }
+        });
+        item.append(element("div", "table-structure-label", key));
+        grid.append(item);
+      }
+      return grid;
+    }
+
+    function renderTableCard(table, idPrefix = "table") {
+      const card = element("section", "table-card");
+      card.id = safeDomId(idPrefix, table.table_id);
+      const head = element("header", "table-heading");
+      append(head, element("div", "table-label", richPlain(firstDefined(table.label, "Table"))));
+      if (table.title) head.append(richElement("div", table.title, "table-title"));
+      card.append(head);
+      const parts = asArray(table.parts);
+      const structureAssets = isObject(table.structure_assets) ? table.structure_assets : {};
+      const displayedStructures = new Set();
+      if (!parts.length) card.append(message("warning", "No structured rows are present for this table."));
+      parts.forEach((part, index) => card.append(renderTablePart(part, index, parts.length, structureAssets, displayedStructures)));
+      const remainingStructures = renderRemainingTableStructures(structureAssets, displayedStructures);
+      if (remainingStructures) card.append(remainingStructures);
+
+      const footnotes = asArray(table.footnotes);
+      if (footnotes.length) {
+        const notes = element("div", "table-footnotes");
+        for (const footnote of footnotes) notes.append(richElement("p", footnote, ""));
+        card.append(notes);
+      }
+      if (table.source_image) {
+        const details = element("details", "source-image");
+        details.append(element("summary", "", "Show original table image"));
+        details.append(mediaStage({ path: table.source_image, label: `${richPlain(table.label)} source image` }));
+        card.append(details);
+      }
+      return card;
+    }
+
+    function renderTables(record, body) {
+      const tables = asArray(record.tables);
+      if (!tables.length) return;
+      const section = element("section", "content-section");
+      section.id = "tables";
+      const heading = element("h2", "", "Tables");
+      heading.dataset.tocLabel = "Tables";
+      section.append(heading);
+      for (const table of tables) section.append(renderTableCard(table));
+      body.append(section);
+    }
+
+    function renderSupportingInformation(record, body) {
+      const blocks = asArray(record.supporting_information);
+      if (!blocks.length) return;
+      const section = element("section", "content-section");
+      section.id = "supporting-information";
+      const heading = element("h2", "", "Supporting information");
+      heading.dataset.tocLabel = "Supporting information";
+      section.append(heading);
+      renderBlocks(blocks, section);
+      body.append(section);
+    }
+
+    function supplementDisplayLabel(supplement) {
+      const firstFigure = asArray(supplement && supplement.figures).find(figure => figure && figure.label);
+      return firstDefined(
+        supplement && supplement.label,
+        firstFigure && firstFigure.label,
+        supplement && supplement.supplement_id,
+        "Supplement"
+      );
+    }
+
+    function supplementFile(supplement) {
+      if (!supplement || !supplement.file) return null;
+      return { ...supplement.file, label: supplementDisplayLabel(supplement) };
+    }
+
+    function renderSupplements(record, body) {
+      const supplements = asArray(record.supplements);
+      if (!supplements.length) return;
+      const assetMap = recordAssetMap(record);
+      const section = element("section", "content-section");
+      section.id = "supplements";
+      const heading = element("h2", "", "Supplementary files");
+      heading.dataset.tocLabel = "Supplementary files";
+      section.append(heading);
+      for (const supplement of supplements) {
+        const card = element("article", "supplement-card");
+        card.id = safeDomId("supplement", supplement.supplement_id);
+        card.append(element("div", "supplement-title", richPlain(supplementDisplayLabel(supplement))));
+        const file = supplementFile(supplement);
+        if (file) card.append(downloadCard(file));
+        else card.append(assetError("", "No preserved supplementary file is declared."));
+        for (const figure of asArray(supplement.figures)) {
+          const mini = element("figure", "media-card");
+          mini.id = safeDomId("supplement-figure", figure.figure_id);
+          const asset = assetFromFigure(figure, assetMap);
+          mini.append(asset ? mediaStage(asset, { alt: richPlain(figure.label) }) : (() => {
+            const stage = element("div", "media-stage");
+            stage.append(assetError(figure.asset_id || "", "Supplementary figure asset is unavailable."));
+            return stage;
+          })());
+          const caption = element("figcaption", "media-caption");
+          append(caption, element("div", "media-label", richPlain(firstDefined(figure.label, "Supplementary figure"))));
+          if (figure.caption) caption.append(richElement("div", figure.caption, "text-block"));
+          mini.append(caption);
+          card.append(mini);
+        }
+        renderBlocks(supplement.blocks, card);
+        const representedAssetIds = new Set(asArray(supplement.figures).map(figure => figure && figure.asset_id).filter(Boolean));
+        const representedPaths = new Set();
+        if (supplement.file && supplement.file.path) representedPaths.add(supplement.file.path);
+        for (const figure of asArray(supplement.figures)) {
+          const figureAsset = assetMap.get(figure && figure.asset_id);
+          if (assetPath(figureAsset)) representedPaths.add(assetPath(figureAsset));
+        }
+        for (const table of asArray(supplement.tables)) {
+          if (table.source_image) representedPaths.add(table.source_image);
+          if (isObject(table.structure_assets)) for (const path of Object.values(table.structure_assets)) representedPaths.add(path);
+        }
+        const dataAssets = [];
+        for (const assetId of asArray(supplement.asset_ids)) {
+          const asset = assetMap.get(assetId);
+          if (!asset || asset.kind !== "supplement_data") continue;
+          representedAssetIds.add(assetId);
+          if (assetPath(asset)) representedPaths.add(assetPath(asset));
+          dataAssets.push(asset);
+        }
+        if (dataAssets.length) {
+          const dataSection = element("section", "supplement-data");
+          dataSection.append(element("div", "supplement-data-title", "Supplementary data files"));
+          const dataList = element("div", "download-list");
+          for (const asset of dataAssets) {
+            dataList.append(renderGenericAsset(asset, safeDomId("supplement-asset", asset.asset_id)));
+          }
+          dataSection.append(dataList);
+          card.append(dataSection);
+        }
+        for (const table of asArray(supplement.tables)) card.append(renderTableCard(table, "supplement-table"));
+        const remainingAssets = [];
+        for (const assetId of asArray(supplement.asset_ids)) {
+          if (representedAssetIds.has(assetId)) continue;
+          const asset = assetMap.get(assetId);
+          if (!asset) {
+            card.append(assetError(assetId, "Supplement asset_id is not present in record.json assets."));
+            continue;
+          }
+          if (representedPaths.has(assetPath(asset))) continue;
+          remainingAssets.push(asset);
+        }
+        const previews = remainingAssets.filter(asset => /preview|thumbnail/i.test([
+          asset && asset.kind, asset && asset.label, asset && asset.asset_id
+        ].filter(Boolean).join(" ")));
+        const components = remainingAssets.filter(asset => !previews.includes(asset));
+        for (const asset of previews) {
+          card.append(renderGenericAsset(asset, safeDomId("supplement-asset", asset.asset_id)));
+        }
+        if (components.length > 12) {
+          const details = element("details", "embedded-assets");
+          details.append(element("summary", "", `Embedded slide assets (${components.length})`));
+          const list = element("div", "embedded-assets-list");
+          details.append(list);
+          let rendered = false;
+          details.addEventListener("toggle", () => {
+            if (!details.open || rendered) return;
+            rendered = true;
+            for (const asset of components) {
+              list.append(renderGenericAsset(asset, safeDomId("supplement-asset", asset.asset_id)));
+            }
+          });
+          card.append(details);
+        } else {
+          for (const asset of components) {
+            card.append(renderGenericAsset(asset, safeDomId("supplement-asset", asset.asset_id)));
+          }
+        }
+        section.append(card);
+      }
+      body.append(section);
+    }
+
+    function renderGenericAsset(asset, id) {
+      const path = assetPath(asset);
+      const type = assetMediaType(asset, path);
+      if (browserCanDisplayImage(type) || type.startsWith("video/") || type.startsWith("audio/")) {
+        const card = element("figure", "media-card");
+        card.id = id;
+        card.append(mediaStage(asset, { alt: richPlain(asset.label) }));
+        const caption = element("figcaption", "media-caption");
+        append(caption, element("div", "media-label", richPlain(firstDefined(asset.label, asset.kind, asset.asset_id))));
+        if (path) caption.append(element("div", "media-path", path));
+        card.append(caption);
+        return card;
+      }
+      return downloadCard(asset, null, id);
+    }
+
+    function renderUnreferencedAssets(record, body) {
+      const referenced = referencedAssets(record);
+      const assets = asArray(record.assets).filter(asset => asset && !referenced.ids.has(asset.asset_id) && !referenced.paths.has(assetPath(asset)));
+      if (!assets.length) return;
+      const section = element("section", "content-section");
+      section.id = "additional-assets";
+      const heading = element("h2", "", "Additional extracted files");
+      heading.dataset.tocLabel = "Additional extracted files";
+      section.append(heading);
+      const list = element("div", "download-list");
+      for (const asset of assets) {
+        const id = safeDomId("asset", asset.asset_id);
+        list.append(renderGenericAsset(asset, id));
+      }
+      section.append(list);
+      body.append(section);
+    }
+
+    function renderReferences(record, body) {
+      const references = asArray(record.references);
+      if (!references.length) return;
+      const section = element("section", "content-section");
+      section.id = "references";
+      const heading = element("h2", "", "References");
+      heading.dataset.tocLabel = "References";
+      section.append(heading);
+      const list = element("div", "reference-list");
+      for (const reference of references) {
+        const item = element("div", "reference-item");
+        if (/^\s*(?:\[\d+\]|\d+[.)])\s+/.test(richPlain(blockContent(reference)))) item.classList.add("source-numbered");
+        item.append(renderBlock(reference));
+        list.append(item);
+      }
+      section.append(list);
+      body.append(section);
+    }
+
+    function renderContents(record) {
+      dom.articleHeader.replaceChildren();
+      dom.articleBody.replaceChildren();
+      renderHeader(record);
+      renderAssetIndex(record, dom.articleBody);
+      renderFrontMatter(record, dom.articleBody);
+      asArray(record.sections).forEach((section, index) => dom.articleBody.append(renderSection(section, index)));
+      renderFigures(record, dom.articleBody);
+      renderTables(record, dom.articleBody);
+      renderSupportingInformation(record, dom.articleBody);
+      renderSupplements(record, dom.articleBody);
+      renderUnreferencedAssets(record, dom.articleBody);
+      renderReferences(record, dom.articleBody);
+      if (!dom.articleBody.childElementCount) dom.articleBody.append(element("p", "empty-state", "This record contains no displayable content."));
+    }
+
+    function renderToc() {
+      dom.toc.replaceChildren();
+      const headings = dom.articleBody.querySelectorAll("[data-toc-label]");
+      for (const heading of headings) {
+        const item = element("li", `toc-level-${heading.tagName.slice(1)}`);
+        const link = element("a", "", heading.dataset.tocLabel || heading.textContent);
+        const targetId = heading.parentElement.id || heading.id;
+        link.href = `#${targetId}`;
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        item.append(link);
+        dom.toc.append(item);
+      }
+      if (!dom.toc.childElementCount) dom.toc.append(element("li", "empty-state", "No sections"));
+    }
+
+    function schemaMessages(record) {
+      dom.schemaMessage.replaceChildren();
+      const issues = [];
+      if (!SUPPORTED_SCHEMA_VERSIONS.has(record.schema_version)) issues.push(`Expected supported schema_version ${[...SUPPORTED_SCHEMA_VERSIONS].join(" or ")}; found ${richPlain(record.schema_version) || "none"}.`);
+      if (record.asset_path_base !== EXPECTED_ASSET_BASE) issues.push(`Expected asset_path_base ${EXPECTED_ASSET_BASE}; asset links may not resolve correctly.`);
+      if (record.content_format !== "safe-html") issues.push("Expected content_format safe-html; formatted content may be incomplete.");
+      if (!isObject(record.record)) issues.push("The required record metadata object is missing.");
+      if (issues.length) dom.schemaMessage.append(message("warning", issues.join(" ")));
+      if (state.resolver && state.resolver.staged) {
+        dom.schemaMessage.append(message("warning", `Staged preview only — run ${state.resolver.runName} is not approved and is not the live extraction.`));
+      }
+    }
+
+    function setView(view) {
+      state.view = view;
+      const raw = view === "raw";
+      dom.documentView.hidden = raw;
+      dom.rawView.hidden = !raw;
+      dom.viewToggle.textContent = raw ? "View formatted record" : "View raw JSON";
+      dom.body.dataset.viewerView = view;
+    }
+
+    function showScreen(screen) {
+      state.screen = screen;
+      dom.landing.hidden = screen !== "landing";
+      dom.library.hidden = screen !== "library";
+      dom.workspace.hidden = screen !== "record";
+      dom.backToRecords.hidden = screen !== "record" || !state.rootHandle;
+      dom.refreshRecords.hidden = screen !== "library";
+      dom.changeRoot.hidden = !state.rootHandle;
+      dom.viewToggle.hidden = screen !== "record";
+      dom.printButton.hidden = screen !== "record";
+      dom.body.dataset.viewerState = screen;
+    }
+
+    function renderRecord(record, rawText, resolver) {
+      clearObjectUrls();
+      state.record = record;
+      state.rawText = rawText;
+      state.resolver = resolver;
+      schemaMessages(record);
+      renderContents(record);
+      renderToc();
+      dom.rawJson.textContent = rawText;
+      const metadata = isObject(record.record) ? record.record : {};
+      dom.loadedRecord.textContent = `${firstDefined(metadata.record_id, metadata.id, "Unknown ID")} · ${richPlain(metadata.title) || "Untitled"}\n${resolver.description}`;
+      setView("document");
+      showScreen("record");
+      window.scrollTo({ top: 0, behavior: "instant" });
+      const title = dom.articleHeader.querySelector(".article-title");
+      if (title) {
+        title.tabIndex = -1;
+        requestAnimationFrame(() => title.focus({ preventScroll: true }));
+      }
+    }
+
+    function parseRecord(rawText) {
+      let record;
+      try { record = JSON.parse(rawText); }
+      catch (error) { throw new Error(`record.json is not valid JSON: ${error.message}`); }
+      if (!isObject(record)) throw new Error("record.json must contain one JSON object.");
+      return record;
+    }
+
+    function jsonStringEnd(text, start) {
+      for (let index = start + 1; index < text.length; index += 1) {
+        if (text[index] === "\\") index += 1;
+        else if (text[index] === '"') return index;
+      }
+      return -1;
+    }
+
+    function matchingObjectEnd(text, start) {
+      let depth = 0;
+      for (let index = start; index < text.length; index += 1) {
+        if (text[index] === '"') {
+          const end = jsonStringEnd(text, index);
+          if (end === -1) return -1;
+          index = end;
+        } else if (text[index] === "{") depth += 1;
+        else if (text[index] === "}" && --depth === 0) return index;
+      }
+      return -1;
+    }
+
+    function extractTopLevelObject(text, propertyName = "record") {
+      const source = String(text || "");
+      const first = source.replace(/^\uFEFF/, "").search(/\S/);
+      if (first === -1) return { status: "incomplete" };
+      const start = source.charCodeAt(0) === 0xFEFF ? first + 1 : first;
+      if (source[start] !== "{") return { status: "invalid", reason: "record.json must start with one JSON object." };
+      let depth = 0;
+      for (let index = start; index < source.length; index += 1) {
+        const character = source[index];
+        if (character === '"') {
+          const end = jsonStringEnd(source, index);
+          if (end === -1) return { status: "incomplete" };
+          if (depth === 1) {
+            let separator = end + 1;
+            while (/\s/.test(source[separator] || "")) separator += 1;
+            if (source[separator] === ":") {
+              let key;
+              try { key = JSON.parse(source.slice(index, end + 1)); }
+              catch (_) { return { status: "invalid", reason: "record.json contains an invalid property name." }; }
+              if (key === propertyName) {
+                let valueStart = separator + 1;
+                while (/\s/.test(source[valueStart] || "")) valueStart += 1;
+                if (valueStart >= source.length) return { status: "incomplete" };
+                if (source[valueStart] !== "{") return { status: "invalid", reason: `The top-level ${propertyName} value must be an object.` };
+                const valueEnd = matchingObjectEnd(source, valueStart);
+                if (valueEnd === -1) return { status: "incomplete" };
+                try { return { status: "found", value: JSON.parse(source.slice(valueStart, valueEnd + 1)) }; }
+                catch (error) { return { status: "invalid", reason: `The ${propertyName} metadata object is invalid JSON: ${error.message}` }; }
+              }
+            }
+          }
+          index = end;
+        } else if (character === "{" || character === "[") depth += 1;
+        else if (character === "}" || character === "]") {
+          depth -= 1;
+          if (depth < 0) return { status: "invalid", reason: "record.json has unmatched closing punctuation." };
+          if (depth === 0) return { status: "missing", reason: `The required top-level ${propertyName} metadata object is missing.` };
+        }
+      }
+      return { status: "incomplete" };
+    }
+
+    async function readRecordMetadataPrefix(file) {
+      if (!file || typeof file.slice !== "function") throw new Error("The browser did not provide a readable local file.");
+      const size = Number.isFinite(Number(file.size)) ? Number(file.size) : METADATA_PREFIX_MAX_BYTES;
+      let limit = Math.min(32 * 1024, size, METADATA_PREFIX_MAX_BYTES);
+      while (true) {
+        const prefix = await file.slice(0, limit).text();
+        const extracted = extractTopLevelObject(prefix, "record");
+        if (extracted.status === "found") return extracted.value;
+        if (extracted.status === "invalid" || extracted.status === "missing") throw new Error(extracted.reason);
+        if (limit >= size) throw new Error("The required top-level record metadata object is incomplete or missing.");
+        if (limit >= METADATA_PREFIX_MAX_BYTES) throw new Error(`The record metadata object is not complete within the first ${METADATA_PREFIX_MAX_BYTES} bytes.`);
+        limit = Math.min(limit * 2, size, METADATA_PREFIX_MAX_BYTES);
+      }
+    }
+
+    function metadataSummary(metadata, folderId) {
+      if (!isObject(metadata)) throw new Error("The required record metadata object is missing.");
+      const declaredId = richPlain(metadata.record_id);
+      if (!declaredId) throw new Error(`Folder ${folderId} does not declare a record_id.`);
+      if (declaredId !== folderId) throw new Error(`Folder ${folderId} contains record_id ${declaredId}.`);
+      const authors = asArray(metadata.authors).map(richPlain).filter(Boolean);
+      const title = richPlain(metadata.title) || "Untitled record";
+      const journal = richPlain(firstDefined(metadata.journal, metadata.publication, ""));
+      const year = richPlain(firstDefined(metadata.publication_year, metadata.year, ""));
+      const doi = richPlain(metadata.doi);
+      return {
+        id: folderId,
+        title,
+        authors,
+        journal,
+        year,
+        doi,
+        searchText: [folderId, title, authors.join(" "), journal, year, doi].join(" ").toLocaleLowerCase()
+      };
+    }
+
+    function recordSummary(record, folderId) {
+      return metadataSummary(isObject(record.record) ? record.record : null, folderId);
+    }
+
+    function notFound(error) {
+      return error && error.name === "NotFoundError";
+    }
+
+    async function latestStagedRecord(stagingHandle, folderId) {
+      if (!stagingHandle) return null;
+      let recordStagingHandle;
+      try { recordStagingHandle = await stagingHandle.getDirectoryHandle(folderId); }
+      catch (error) {
+        if (notFound(error)) return null;
+        throw new Error(`Could not inspect staging/${folderId}/: ${error.message || error}`);
+      }
+      const candidates = [];
+      for await (const runHandle of recordStagingHandle.values()) {
+        if (!runHandle || runHandle.kind !== "directory" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(runHandle.name)) continue;
+        try {
+          const extractionHandle = await runHandle.getDirectoryHandle("extraction");
+          const recordFileHandle = await extractionHandle.getFileHandle("record.json");
+          const file = await recordFileHandle.getFile();
+          candidates.push({
+            runName: runHandle.name,
+            extractionHandle,
+            recordFileHandle,
+            file,
+            lastModified: Number.isFinite(Number(file.lastModified)) ? Number(file.lastModified) : 0
+          });
+        } catch (error) {
+          if (notFound(error)) continue;
+          throw new Error(`Could not inspect staging/${folderId}/${runHandle.name}/: ${error.message || error}`);
+        }
+      }
+      candidates.sort((left, right) =>
+        right.lastModified - left.lastModified
+        || right.runName.localeCompare(left.runName, "en", { numeric: true, sensitivity: "variant" })
+      );
+      return candidates[0] || null;
+    }
+
+    async function probeRecordFolder(folderHandle, stagingHandle = null) {
+      let extractionHandle;
+      let recordFileHandle;
+      let file;
+      let staged = false;
+      let runName = "";
+      try {
+        extractionHandle = await folderHandle.getDirectoryHandle("extraction");
+        recordFileHandle = await extractionHandle.getFileHandle("record.json");
+        file = await recordFileHandle.getFile();
+      }
+      catch (error) {
+        if (!notFound(error)) return { id: folderHandle.name, valid: false, error: `Could not inspect live extraction/record.json: ${error.message || error}` };
+        try {
+          const candidate = await latestStagedRecord(stagingHandle, folderHandle.name);
+          if (!candidate) return null;
+          ({ extractionHandle, recordFileHandle, file, runName } = candidate);
+          staged = true;
+        } catch (stagingError) {
+          return { id: folderHandle.name, valid: false, error: stagingError.message || String(stagingError), searchText: folderHandle.name };
+        }
+      }
+      try {
+        const metadata = await readRecordMetadataPrefix(file);
+        const summary = metadataSummary(metadata, folderHandle.name);
+        return {
+          ...summary,
+          valid: true,
+          staged,
+          runName,
+          extractionHandle,
+          recordFileHandle,
+          recordPath: staged ? `staging/${folderHandle.name}/${runName}/extraction/record.json` : `${folderHandle.name}/extraction/record.json`
+        };
+      } catch (error) {
+        return { id: folderHandle.name, valid: false, staged, runName, extractionHandle, recordFileHandle, error: error.message || String(error), searchText: folderHandle.name };
+      }
+    }
+
+    async function scanRootHandle(rootHandle, options = {}) {
+      let stagingHandle = null;
+      let stagingAccessWarning = "";
+      if (rootHandle && typeof rootHandle.getDirectoryHandle === "function") {
+        try { stagingHandle = await rootHandle.getDirectoryHandle("staging"); }
+        catch (error) {
+          if (!notFound(error)) {
+            stagingAccessWarning = `Staged previews could not be checked because the browser could not read staging/. Live extractions are still shown. (${error.message || error})`;
+          }
+        }
+      }
+      const recordFolders = [];
+      for await (const handle of rootHandle.values()) {
+        if (handle && handle.kind === "directory" && /^\d{5}$/.test(handle.name)) recordFolders.push(handle);
+      }
+      recordFolders.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      options.onProgress?.(0, recordFolders.length);
+      const records = [];
+      let cursor = 0;
+      let completed = 0;
+      async function worker() {
+        while (cursor < recordFolders.length) {
+          if (options.isStale?.()) return;
+          const folder = recordFolders[cursor++];
+          const entry = await probeRecordFolder(folder, stagingHandle);
+          if (entry) records.push(entry);
+          completed += 1;
+          options.onProgress?.(completed, recordFolders.length);
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(8, Math.max(1, recordFolders.length)) }, () => worker()));
+      records.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+      return { records, candidateCount: recordFolders.length, stagingAccessWarning };
+    }
+
+    function setLibraryMessage(type, text) {
+      dom.libraryStatus.replaceChildren(text ? message(type, text) : document.createDocumentFragment());
+    }
+
+    function renderLibrary() {
+      const query = state.search.trim().toLocaleLowerCase();
+      const visible = state.records.filter(entry => !query || (entry.searchText || entry.id).includes(query));
+      const viewableCount = state.records.filter(entry => entry.valid).length;
+      const unavailableCount = state.records.length - viewableCount;
+      const stagedCount = state.records.filter(entry => entry.valid && entry.staged).length;
+      const noun = viewableCount === 1 ? "record" : "records";
+      dom.librarySummary.textContent = `${viewableCount} viewable ${noun}${stagedCount ? ` · ${stagedCount} staged/unapproved` : ""}${unavailableCount ? ` · ${unavailableCount} unavailable` : ""} · ${state.rootName || "selected folder"}`;
+      dom.recordList.replaceChildren();
+      for (const entry of visible) {
+        const row = element("li", "record-row");
+        if (!entry.valid) {
+          const problem = element("div", "record-problem");
+          append(problem, element("strong", "", `${entry.id} · Record unavailable`), element("span", "", entry.error || "record.json could not be read."));
+          row.append(problem);
+        } else {
+          const button = element("button", "record-select");
+          button.type = "button";
+          button.id = `record-choice-${entry.id}`;
+          button.dataset.recordId = entry.id;
+          button.setAttribute("aria-label", `Open record ${entry.id}${entry.staged ? " staged unapproved preview" : ""}: ${entry.title}`);
+          const citation = [entry.staged ? `Staged / unapproved · run ${entry.runName}` : "", entry.journal, entry.year, entry.doi].filter(Boolean).join(" · ");
+          append(
+            button,
+            element("span", "record-list-id", entry.id),
+            element("span", "record-list-title", entry.title),
+            element("span", "record-list-authors", entry.authors.join(", ") || "Authors not listed"),
+            element("span", "record-list-citation", citation || "Publication details not listed")
+          );
+          button.addEventListener("click", () => openRecordById(entry.id));
+          row.append(button);
+        }
+        dom.recordList.append(row);
+      }
+      dom.libraryEmpty.hidden = visible.length > 0;
+      if (!visible.length) {
+        dom.libraryEmpty.textContent = state.records.length ? "No records match this search." : "No live or completed staged extraction/record.json files were found in the selected private folder.";
+      }
+      if (unavailableCount) setLibraryMessage("warning", `${unavailableCount} record${unavailableCount === 1 ? " is" : "s are"} listed but unavailable. Each issue is shown beside its folder ID.`);
+      else setLibraryMessage("info", "");
+    }
+
+    function writeHistory(screen, recordId, mode) {
+      if (mode === "none") return;
+      const value = screen === "record" ? `#record-${recordId}` : "#records";
+      const historyState = { pipExtractionViewer: true, screen, recordId: recordId || null };
+      history[mode === "push" ? "pushState" : "replaceState"](historyState, "", value);
+    }
+
+    function showLibrary(options = {}) {
+      state.recordOpenToken += 1;
+      state.selectionToken += 1;
+      clearObjectUrls();
+      state.record = null;
+      state.rawText = "";
+      state.resolver = null;
+      setView("document");
+      renderLibrary();
+      showScreen("library");
+      writeHistory("library", null, options.historyMode || "none");
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: state.libraryScroll, behavior: "instant" });
+        const returnTarget = state.returnFocusId && document.getElementById(`record-choice-${state.returnFocusId}`);
+        if (options.restoreFocus !== false && returnTarget) returnTarget.focus({ preventScroll: true });
+        else if (options.focusTitle) dom.libraryTitle.focus({ preventScroll: true });
+      });
+    }
+
+    async function openRecordById(recordId, options = {}) {
+      const entry = state.records.find(candidate => candidate.id === recordId && candidate.valid);
+      if (!entry) {
+        showLibrary({ historyMode: "replace" });
+        setLibraryMessage("error", `Record ${recordId} is not available.`);
+        return false;
+      }
+      if (state.screen === "library") state.libraryScroll = window.scrollY;
+      state.returnFocusId = recordId;
+      const openToken = ++state.recordOpenToken;
+      const assetToken = ++state.selectionToken;
+      setLibraryMessage("info", `Opening record ${recordId}…`);
+      try {
+        const file = await entry.recordFileHandle.getFile();
+        const rawText = await file.text();
+        const record = parseRecord(rawText);
+        recordSummary(record, recordId);
+        if (openToken !== state.recordOpenToken || assetToken !== state.selectionToken) return false;
+        const resolver = handleResolver(entry.extractionHandle, entry.recordPath, assetToken);
+        resolver.staged = Boolean(entry.staged);
+        resolver.runName = entry.runName || "";
+        renderRecord(record, rawText, resolver);
+        writeHistory("record", recordId, options.historyMode || "push");
+        return true;
+      } catch (error) {
+        if (openToken !== state.recordOpenToken || assetToken !== state.selectionToken) return false;
+        entry.valid = false;
+        entry.error = `Could not open record.json: ${error.message || error}`;
+        entry.searchText = [entry.id, entry.title, entry.authors && entry.authors.join(" "), entry.journal, entry.year, entry.doi].filter(Boolean).join(" ").toLocaleLowerCase();
+        showLibrary({ historyMode: "replace" });
+        setLibraryMessage("error", `Could not open record ${recordId}: ${error.message || error}`);
+        return false;
+      }
+    }
+
+    function setScanBusy(busy) {
+      dom.chooseRoot.disabled = busy;
+      dom.changeRoot.disabled = busy;
+      dom.refreshRecords.disabled = busy;
+    }
+
+    function setOperationStatus(type, text) {
+      dom.operationStatus.replaceChildren(text ? message(type, text) : document.createDocumentFragment());
+    }
+
+    function scanProgressMessage(completed, total) {
+      const text = total ? `Checking record folders… ${completed} of ${total}` : "Looking for five-digit record folders…";
+      dom.operationStatus.replaceChildren(element("div", "progress-line", text));
+    }
+
+    async function loadRootHandle(rootHandle, options = {}) {
+      state.recordOpenToken += 1;
+      const scanToken = ++state.scanToken;
+      setScanBusy(true);
+      scanProgressMessage(0, 0);
+      try {
+        const result = await scanRootHandle(rootHandle, {
+          isStale: () => scanToken !== state.scanToken,
+          onProgress: scanProgressMessage
+        });
+        if (scanToken !== state.scanToken) return false;
+        state.selectionToken += 1;
+        clearObjectUrls();
+        state.rootHandle = rootHandle;
+        state.rootName = rootHandle.name || "papers (private)";
+        state.records = result.records;
+        state.libraryScroll = 0;
+        state.returnFocusId = "";
+        if (!options.preserveSearch) {
+          state.search = "";
+          dom.recordSearch.value = "";
+        }
+        setOperationStatus("info", "");
+        showLibrary({ historyMode: "replace", restoreFocus: false, focusTitle: true });
+        if (result.stagingAccessWarning) setLibraryMessage("warning", result.stagingAccessWarning);
+        else if (!result.candidateCount) setLibraryMessage("warning", "This folder does not contain immediate five-digit record folders. Choose papers (private), not an individual record or extraction folder.");
+        else if (!result.records.length) setLibraryMessage("info", "No live or completed staged extraction/record.json files were found yet.");
+        return true;
+      } catch (error) {
+        if (scanToken !== state.scanToken) return false;
+        setOperationStatus("error", `Could not read this folder: ${error.message || error}`);
+        return false;
+      } finally {
+        if (scanToken === state.scanToken) setScanBusy(false);
+      }
+    }
+
+    async function choosePrivateRoot() {
+      state.recordOpenToken += 1;
+      let rootHandle;
+      try {
+        rootHandle = await window.showDirectoryPicker({ id: "pip-litdb-private", mode: "read" });
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+        setOperationStatus("error", `Folder access was not granted: ${error.message || error}`);
+        return;
+      }
+      await loadRootHandle(rootHandle);
+    }
+
+    dom.chooseRoot.addEventListener("click", choosePrivateRoot);
+    dom.changeRoot.addEventListener("click", choosePrivateRoot);
+    dom.refreshRecords.addEventListener("click", () => {
+      if (state.rootHandle) loadRootHandle(state.rootHandle, { preserveSearch: true });
+    });
+    dom.recordSearch.addEventListener("input", event => {
+      state.search = event.target.value;
+      renderLibrary();
+    });
+    dom.backToRecords.addEventListener("click", () => {
+      if (history.state && history.state.pipExtractionViewer && history.state.screen === "record") history.back();
+      else showLibrary({ historyMode: "replace" });
+    });
+    dom.documentView.addEventListener("click", event => {
+      const anchor = event.target.closest && event.target.closest('a[href^="#"]');
+      if (!anchor) return;
+      const id = decodeURIComponent(anchor.getAttribute("href").slice(1));
+      const target = document.getElementById(id);
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    dom.viewToggle.addEventListener("click", () => setView(state.view === "document" ? "raw" : "document"));
+    dom.printButton.addEventListener("click", () => window.print());
+    dom.copyJson.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(state.rawText);
+        dom.copyJson.textContent = "Copied";
+        setTimeout(() => { dom.copyJson.textContent = "Copy JSON"; }, 1200);
+      } catch (_) {
+        dom.copyJson.textContent = "Copy unavailable";
+        setTimeout(() => { dom.copyJson.textContent = "Copy JSON"; }, 1500);
+      }
+    });
+
+    window.addEventListener("popstate", event => {
+      if (!state.rootHandle) return;
+      const historyState = event.state;
+      if (historyState && historyState.pipExtractionViewer && historyState.screen === "record" && historyState.recordId) {
+        openRecordById(historyState.recordId, { historyMode: "none" });
+      } else {
+        showLibrary({ historyMode: "none" });
+      }
+    });
+    window.addEventListener("beforeunload", clearObjectUrls);
+
+    const directoryPickerAvailable = window.isSecureContext && typeof window.showDirectoryPicker === "function";
+    if (!directoryPickerAvailable) {
+      dom.chooseRoot.disabled = true;
+      dom.landingMessage.append(message("error", "This browser cannot grant read-only folder access. Open this file in the Codex browser, Chrome, or Edge."));
+    }
+    showScreen("landing");
+
+    // Small, read-only test surface for browser smoke tests.
+    window.ExtractionViewer = Object.freeze({
+      renderSynthetic(record) {
+        state.recordOpenToken += 1;
+        state.selectionToken += 1;
+        const raw = JSON.stringify(record, null, 2);
+        renderRecord(parseRecord(raw), raw, {
+          mode: "synthetic",
+          description: "synthetic browser fixture",
+          resolve(path) {
+            try { return { ok: false, path: normalizeRelativePath(path), reason: "Synthetic fixture has no binary files." }; }
+            catch (error) { return { ok: false, path: String(path || ""), reason: error.message }; }
+          }
+        });
+      },
+      scanRootHandle,
+      loadRootHandle,
+      openRecordById,
+      showLibrary,
+      extractTopLevelObject,
+      readRecordMetadataPrefix,
+      latestStagedRecord,
+      normalizeRelativePath,
+      expectedSchemaVersion: EXPECTED_SCHEMA_VERSION,
+      supportedSchemaVersions: Object.freeze([...SUPPORTED_SCHEMA_VERSIONS]),
+      metadataPrefixMaxBytes: METADATA_PREFIX_MAX_BYTES,
+      directoryPickerAvailable,
+      getState() {
+        return {
+          screen: state.screen,
+          rootName: state.rootName,
+          recordIds: state.records.map(entry => entry.id),
+          viewableRecordIds: state.records.filter(entry => entry.valid).map(entry => entry.id),
+          stagedRecordIds: state.records.filter(entry => entry.valid && entry.staged).map(entry => entry.id),
+          search: state.search
+        };
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

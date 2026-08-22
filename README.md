@@ -250,7 +250,7 @@ papers (private)/
     |   |-- original-name.docx
     |   `-- original-name.ext
     |-- extraction_old/          # Temporary legacy comparison baseline
-    |-- extraction/              # Polished machine-ready output
+    |-- extraction/              # record.json plus linked binary/large assets
     `-- extraction_diagnostic/   # Technical reports and review material
 ```
 
@@ -265,8 +265,47 @@ sources. They will eventually be deleted through a separate, explicitly
 authorized cleanup after their replacements have been approved.
 
 The detailed structure and behavior of new `extraction/` and
-`extraction_diagnostic/` outputs will be documented separately. Empty or
+`extraction_diagnostic/` outputs are summarized below. Empty or
 not-yet-generated directories do not need to be created as placeholders.
+
+Each new extraction has one canonical, content-only `record.json`; this is the
+sole content format produced for all future extraction runs. Article and
+supplement text, captions, references, and structured tables are stored in that
+file. Images, videos, original supplements, workbooks, datasets, and other
+binary or large assets remain separate files referenced by paths relative to
+the record's `extraction/` directory. New-format extractions do not create
+per-table JSON or CSV files. Provenance, confidence, OCR details, and review
+material remain out of the polished record in the sibling
+`extraction_diagnostic/` directory.
+
+For a human-friendly view, open the shared repository-root
+`extraction_viewer.html` and choose the `papers (private)/` directory. The
+viewer scans only its immediate five-digit record directories and lists those
+with a live `extraction/record.json`. Search the list, select a record, return
+to the list to choose another, or use **Refresh records** and **Change private
+folder** as needed. The viewer formats the canonical JSON and linked local
+assets; it is not copied into each record.
+
+This is the viewer's only loading workflow: it does not accept an individual
+`extraction/` folder, standalone `record.json`, or URL/query parameter. It is
+read-only and offline, and access to the chosen private directory lasts only
+for the current browser session. Historical `record.md` files remain supported
+only by extraction validation for older packages, not by the viewer.
+
+Install the separate private-extraction runtime and create a staged candidate
+one record at a time:
+
+```powershell
+python -m pip install -r requirements-extraction.txt
+python scripts/extract_record.py NNNNN --run-id pilot-001
+python scripts/validate_extraction.py "papers (private)/staging/NNNNN/pilot-001" --expected-title "Exact title"
+```
+
+For scanned pages, the pipeline uses pinned local OCR dependencies and records
+the engine, model hashes, page regions, confidence, and reviewed repairs only
+in `extraction_diagnostic/`. Figure and scheme pixels are excluded from OCR.
+Candidates remain staged until they have passed validation and review and the
+user explicitly approves promotion.
 
 When both a publisher copy and a PubMed Central copy of the same manuscript are available, retain
 the publisher copy as `main.pdf`; retain the PubMed Central copy only when no publisher copy is
