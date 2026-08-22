@@ -317,7 +317,7 @@ class RapidOcrEngine:
             or onnxruntime_version != ONNXRUNTIME_VERSION
         ):
             raise OcrDependencyError(
-                "OCR runtime versions do not match requirements-extraction.txt: "
+                "OCR runtime versions do not match requirements.txt: "
                 f"rapidocr={rapidocr_version or 'not-installed'} "
                 f"(expected {RAPIDOCR_VERSION}), onnxruntime="
                 f"{onnxruntime_version or 'not-installed'} "
@@ -333,7 +333,7 @@ class RapidOcrEngine:
                 engine_type_value = getattr(rapidocr_module, "EngineType").ONNXRUNTIME
             except (ImportError, AttributeError) as exc:
                 raise OcrDependencyError(
-                    "RapidOCR is optional; install requirements-extraction.txt "
+                    "RapidOCR is optional; install requirements.txt "
                     "and provision the local ONNX model files before OCR"
                 ) from exc
 

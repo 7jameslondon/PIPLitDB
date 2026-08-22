@@ -351,9 +351,11 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertNotIn("ref", checkout)
         self.assertNotIn("path", checkout)
 
-        self.assertEqual(
-            steps_by_name["Install validation dependencies"]["id"], "install"
-        )
+        setup_python = steps_by_name["Set up Python"]["with"]
+        self.assertEqual(setup_python["cache-dependency-path"], "requirements.txt")
+        install_dependencies = steps_by_name["Install repository dependencies"]
+        self.assertEqual(install_dependencies["id"], "install")
+        self.assertIn("--requirement requirements.txt", install_dependencies["run"])
         pull_request_validation = steps_by_name["Validate pull request result"]
         self.assertIn(
             "github.event_name == 'pull_request'", pull_request_validation["if"]
@@ -367,7 +369,7 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn('${{ github.sha }}', pull_request_validation["run"])
 
-        validator_tests = steps_by_name["Test metadata validator"]
+        validator_tests = steps_by_name["Run test suite"]
         self.assertIn(
             "python -m unittest discover --start-directory tests --verbose",
             validator_tests["run"],
@@ -402,6 +404,7 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("/.github/ @7jameslondon", codeowners)
         self.assertIn("/database/schema/ @7jameslondon", codeowners)
         self.assertIn("/database/vocabularies/ @7jameslondon", codeowners)
+        self.assertIn("/requirements.txt @7jameslondon", codeowners)
         self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:

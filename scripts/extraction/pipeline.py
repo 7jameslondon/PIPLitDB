@@ -81,7 +81,7 @@ def _bundled_rapidocr_models() -> RapidOcrModelSet:
     if len(locations) != 1:
         raise OcrDependencyError(
             "RapidOCR 3.9.2 is not installed as one local package; install "
-            "requirements-extraction.txt"
+            "requirements.txt"
         )
     model_root = Path(locations[0]).resolve() / "models"
     return RapidOcrModelSet(

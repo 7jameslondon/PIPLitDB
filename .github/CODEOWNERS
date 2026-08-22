@@ -2,6 +2,6 @@
 /.github/ @7jameslondon
 /database/schema/ @7jameslondon
 /database/vocabularies/ @7jameslondon
-/requirements-validation.txt @7jameslondon
+/requirements.txt @7jameslondon
 /scripts/validate_metadata.py @7jameslondon
 /tests/test_validate_metadata.py @7jameslondon

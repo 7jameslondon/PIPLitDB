@@ -166,7 +166,7 @@ either accidental duplicates or legitimate separate versions.
 Run the complete validation locally with Python 3.12 or later:
 
 ```powershell
-python -m pip install -r requirements-validation.txt
+python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python scripts/validate_metadata.py
 ```
@@ -292,11 +292,11 @@ read-only and offline, and access to the chosen private directory lasts only
 for the current browser session. Historical `record.md` files remain supported
 only by extraction validation for older packages, not by the viewer.
 
-Install the separate private-extraction runtime and create a staged candidate
-one record at a time:
+Install the repository dependencies and create a staged candidate one record
+at a time:
 
 ```powershell
-python -m pip install -r requirements-extraction.txt
+python -m pip install -r requirements.txt
 python scripts/extract_record.py NNNNN --run-id pilot-001
 python scripts/validate_extraction.py "papers (private)/staging/NNNNN/pilot-001" --expected-title "Exact title"
 ```
