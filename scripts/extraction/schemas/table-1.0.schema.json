@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pip-litdb.org/schema/table-1.0.schema.json",
+  "title": "PIP LitDB extracted table",
+  "description": "A lossless structural representation of an extracted table. This schema validates the extraction container without normalizing or constraining author-supplied table content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "asset_path_base",
+    "table_id",
+    "label",
+    "title",
+    "parts",
+    "footnotes",
+    "footnotes_typed",
+    "structure_assets",
+    "machine_records",
+    "source_kind"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "asset_path_base": {
+      "const": "extraction_root",
+      "description": "All relative asset paths in this document resolve from the root of the extraction directory."
+    },
+    "table_id": {
+      "type": "string"
+    },
+    "label": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tablePart"
+      }
+    },
+    "footnotes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Footnotes preserved in their source order and wording."
+    },
+    "footnotes_typed": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/typedFootnote"
+      },
+      "description": "Structural footnote labels and scopes; the source wording remains unchanged."
+    },
+    "structure_assets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/assetPath"
+      },
+      "description": "Optional graphical table-cell assets keyed by the identifier used in the table."
+    },
+    "machine_records": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Optional domain-specific machine records. Their shape is intentionally unconstrained so the lossless table format does not impose one scientific domain's model on another."
+    },
+    "source_kind": {
+      "type": "string",
+      "enum": [
+        "html",
+        "pdf",
+        "image"
+      ]
+    },
+    "source_image": {
+      "$ref": "#/$defs/assetPath",
+      "description": "The extraction-relative image retained when the authoritative table source is a PDF region or image."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source_kind": {
+            "const": "html"
+          }
+        },
+        "required": [
+          "source_kind"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "source_image"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source_kind": {
+            "enum": [
+              "pdf",
+              "image"
+            ]
+          }
+        },
+        "required": [
+          "source_kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "source_image"
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "assetPath": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tablePart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "part_id",
+        "rows"
+      ],
+      "properties": {
+        "part_id": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/tableCell"
+            }
+          }
+        }
+      }
+    },
+    "tableCell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "html",
+        "header",
+        "rowspan",
+        "colspan"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "html": {
+          "type": "string"
+        },
+        "header": {
+          "type": "boolean"
+        },
+        "rowspan": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "colspan": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "typedFootnote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "scope",
+        "text"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
