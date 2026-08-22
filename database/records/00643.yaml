@@ -1,0 +1,34 @@
+document_type: correction
+publication_stage: publication
+title: "Author Correction: A RUNX-targeted gene switch-off approach modulates the BIRC5/PIF1-p21 pathway and reduces glioblastoma growth in mice"
+authors:
+  - name: "Etsuko Yamamoto Hattori"
+  - name: "Tatsuya Masuda"
+  - name: "Yohei Mineharu"
+  - name: "Masamitsu Mikami"
+  - name: "Yukinori Terada"
+  - name: "Yasuzumi Matsui"
+  - name: "Hirohito Kubota"
+  - name: "Hidemasa Matsuo"
+  - name: "Masahiro Hirata"
+  - name: "Tatsuki R. Kataoka"
+  - name: "Tatsutoshi Nakahata"
+  - name: "Shuji Ikeda"
+  - name: "Susumu Miyamoto"
+  - name: "Hiroshi Sugiyama"
+  - name: "Yoshiki Arakawa"
+  - name: "Yasuhiko Kamikubo"
+doi: "10.1038/s42003-022-04006-3"
+publication_year: 2022
+journal: "Communications Biology"
+related_papers:
+  - pip_litdb_id: "00026"
+    relationship_type: corrects
+pip_litdb_notes: "This correction replaces the originally published marked-up peer-review version of the Supplementary Information with an unmarked corrected file."
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
+pip_litdb_status: verified

@@ -11,6 +11,8 @@
     "publication_year",
     "journal",
     "language_status",
+    "human_user_reported_publisher_access",
+    "jamies_human_only_notes",
     "related_papers",
     "pip_litdb_status",
     "pip_litdb_notes",
@@ -306,8 +308,10 @@
   async function loadVocabularies(readVocabulary) {
     const names = [
       "document-types",
+      "jamies-human-only-note-tags",
       "language-statuses",
       "publication-stages",
+      "publisher-access-statuses",
       "record-statuses",
       "relationship-types",
     ];
@@ -633,6 +637,13 @@
         record.document_type,
         record.publication_stage,
         record.language_status,
+        record.human_user_reported_publisher_access,
+        record.human_user_reported_publisher_access
+          ? labelFor(
+              state.vocabularies["publisher-access-statuses"],
+              record.human_user_reported_publisher_access,
+            )
+          : null,
         record.pip_litdb_status,
         record.pip_litdb_notes,
         ...(Array.isArray(record.authors)
@@ -826,6 +837,14 @@
     );
     appendMetadata(
       overviewGrid,
+      "Human user-reported publisher access",
+      labelFor(
+        vocabulary["publisher-access-statuses"],
+        record.human_user_reported_publisher_access,
+      ),
+    );
+    appendMetadata(
+      overviewGrid,
       "Record status",
       record.pip_litdb_status
         ? labelFor(vocabulary["record-statuses"], record.pip_litdb_status)
@@ -905,6 +924,22 @@
       const notes = createMetadataSection("PIP LitDB notes");
       notes.append(element("p", { className: "notes", text: record.pip_litdb_notes }));
       fragment.append(notes);
+    }
+
+    const jamiesTags = record.jamies_human_only_notes?.tags;
+    if (Array.isArray(jamiesTags) && jamiesTags.length > 0) {
+      const jamiesNotes = createMetadataSection("Jamie's Human-Only Notes");
+      const tagRow = element("div", { className: "tag-row" });
+      jamiesTags.forEach((tag) => {
+        tagRow.append(
+          element("span", {
+            className: "tag",
+            text: labelFor(vocabulary["jamies-human-only-note-tags"], tag),
+          }),
+        );
+      });
+      jamiesNotes.append(tagRow);
+      fragment.append(jamiesNotes);
     }
 
     const additionalFields = Object.entries(record).filter(

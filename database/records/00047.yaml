@@ -11,6 +11,7 @@ doi: "10.1002/chem.202002166"
 publication_year: 2020
 journal: "Chemistry – A European Journal"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

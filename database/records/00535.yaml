@@ -19,9 +19,10 @@ doi: "10.1038/onc.2016.171"
 publication_year: 2016
 journal: "Oncogene"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
 pip_litdb_status: verified
-pip_litdb_notes: "Original article (vol. 35, issue 49, pp. 6350-6358; PMID 27270436), published online 2016-06-06 with issue date 2016-12-08. The indexed local PDF is the publisher's 10-page Supplementary Figures file, not the article PDF."
+pip_litdb_notes: "Original article (vol. 35, issue 49, pp. 6350-6358; PMID 27270436), published online 2016-06-06 with issue date 2016-12-08."

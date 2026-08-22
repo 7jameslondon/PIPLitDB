@@ -12,7 +12,7 @@ on:
       - "database/**"
       - "scripts/**"
       - "tests/**"
-      - "requirements-validation.txt"
+      - "requirements.txt"
       - ".github/workflows/validate-metadata.yml"
       - ".github/CODEOWNERS"
   workflow_dispatch:
@@ -47,11 +47,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements-validation.txt
+          cache-dependency-path: requirements.txt
 
-      - name: Install validation dependencies
+      - name: Install repository dependencies
         id: install
-        run: python -m pip install --requirement requirements-validation.txt
+        run: python -m pip install --requirement requirements.txt
 
       - name: Validate pull request result
         if: ${{ !cancelled() && steps.install.outcome == 'success' && github.event_name == 'pull_request' }}
@@ -72,6 +72,6 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')) }}
         run: python scripts/validate_metadata.py
 
-      - name: Test metadata validator
+      - name: Run test suite
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: python -m unittest discover --start-directory tests --verbose

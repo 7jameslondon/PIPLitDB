@@ -11,6 +11,7 @@ doi: "10.1016/j.jmb.2004.10.012"
 publication_year: 2005
 journal: "Journal of Molecular Biology"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

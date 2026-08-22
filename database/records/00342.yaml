@@ -9,9 +9,10 @@ doi: "10.1002/(sici)1521-3773(19980605)37:10<1421::aid-anie1421>3.0.co;2-8"
 publication_year: 1998
 journal: "Angewandte Chemie International Edition"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: needed
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

@@ -8,6 +8,7 @@ doi: "10.3390/biom10040544"
 publication_year: 2020
 journal: "Biomolecules"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

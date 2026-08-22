@@ -36,6 +36,7 @@ doi: "10.1234/example.1"
 publication_year: 2024
 journal: "Example Journal"
 language_status: unchecked
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: unchecked
   supplementary_material: unchecked
@@ -106,6 +107,20 @@ class MetadataValidationTests(unittest.TestCase):
                   label: Not applicable
                   description: The publication does not provide this material.
             """,
+            "jamies-human-only-note-tags.yaml": """
+                read_later:
+                  label: Read later
+                  description: Jamie marked this work to be read later.
+                interesting_for_cooperativity:
+                  label: Interesting for cooperativity
+                  description: Jamie marked this work as interesting for cooperativity.
+                important_to_me:
+                  label: Important to me
+                  description: Jamie marked this work as personally important.
+                interesting_monomer:
+                  label: Interesting monomer
+                  description: Jamie marked this work as an interesting monomer.
+            """,
             "language-statuses.yaml": """
                 english:
                   label: English
@@ -128,6 +143,17 @@ class MetadataValidationTests(unittest.TestCase):
                   label: Publication
                   description: A formally published document.
             """,
+            "publisher-access-statuses.yaml": """
+                access:
+                  label: Access
+                  description: A human user reports publisher full-text access.
+                no_access:
+                  label: No access
+                  description: A human user reports no publisher full-text access.
+                unknown:
+                  label: Unknown
+                  description: No current human-user access report is recorded.
+            """,
             "record-statuses.yaml": """
                 needs_review:
                   label: Needs review
@@ -149,6 +175,14 @@ class MetadataValidationTests(unittest.TestCase):
                   label: Is version of
                   description: Symmetric version relationship.
                   inverse: is_version_of
+                corrects:
+                  label: Corrects
+                  description: Correction relationship.
+                  inverse: is_corrected_by
+                is_corrected_by:
+                  label: Is corrected by
+                  description: Corrected-publication relationship.
+                  inverse: corrects
             """,
         }
         for filename, content in vocabularies.items():
@@ -317,9 +351,11 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertNotIn("ref", checkout)
         self.assertNotIn("path", checkout)
 
-        self.assertEqual(
-            steps_by_name["Install validation dependencies"]["id"], "install"
-        )
+        setup_python = steps_by_name["Set up Python"]["with"]
+        self.assertEqual(setup_python["cache-dependency-path"], "requirements.txt")
+        install_dependencies = steps_by_name["Install repository dependencies"]
+        self.assertEqual(install_dependencies["id"], "install")
+        self.assertIn("--requirement requirements.txt", install_dependencies["run"])
         pull_request_validation = steps_by_name["Validate pull request result"]
         self.assertIn(
             "github.event_name == 'pull_request'", pull_request_validation["if"]
@@ -333,7 +369,7 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn('${{ github.sha }}', pull_request_validation["run"])
 
-        validator_tests = steps_by_name["Test metadata validator"]
+        validator_tests = steps_by_name["Run test suite"]
         self.assertIn(
             "python -m unittest discover --start-directory tests --verbose",
             validator_tests["run"],
@@ -368,6 +404,7 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertIn("/.github/ @7jameslondon", codeowners)
         self.assertIn("/database/schema/ @7jameslondon", codeowners)
         self.assertIn("/database/vocabularies/ @7jameslondon", codeowners)
+        self.assertIn("/requirements.txt @7jameslondon", codeowners)
         self.assertIn("/scripts/validate_metadata.py @7jameslondon", codeowners)
 
     def test_duplicate_yaml_key_is_rejected(self) -> None:
@@ -652,12 +689,136 @@ class MetadataValidationTests(unittest.TestCase):
         )
         self.assertIn("record.unknown_vocabulary_value", self.error_codes())
 
+    def test_human_user_reported_publisher_access_is_required(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "human_user_reported_publisher_access: unknown\n", ""
+            ),
+        )
+        self.assertIn("schema.required", self.error_codes())
+
+    def test_publisher_access_status_values_pass(self) -> None:
+        for value in ("access", "no_access", "unknown"):
+            with self.subTest(value=value):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        "human_user_reported_publisher_access: unknown",
+                        f"human_user_reported_publisher_access: {value}",
+                    ),
+                )
+                report = validate_repository(self.root)
+                self.assertTrue(report.passed, report.findings)
+
+    def test_publisher_access_status_controlled_vocabulary_is_enforced(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "human_user_reported_publisher_access: unknown",
+                "human_user_reported_publisher_access: invented_status",
+            ),
+        )
+        self.assertIn("record.unknown_vocabulary_value", self.error_codes())
+
     def test_file_status_controlled_vocabulary_is_enforced(self) -> None:
         self.write_record(
             "00001",
             VALID_RECORD.replace("main_pdf: unchecked", "main_pdf: invented_status"),
         )
         self.assertIn("record.unknown_vocabulary_value", self.error_codes())
+
+    def test_jamies_human_only_notes_may_be_omitted(self) -> None:
+        report = validate_repository(self.root)
+        self.assertTrue(report.passed, report.findings)
+
+    def test_jamies_human_only_note_tags_are_accepted(self) -> None:
+        tag_sets = (
+            ("read_later",),
+            (
+                "read_later",
+                "interesting_for_cooperativity",
+                "important_to_me",
+                "interesting_monomer",
+            ),
+        )
+        for tags in tag_sets:
+            with self.subTest(tags=tags):
+                tag_lines = "".join(f"    - {tag}\n" for tag in tags)
+                self.write_record(
+                    "00001",
+                    VALID_RECORD
+                    + "jamies_human_only_notes:\n"
+                    + "  tags:\n"
+                    + tag_lines,
+                )
+                report = validate_repository(self.root)
+                self.assertTrue(report.passed, report.findings)
+
+    def test_unknown_jamies_human_only_note_tag_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + "jamies_human_only_notes:\n"
+            + "  tags:\n"
+            + "    - invented_tag\n",
+        )
+        self.assertIn("record.unknown_vocabulary_value", self.error_codes())
+
+    def test_duplicate_jamies_human_only_note_tags_are_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + "jamies_human_only_notes:\n"
+            + "  tags:\n"
+            + "    - read_later\n"
+            + "    - read_later\n",
+        )
+        self.assertIn("schema.uniqueItems", self.error_codes())
+
+    def test_empty_jamies_human_only_notes_are_rejected(self) -> None:
+        invalid_values = (
+            ("jamies_human_only_notes: {}\n", "schema.required"),
+            (
+                "jamies_human_only_notes:\n  tags: []\n",
+                "schema.minItems",
+            ),
+        )
+        for value, expected_code in invalid_values:
+            with self.subTest(value=value):
+                self.write_record("00001", VALID_RECORD + value)
+                self.assertIn(expected_code, self.error_codes())
+
+    def test_null_jamies_human_only_notes_are_rejected(self) -> None:
+        for value in (
+            "jamies_human_only_notes: null\n",
+            "jamies_human_only_notes:\n  tags: null\n",
+        ):
+            with self.subTest(value=value):
+                self.write_record("00001", VALID_RECORD + value)
+                self.assertIn("schema.type", self.error_codes())
+
+    def test_jamies_human_only_notes_wrong_types_are_rejected(self) -> None:
+        invalid_values = (
+            "jamies_human_only_notes: []\n",
+            "jamies_human_only_notes:\n  tags: read_later\n",
+            "jamies_human_only_notes:\n  tags:\n    - true\n",
+        )
+        for value in invalid_values:
+            with self.subTest(value=value):
+                self.write_record("00001", VALID_RECORD + value)
+                self.assertIn("schema.type", self.error_codes())
+
+    def test_unknown_jamies_human_only_notes_member_is_rejected(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD
+            + "jamies_human_only_notes:\n"
+            + "  tags:\n"
+            + "    - read_later\n"
+            + "  private_comment: keep this\n",
+        )
+        self.assertIn("schema.additionalProperties", self.error_codes())
 
     def test_all_file_status_members_are_required(self) -> None:
         self.write_record(
@@ -728,6 +889,33 @@ class MetadataValidationTests(unittest.TestCase):
         warning_codes = {finding.code for finding in report.warnings}
         self.assertTrue(report.passed)
         self.assertIn("database.possible_duplicate", warning_codes)
+
+    def test_reciprocal_correction_pair_is_not_a_possible_duplicate(self) -> None:
+        original = VALID_RECORD + """
+related_papers:
+  - pip_litdb_id: "00002"
+    relationship_type: is_corrected_by
+"""
+        correction = (
+            VALID_RECORD.replace(
+                "document_type: research_article", "document_type: correction"
+            ).replace("10.1234/example.1", "10.1234/example.2")
+            + """
+related_papers:
+  - pip_litdb_id: "00001"
+    relationship_type: corrects
+"""
+        )
+        self.write_record("00001", original)
+        self.write_record("00002", correction)
+
+        report = validate_repository(self.root)
+
+        self.assertTrue(report.passed, report.findings)
+        self.assertNotIn(
+            "database.possible_duplicate",
+            {finding.code for finding in report.warnings},
+        )
 
     def test_integral_float_year_participates_in_duplicate_detection(self) -> None:
         second = VALID_RECORD.replace(

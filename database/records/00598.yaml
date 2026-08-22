@@ -12,6 +12,7 @@ doi: "10.1016/j.bios.2023.115256"
 publication_year: 2023
 journal: "Biosensors and Bioelectronics"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

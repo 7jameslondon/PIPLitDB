@@ -3,15 +3,17 @@ publication_stage: publication
 title: "A Liquid-Phase Synthesis of DNA-Binding Polyamides Using Oligocarboxamide Blocks"
 authors:
   - name: "A. N. Sinyakov"
+    canonical_name: "Alexandre N. Sinyakov"
   - name: "M. V. Feshchenko"
   - name: "V. A. Ryabinin"
 doi: "10.1023/b:rubi.0000015781.35511.aa"
 publication_year: 2004
 journal: "Russian Journal of Bioorganic Chemistry"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

@@ -9,10 +9,14 @@ authors:
 doi: "10.1093/nass/49.1.75"
 publication_year: 2005
 journal: "Nucleic Acids Symposium Series"
+related_papers:
+  - pip_litdb_id: "00264"
+    relationship_type: is_preliminary_version_of
 pip_litdb_notes: "The publisher provides this article only as a PDF; no full-text HTML version is available."
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified

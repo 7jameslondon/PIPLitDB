@@ -7,6 +7,7 @@ authors:
   - name: "Alexandre S. Boutorine"
   - name: "Vladimir A. Ryabinin"
   - name: "Alexandre N. Syniakov"
+    canonical_name: "Alexandre N. Sinyakov"
   - name: "Jian-Sheng Sun"
   - name: "Thérèse Garestier"
   - name: "Claude Hélène"
@@ -14,6 +15,7 @@ doi: "10.1002/1521-3773(20010817)40:16<3045::aid-anie3045>3.0.co;2-a"
 publication_year: 2001
 journal: "Angewandte Chemie International Edition"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

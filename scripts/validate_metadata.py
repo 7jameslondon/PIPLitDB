@@ -40,8 +40,10 @@ YAML_VALUE_ERRORS = (AttributeError, KeyError, TypeError, ValueError, OverflowEr
 VOCABULARY_SPECS = {
     "document-types.yaml": frozenset({"label", "description"}),
     "file-statuses.yaml": frozenset({"label", "description"}),
+    "jamies-human-only-note-tags.yaml": frozenset({"label", "description"}),
     "language-statuses.yaml": frozenset({"label", "description"}),
     "publication-stages.yaml": frozenset({"label", "description"}),
+    "publisher-access-statuses.yaml": frozenset({"label", "description"}),
     "record-statuses.yaml": frozenset({"label", "description"}),
     "relationship-types.yaml": frozenset({"label", "description", "inverse"}),
 }
@@ -884,8 +886,14 @@ class MetadataValidator:
     def _validate_record_schema_and_values(self) -> None:
         document_types = self.vocabularies.get("document-types.yaml", {})
         file_statuses = self.vocabularies.get("file-statuses.yaml", {})
+        jamies_human_only_note_tags = self.vocabularies.get(
+            "jamies-human-only-note-tags.yaml", {}
+        )
         language_statuses = self.vocabularies.get("language-statuses.yaml", {})
         publication_stages = self.vocabularies.get("publication-stages.yaml", {})
+        publisher_access_statuses = self.vocabularies.get(
+            "publisher-access-statuses.yaml", {}
+        )
         record_statuses = self.vocabularies.get("record-statuses.yaml", {})
         relationship_types = self.vocabularies.get("relationship-types.yaml", {})
         maximum_publication_year = _current_year() + MAX_FUTURE_PUBLICATION_YEARS
@@ -973,6 +981,13 @@ class MetadataValidator:
             self._check_vocab_value(
                 record, "language_status", language_statuses, relative, lines
             )
+            self._check_vocab_value(
+                record,
+                "human_user_reported_publisher_access",
+                publisher_access_statuses,
+                relative,
+                lines,
+            )
             if "pip_litdb_status" in record:
                 self._check_vocab_value(
                     record, "pip_litdb_status", record_statuses, relative, lines
@@ -995,10 +1010,33 @@ class MetadataValidator:
                             self._line_for(lines, value_path),
                         )
 
+            jamies_human_only_notes = record.get("jamies_human_only_notes")
+            if isinstance(jamies_human_only_notes, dict):
+                tags = jamies_human_only_notes.get("tags")
+                if isinstance(tags, list):
+                    for index, value in enumerate(tags):
+                        if (
+                            isinstance(value, str)
+                            and value not in jamies_human_only_note_tags
+                        ):
+                            value_path = (
+                                "jamies_human_only_notes",
+                                "tags",
+                                index,
+                            )
+                            self.report.add(
+                                "error",
+                                "record.unknown_vocabulary_value",
+                                f"{_format_value_path(value_path)} value {value!r} is not defined in its vocabulary.",
+                                relative,
+                                self._line_for(lines, value_path),
+                            )
+
             single_line_paths: list[tuple[Any, ...]] = [
                 ("document_type",),
                 ("publication_stage",),
                 ("language_status",),
+                ("human_user_reported_publisher_access",),
                 ("title",),
                 ("doi",),
                 ("journal",),
@@ -1012,6 +1050,14 @@ class MetadataValidator:
                     "full_text_html",
                 )
             )
+            if (
+                isinstance(jamies_human_only_notes, dict)
+                and isinstance(jamies_human_only_notes.get("tags"), list)
+            ):
+                single_line_paths.extend(
+                    ("jamies_human_only_notes", "tags", index)
+                    for index in range(len(jamies_human_only_notes["tags"]))
+                )
             authors = record.get("authors")
             if isinstance(authors, list):
                 for index in range(len(authors)):
@@ -1271,6 +1317,44 @@ class MetadataValidator:
         dois: dict[str, list[str]] = defaultdict(list)
         title_years: dict[tuple[str, int], list[str]] = defaultdict(list)
 
+        def has_relationship(
+            source_id: str,
+            target_id: str,
+            relationship_type: str,
+        ) -> bool:
+            entries = self.records[source_id].get("related_papers", [])
+            return isinstance(entries, list) and any(
+                isinstance(entry, dict)
+                and entry.get("pip_litdb_id") == target_id
+                and entry.get("relationship_type") == relationship_type
+                for entry in entries
+            )
+
+        def is_reciprocal_correction_pair(left_id: str, right_id: str) -> bool:
+            return (
+                has_relationship(left_id, right_id, "corrects")
+                and has_relationship(right_id, left_id, "is_corrected_by")
+            ) or (
+                has_relationship(left_id, right_id, "is_corrected_by")
+                and has_relationship(right_id, left_id, "corrects")
+            )
+
+        def is_connected_correction_group(record_ids: list[str]) -> bool:
+            if len(record_ids) < 2:
+                return False
+            connected = {record_ids[0]}
+            changed = True
+            while changed:
+                changed = False
+                for left_id in tuple(connected):
+                    for right_id in record_ids:
+                        if right_id in connected:
+                            continue
+                        if is_reciprocal_correction_pair(left_id, right_id):
+                            connected.add(right_id)
+                            changed = True
+            return len(connected) == len(record_ids)
+
         for record_id, record in self.records.items():
             doi = record.get("doi")
             if isinstance(doi, str) and doi.strip():
@@ -1318,7 +1402,7 @@ class MetadataValidator:
                     )
 
         for (_normalized_title, year), record_ids in sorted(title_years.items()):
-            if len(record_ids) > 1:
+            if len(record_ids) > 1 and not is_connected_correction_group(record_ids):
                 joined = ", ".join(record_ids)
                 for record_id in record_ids:
                     self.report.add(

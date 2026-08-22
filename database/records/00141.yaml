@@ -18,6 +18,7 @@ doi: "10.1007/s00109-013-1118-x"
 publication_year: 2014
 journal: "Journal of Molecular Medicine"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

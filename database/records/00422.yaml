@@ -8,9 +8,10 @@ doi: "10.1021/ja00189a054"
 publication_year: 1989
 journal: "Journal of the American Chemical Society"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

@@ -8,7 +8,11 @@ authors:
 doi: "10.1093/nass/nrn184"
 publication_year: 2008
 journal: "Nucleic Acids Symposium Series"
+related_papers:
+  - pip_litdb_id: "00224"
+    relationship_type: is_preliminary_version_of
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

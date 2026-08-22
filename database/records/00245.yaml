@@ -11,7 +11,11 @@ authors:
 doi: "10.1093/nass/nrm133"
 publication_year: 2007
 journal: "Nucleic Acids Symposium Series"
+related_papers:
+  - pip_litdb_id: "00240"
+    relationship_type: is_preliminary_version_of
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

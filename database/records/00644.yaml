@@ -1,0 +1,24 @@
+document_type: correction
+publication_stage: publication
+title: "Investigation of non‐covalent interaction of ANF promoter DNA and polyamides containing N‐methylimidazole and N‐methylpyrrole amino acids by electrospray ionization mass spectrometry"
+authors:
+  - name: "Xiangwei He"
+  - name: "Sufang Li"
+  - name: "Ming Xu"
+  - name: "Sen Lin"
+  - name: "Jiang Zhou"
+  - name: "Gu Yuan"
+doi: "10.1002/rcm.4994"
+publication_year: 2011
+journal: "Rapid Communications in Mass Spectrometry"
+related_papers:
+  - pip_litdb_id: "00194"
+    relationship_type: corrects
+pip_litdb_notes: "This erratum removes the sentence identifying d(GCTTTAGAGGAA) as the STAT3-binding site from paragraph 2 on page 993; the proof correction had not been applied properly online, changing the scientific meaning."
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: needed
+  supplementary_material: not_applicable
+  full_text_html: present
+pip_litdb_status: verified

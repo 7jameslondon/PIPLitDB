@@ -11,6 +11,7 @@ related_papers:
   - pip_litdb_id: "00607"
     relationship_type: is_version_of
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

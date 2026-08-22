@@ -9,9 +9,10 @@ doi: "10.1002/chem.200204689"
 publication_year: 2003
 journal: "Chemistry – A European Journal"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: verified
-pip_litdb_notes: "Full Paper (vol. 9, issue 9, pp. 2110-2122), first published 2003-05-05. Wiley also provides a one-page supporting information file containing Figure S1."
+pip_litdb_status: extracted_approved
+pip_litdb_notes: "Full Paper (vol. 9, issue 9, pp. 2110-2122), first published 2003-05-05. Wiley also provides a one-page supporting information file containing Figure S1. The publisher does not provide the graphical abstract image; its sources contain only the graphical-abstract text."

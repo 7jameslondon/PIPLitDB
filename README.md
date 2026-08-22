@@ -35,8 +35,10 @@ database/
 └── vocabularies/
     ├── document-types.yaml
     ├── file-statuses.yaml
+    ├── jamies-human-only-note-tags.yaml
     ├── language-statuses.yaml
     ├── publication-stages.yaml
+    ├── publisher-access-statuses.yaml
     ├── relationship-types.yaml
     └── record-statuses.yaml
 ```
@@ -48,6 +50,7 @@ The database records the following fields for each work:
 - Document type (`document_type`): The kind of document. Allowed values are `research_article`, `review`, `correction`, and `book`.
 - Publication stage (`publication_stage`): The publication stage of the document. Allowed values are `preprint` and `publication`.
 - Language status (`language_status`): The result of checking the publication's primary language. Allowed values are `english`, `non_english`, `uncertain`, and `unchecked`.
+- Human user-reported publisher access (`human_user_reported_publisher_access`): A required current human report about access to the publisher's main full text, regardless of whether that full text is provided as HTML or PDF. Allowed values are `access`, `no_access`, and `unknown`. Automated checks must not infer this value.
 - PIP LitDB file status (`pip_litdb_file_status`): Publicly committed statuses for the project's private holdings of the main PDF, supplementary material, and full-text HTML. All three status fields are required.
 - Title
 - Authors: One ordered list of author objects. `name` preserves the name as published in the work. Optional `canonical_name` records the project's normalized form of the same author's name and should be omitted when it is identical to `name`. ORCID identifiers are not stored.
@@ -57,6 +60,29 @@ The database records the following fields for each work:
 - Journal or publication venue (`journal`): For an article, use the standard full journal name rather than an abbreviation. For a book, use its series name when available, otherwise its publisher or imprint. For a preprint, use the server name.
 - PIP LitDB status: A text field used exclusivly by human end users
 - PIP LitDB notes: An optional field used only when a note is essential or temporary
+- Jamie's human-only notes (`jamies_human_only_notes`): An optional collection of human-authored tags. Its only subfield is currently `tags`.
+
+### Jamie's human-only notes policy
+
+`jamies_human_only_notes` is for human use only. AI and automation must not infer, add, change, or remove its tags. Each specific edit requires explicit human permission. Tools may preserve, validate, display, and user-filter these tags without interpreting them.
+
+This field is part of the public metadata database and remains publicly visible. “Human-only” restricts how the field is authored and interpreted; it does not make the field private.
+
+When `jamies_human_only_notes` is present, its required `tags` subfield is a list containing one or more values controlled by `database/vocabularies/jamies-human-only-note-tags.yaml`. The currently allowed tags are:
+
+- `read_later`
+- `interesting_for_cooperativity`
+- `important_to_me`
+- `interesting_monomer`
+
+Blank is the default. Represent blank by omitting `jamies_human_only_notes` entirely, rather than storing an empty object or empty `tags` list. When tags are present, for example:
+
+```yaml
+jamies_human_only_notes:
+  tags:
+    - read_later
+    - interesting_for_cooperativity
+```
 
 File status values are defined in `database/vocabularies/file-statuses.yaml`:
 
@@ -87,6 +113,7 @@ doi: "10.1234/example.123"
 publication_year: 2024
 journal: "BioRxiv"
 language_status: unchecked
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: unchecked
   supplementary_material: unchecked
@@ -121,7 +148,7 @@ from being added again under a different ID.
 Automated database validation checks:
 
 - Every record follows `paper.schema.json`.
-- Every `document_type`, `publication_stage`, `language_status`, and `pip_litdb_file_status` value is defined in its corresponding vocabulary file.
+- Every `document_type`, `publication_stage`, `language_status`, `human_user_reported_publisher_access`, `pip_litdb_file_status`, and `jamies_human_only_notes.tags` value is defined in its corresponding vocabulary file.
 - Every record filename matches the five-digit format `NNNNN.yaml`, begins at `00001`, and uniquely determines that record's PIP LitDB ID.
 - Duplicate DOIs.
 - Related-paper IDs and relationship types.
@@ -139,7 +166,7 @@ either accidental duplicates or legitimate separate versions.
 Run the complete validation locally with Python 3.12 or later:
 
 ```powershell
-python -m pip install -r requirements-validation.txt
+python -m pip install -r requirements.txt
 python -m unittest discover -s tests -v
 python scripts/validate_metadata.py
 ```
@@ -223,7 +250,7 @@ papers (private)/
     |   |-- original-name.docx
     |   `-- original-name.ext
     |-- extraction_old/          # Temporary legacy comparison baseline
-    |-- extraction/              # Polished machine-ready output
+    |-- extraction/              # record.json plus linked binary/large assets
     `-- extraction_diagnostic/   # Technical reports and review material
 ```
 
@@ -238,8 +265,47 @@ sources. They will eventually be deleted through a separate, explicitly
 authorized cleanup after their replacements have been approved.
 
 The detailed structure and behavior of new `extraction/` and
-`extraction_diagnostic/` outputs will be documented separately. Empty or
+`extraction_diagnostic/` outputs are summarized below. Empty or
 not-yet-generated directories do not need to be created as placeholders.
+
+Each new extraction has one canonical, content-only `record.json`; this is the
+sole content format produced for all future extraction runs. Article and
+supplement text, captions, references, and structured tables are stored in that
+file. Images, videos, original supplements, workbooks, datasets, and other
+binary or large assets remain separate files referenced by paths relative to
+the record's `extraction/` directory. New-format extractions do not create
+per-table JSON or CSV files. Provenance, confidence, OCR details, and review
+material remain out of the polished record in the sibling
+`extraction_diagnostic/` directory.
+
+For a human-friendly view, open the shared repository-root
+`extraction_viewer.html` and choose the `papers (private)/` directory. The
+viewer scans only its immediate five-digit record directories and lists those
+with a live `extraction/record.json`. Search the list, select a record, return
+to the list to choose another, or use **Refresh records** and **Change private
+folder** as needed. The viewer formats the canonical JSON and linked local
+assets; it is not copied into each record.
+
+This is the viewer's only loading workflow: it does not accept an individual
+`extraction/` folder, standalone `record.json`, or URL/query parameter. It is
+read-only and offline, and access to the chosen private directory lasts only
+for the current browser session. Historical `record.md` files remain supported
+only by extraction validation for older packages, not by the viewer.
+
+Install the repository dependencies and create a staged candidate one record
+at a time:
+
+```powershell
+python -m pip install -r requirements.txt
+python scripts/extract_record.py NNNNN --run-id pilot-001
+python scripts/validate_extraction.py "papers (private)/staging/NNNNN/pilot-001" --expected-title "Exact title"
+```
+
+For scanned pages, the pipeline uses pinned local OCR dependencies and records
+the engine, model hashes, page regions, confidence, and reviewed repairs only
+in `extraction_diagnostic/`. Figure and scheme pixels are excluded from OCR.
+Candidates remain staged until they have passed validation and review and the
+user explicitly approves promotion.
 
 When both a publisher copy and a PubMed Central copy of the same manuscript are available, retain
 the publisher copy as `main.pdf`; retain the PubMed Central copy only when no publisher copy is

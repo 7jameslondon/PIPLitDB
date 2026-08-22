@@ -12,6 +12,7 @@ doi: "10.1046/j.1432-1327.1999.00515.x"
 publication_year: 1999
 journal: "European Journal of Biochemistry"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

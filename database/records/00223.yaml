@@ -14,6 +14,7 @@ doi: "10.1002/bdd.648"
 publication_year: 2009
 journal: "Biopharmaceutics & Drug Disposition"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

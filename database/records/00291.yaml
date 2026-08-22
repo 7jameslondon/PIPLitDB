@@ -7,8 +7,8 @@ authors:
 doi: "10.1039/b306685a"
 publication_year: 2003
 journal: "Organic & Biomolecular Chemistry"
-pip_litdb_notes: "Publisher full-text HTML is unavailable through the current institutional access."
 language_status: english
+human_user_reported_publisher_access: no_access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

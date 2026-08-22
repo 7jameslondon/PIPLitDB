@@ -14,6 +14,7 @@ doi: "10.1021/acs.jpclett.5c01542"
 publication_year: 2025
 journal: "The Journal of Physical Chemistry Letters"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

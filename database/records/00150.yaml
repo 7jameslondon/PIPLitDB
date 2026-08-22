@@ -15,6 +15,7 @@ doi: "10.3892/ijo.2013.2073"
 publication_year: 2013
 journal: "International Journal of Oncology"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

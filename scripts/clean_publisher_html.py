@@ -182,7 +182,8 @@ def clean_html(
     # article element. Select it before stripping the surrounding global
     # header, navigation, recommendations, and account controls.
     sciencedirect_articles = root.xpath(
-        './/article[.//*[@id="abstracts"] and .//*[@id="body"]]'
+        './/article[(.//*[@id="abstracts"] and .//*[@id="body"])'
+        ' or .//*[@id="bodymatter"]]'
     )
     if sciencedirect_articles:
         root = copy.deepcopy(
@@ -244,7 +245,8 @@ def clean_html(
         './/*[@id="ContentColumn" and .//h1 and '
         '(.//*[contains(translate(normalize-space(string(.)), '
         '"ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "references")] '
-        'or .//*[@id="references"])]'
+        'or .//*[@id="references"] '
+        'or .//*[contains(concat(" ", normalize-space(@class), " "), " article-body ")])]'
     )
     if content_columns:
         root = copy.deepcopy(
@@ -295,6 +297,23 @@ def clean_html(
         # figure-thumbnail list, and table index in a div-based navigation
         # block. The inline article body below already retains each item.
         './/*[@role="navigation" and @aria-label="Table of contents"]',
+        # Modern Cell Press pages keep the complete article in ``bodymatter``
+        # but append author popovers, action/navigation rails, an advertising
+        # aside, metrics, and unrelated recommendations inside the same
+        # semantic article. Preserve the article header, relationship block,
+        # body, and any real supplementary section while removing those
+        # separable interface containers.
+        './/*[contains(concat(" ", normalize-space(@class), " "), " article-header__download-full-issue ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " core-header-aside ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " core-nav-wrapper ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " core-sections-menu-outer ")]',
+        './/*[@id="core-collateral-metrics"]',
+        './/*[@id="core-collateral-relatedArticles"]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " core-authors-details ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " dropBlock__holder ")]',
+        './/aside[@data-core-aside="right-rail"]',
+        './/*[@id="core-linked-content" and not(.//a)]',
+        './/*[@id="core-collateral-supplementary" and not(.//a or .//img or normalize-space(string(.)))]',
         # Frontiers duplicates article figures in a separate outline rail.
         # Keep the numbered inline ArticleFigure blocks and discard this
         # navigation-only thumbnail list.
@@ -349,6 +368,19 @@ def clean_html(
         './/*[contains(concat(" ", normalize-space(@class), " "), " vt-widget-alerts ")]',
         './/*[contains(concat(" ", normalize-space(@class), " "), " vt-related-content ")]',
         './/*[contains(concat(" ", normalize-space(@class), " "), " widget-ArticleDataSupplements ")]',
+        # Current ACS article pages place author-detail popovers, duplicate
+        # deck/metadata blocks, citation/search controls, and the PDF action
+        # inside the same ContentColumn as short Addition/Correction bodies.
+        # Keep the literal byline, citation history, and scientific text while
+        # removing those separable interface and duplicate containers.
+        './/*[contains(concat(" ", normalize-space(@class), " "), " al-author-info-wrap ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " article-deck-wrap ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " author-expand-collapse-metadata-wrap ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " js-metadata-wrap ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " vt-toolbar-wrap ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " article-pdf-button ")]',
+        './/*[contains(concat(" ", normalize-space(@class), " "), " history-label ")]',
+        './/*[@id="sr-fig-viewer-action"]',
         # J-STAGE appends asynchronous UI panels after the complete inline
         # article. They duplicate figures/tables or remain empty placeholders
         # when no supplementary material, citations, or result list exists.
@@ -671,6 +703,46 @@ def clean_html(
     ):
         element.tag = "span"
 
+    # Modern Cell Press bylines use clickable author-name popovers and
+    # responsive show-more wrappers. The popover bodies were removed above;
+    # retain every literal byline name and correspondence link as ordinary
+    # article text, including authors initially hidden by the responsive UI.
+    for element in root.xpath(
+        './/*[contains(concat(" ", normalize-space(@class), " "), " contributors ")]'
+        '//a[@data-db-target-for]'
+    ):
+        element.tag = "span"
+        for attribute in ("href", "role", "aria-expanded", "aria-controls"):
+            element.attrib.pop(attribute, None)
+
+    for element in list(
+        root.xpath(
+            './/*[contains(concat(" ", normalize-space(@class), " "), " contributors ")]'
+            '//span[@data-displayed-on and not(.//*[@property="author"])]'
+        )
+    ):
+        remove_element(element)
+        removed_elements += 1
+
+    for element in list(
+        root.xpath(
+            './/*[contains(concat(" ", normalize-space(@class), " "), " contributors ")]'
+            '//span[@data-hidden-on and .//*[@property="author"]]'
+        )
+    ):
+        element.drop_tag()
+        removed_elements += 1
+
+    # The full-size-image anchor is a viewer control. The exact figure image
+    # itself is embedded below and its native figure/caption remain intact.
+    for element in list(
+        root.xpath(
+            './/figure//a[contains(concat(" ", normalize-space(@class), " "), " icon-full-screen ") and .//img]'
+        )
+    ):
+        element.drop_tag()
+        removed_elements += 1
+
     for tag in UNWRAPPED_TAGS:
         for element in list(root.xpath(f".//{tag}")):
             element.drop_tag()
@@ -915,6 +987,49 @@ def clean_html(
             embedded_alts.add(alt)
         if figure_number is not None and figure_number in large_figure_assets:
             embedded_large_figures.add(figure_number)
+
+    # Preserve publisher paragraphs and links without leaving control-only
+    # anchors or browser-dependent root-relative URLs in the offline archive.
+    for element in root.xpath('.//*[@role="paragraph"]'):
+        if etree.QName(element).localname.lower() == "div":
+            element.tag = "p"
+        element.attrib.pop("role", None)
+
+    for anchor in root.xpath(".//a"):
+        href = (anchor.get("href") or "").strip()
+        if not href or href.lower().startswith("javascript:"):
+            anchor.tag = "span"
+            anchor.attrib.pop("href", None)
+            anchor.attrib.pop("target", None)
+            continue
+        if re.fullmatch(
+            r"http://pubs\.acs\.org\.\d{2}/\d{2}/\d{4}",
+            href,
+            flags=re.IGNORECASE,
+        ):
+            anchor.set("href", "https://pubs.acs.org")
+            anchor.text = "https://pubs.acs.org."
+            for child in list(anchor):
+                anchor.remove(child)
+            continue
+        if href.lower().startswith("http://pubs.acs.org/"):
+            anchor.set("href", "https://" + href[len("http://") :])
+            continue
+        if not href.startswith("#"):
+            anchor.set("href", urljoin(base_url, href))
+
+    # Publisher controls can leave whitespace-only layout divs behind after
+    # their scripts, buttons, and widgets are removed. They contain no
+    # archival content, so prune them from the final body.
+    while True:
+        empty_divs = root.xpath(
+            './/div[not(*) and not(normalize-space(string(.)))]'
+        )
+        if not empty_divs:
+            break
+        for element in reversed(empty_divs):
+            remove_element(element)
+            removed_elements += 1
 
     removed_attributes = 0
     event_attribute = re.compile(r"^on", re.IGNORECASE)

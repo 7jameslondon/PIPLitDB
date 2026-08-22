@@ -9,3 +9,7 @@ metadata_complete:
 verified:
   label: Verified
   description: The record metadata has been checked against an authoritative source.
+
+extracted_approved:
+  label: Extracted - Approved
+  description: The record has a completed extraction that has been reviewed and approved.

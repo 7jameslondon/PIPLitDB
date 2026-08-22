@@ -11,6 +11,7 @@ doi: "10.1158/0008-5472.can-16-2503"
 publication_year: 2017
 journal: "Cancer Research"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

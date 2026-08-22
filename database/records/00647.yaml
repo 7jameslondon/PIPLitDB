@@ -1,0 +1,25 @@
+document_type: correction
+publication_stage: publication
+title: "Arresting Cancer Proliferation by Small-Molecule Gene Regulation"
+authors:
+  - name: "Liliane A. Dickinson"
+  - name: "Ryan Burnett"
+  - name: "Christian Melander"
+  - name: "Benjamin S. Edelson"
+  - name: "Paramjit S. Arora"
+  - name: "Peter B. Dervan"
+  - name: "Joel M. Gottesfeld"
+doi: "10.1016/j.chembiol.2006.02.006"
+publication_year: 2006
+journal: "Chemistry & Biology"
+related_papers:
+  - pip_litdb_id: "00553"
+    relationship_type: corrects
+pip_litdb_notes: "Erratum in volume 13, issue 3, p. 339, published 2006-03-01. It corrects the Figure 1 polyamide–chlorambucil structures: the compounds were α-linked rather than γ-linked hairpins. The two classes differ in alkylation reactivity and mouse toxicity, but the key data were reproduced and the paper's conclusions are unchanged."
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: not_applicable
+  full_text_html: present
+pip_litdb_status: verified

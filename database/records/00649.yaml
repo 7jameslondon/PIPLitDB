@@ -1,0 +1,28 @@
+document_type: correction
+publication_stage: publication
+title: "Corrigendum to “Chlorambucil-conjugated PI-polyamide (Chb-M’), a transcription inhibitor of the RUNX family, has anti-tumor activity against SHH-type medulloblastoma with p53 mutation” [Biochem. Biophys. Res. Commun. 620 (10 September 2022) 150–157]"
+authors:
+  - name: "Yasuzumi Matsui"
+  - name: "Yohei Mineharu"
+  - name: "Yuki Noguchi"
+  - name: "Etsuko Yamamoto Hattori"
+  - name: "Hirohito Kubota"
+  - name: "Masahiro Hirata"
+  - name: "Susumu Miyamoto"
+  - name: "Hiroshi Sugiyama"
+  - name: "Yoshiki Arakawa"
+  - name: "Yasuhiko Kamikubo"
+doi: "10.1016/j.bbrc.2023.03.022"
+publication_year: 2023
+journal: "Biochemical and Biophysical Research Communications"
+related_papers:
+  - pip_litdb_id: "00617"
+    relationship_type: corrects
+pip_litdb_notes: "Corrigendum in volume 656, pp. 146–147, published online 2023-03-23 and assigned to the 2023-05-14 issue (PMID 36966045). It corrects the Chb-M’ abbreviation, the Figure 1 legend, the control-reagent names in section 3.2, and Figure 2, replacing mislabeled DMSO controls with Chb; it states that the experimental results remain unchanged."
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: needed
+  supplementary_material: not_applicable
+  full_text_html: not_applicable
+pip_litdb_status: verified
