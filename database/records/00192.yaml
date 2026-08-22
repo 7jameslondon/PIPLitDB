@@ -13,6 +13,7 @@ doi: "10.1016/j.antiviral.2011.05.014"
 publication_year: 2011
 journal: "Antiviral Research"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

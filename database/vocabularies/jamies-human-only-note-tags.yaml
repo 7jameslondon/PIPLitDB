@@ -1,0 +1,15 @@
+read_later:
+  label: Read later
+  description: Jamie marked this work to be read later.
+
+interesting_for_cooperativity:
+  label: Interesting for cooperativity
+  description: Jamie marked this work as interesting for cooperativity.
+
+important_to_me:
+  label: Important to me
+  description: Jamie marked this work as personally important.
+
+interesting_monomer:
+  label: Interesting monomer
+  description: Jamie marked this work as an interesting monomer.

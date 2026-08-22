@@ -11,6 +11,7 @@ doi: "10.1021/acs.jmedchem.3c00613"
 publication_year: 2023
 journal: "Journal of Medicinal Chemistry"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

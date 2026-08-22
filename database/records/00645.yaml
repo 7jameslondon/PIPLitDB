@@ -1,0 +1,31 @@
+document_type: correction
+publication_stage: publication
+title: "Corrigendum to “Novel diamino imidazole and pyrrole-containing polyamides: Synthesis and DNA binding studies of mono- and diamino-phenyl-ImPy*Im polyamides designed to target 5′-ACGCGT-3′” [Bioorg. Med. Chem. 20 (2012) 693–701]"
+authors:
+  - name: "Vijay Satam"
+  - name: "Balaji Babu"
+  - name: "Sameer Chavda"
+  - name: "Mia Savagian"
+  - name: "Robert Sjoholm"
+  - name: "Samuel Tzou"
+  - name: "Joseph Ramos"
+  - name: "Yang Liu"
+  - name: "Konstantinos Kiakos"
+  - name: "Shicai Lin"
+  - name: "W. David Wilson"
+  - name: "John A. Hartley"
+  - name: "Moses Lee"
+doi: "10.1016/j.bmc.2012.06.037"
+publication_year: 2012
+journal: "Bioorganic & Medicinal Chemistry"
+related_papers:
+  - pip_litdb_id: "00546"
+    relationship_type: corrects
+pip_litdb_notes: "Volume 20, issue 15, p. 4881, published 2012-08-01. This corrigendum states that Joseph Ramos was inadvertently omitted from the original author line and supplies the corrected author line."
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: needed
+  supplementary_material: not_applicable
+  full_text_html: not_applicable
+pip_litdb_status: verified

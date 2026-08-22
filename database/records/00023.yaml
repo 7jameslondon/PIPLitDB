@@ -32,6 +32,7 @@ doi: "10.14348/molcells.2022.2031"
 publication_year: 2022
 journal: "Molecules and Cells"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

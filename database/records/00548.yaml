@@ -8,9 +8,10 @@ doi: "10.1007/978-3-540-78709-9_11"
 publication_year: 2008
 journal: "RNA Technologies in Cardiovascular Medicine and Research"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "Review chapter (pp. 209–231) in the Springer book RNA Technologies in Cardiovascular Medicine and Research. The publisher provides the full chapter as a PDF but does not provide full-text HTML."

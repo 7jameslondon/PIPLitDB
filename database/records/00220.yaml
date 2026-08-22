@@ -15,9 +15,9 @@ doi: "10.2174/157340609788185945"
 publication_year: 2009
 journal: "Medicinal Chemistry"
 language_status: english
+human_user_reported_publisher_access: no_access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_available
 pip_litdb_status: verified
-pip_litdb_notes: "The article's full text is unavailable through the current institutional access."

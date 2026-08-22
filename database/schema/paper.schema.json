@@ -14,6 +14,7 @@
     "publication_year",
     "journal",
     "language_status",
+    "human_user_reported_publisher_access",
     "pip_litdb_file_status"
   ],
   "properties": {
@@ -58,6 +59,11 @@
       "minLength": 1,
       "description": "A value defined in database/vocabularies/language-statuses.yaml."
     },
+    "human_user_reported_publisher_access": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A current human report about access to the publisher's main full text, using a value defined in database/vocabularies/publisher-access-statuses.yaml."
+    },
     "pip_litdb_file_status": {
       "type": "object",
       "additionalProperties": false,
@@ -78,6 +84,26 @@
         }
       },
       "description": "Publicly committed statuses for source materials in the PIP LitDB project's private holdings."
+    },
+    "jamies_human_only_notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tags"
+      ],
+      "properties": {
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Human-authored tags defined in database/vocabularies/jamies-human-only-note-tags.yaml."
+        }
+      },
+      "description": "Jamie's human-only metadata. AI and automation must not infer, add, change, or remove these notes without explicit human permission. Omit this object when no tags are assigned."
     },
     "related_papers": {
       "type": "array",

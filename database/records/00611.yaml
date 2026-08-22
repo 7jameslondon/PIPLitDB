@@ -7,12 +7,14 @@ authors:
   - name: "Goran Rasched"
   - name: "Partha P. Parui"
   - name: "Bernd Brutschy"
+    canonical_name: "Bernhard Brutschy"
   - name: "Michael Famulok"
   - name: "Alexander Heckel"
 doi: "10.1002/anie.200700469"
 publication_year: 2007
 journal: "Angewandte Chemie International Edition"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

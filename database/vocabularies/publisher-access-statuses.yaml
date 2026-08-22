@@ -1,0 +1,11 @@
+access:
+  label: Access
+  description: A human user has reported access to the publisher's main full text for this work.
+
+no_access:
+  label: No access
+  description: A human user has reported that they do not have access to the publisher's main full text for this work.
+
+unknown:
+  label: Unknown
+  description: No current human-user report about access to the publisher's main full text is recorded for this work.

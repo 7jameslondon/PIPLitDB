@@ -9,9 +9,10 @@ doi: "10.1002/1521-3765(20001215)6:24<4487::aid-chem4487>3.0.co;2-c"
 publication_year: 2000
 journal: "Chemistry – A European Journal"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

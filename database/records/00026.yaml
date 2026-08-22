@@ -21,7 +21,11 @@ authors:
 doi: "10.1038/s42003-022-03917-5"
 publication_year: 2022
 journal: "Communications Biology"
+related_papers:
+  - pip_litdb_id: "00643"
+    relationship_type: is_corrected_by
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

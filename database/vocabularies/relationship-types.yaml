@@ -8,6 +8,16 @@ has_preprint:
   description: This publication has the related preprint.
   inverse: is_preprint_of
 
+is_preliminary_version_of:
+  label: Is preliminary version of
+  description: This document is a preliminary or abbreviated version of the related expanded publication.
+  inverse: has_preliminary_version
+
+has_preliminary_version:
+  label: Has preliminary version
+  description: This publication has the related preliminary or abbreviated version.
+  inverse: is_preliminary_version_of
+
 corrects:
   label: Corrects
   description: This document corrects the related document.

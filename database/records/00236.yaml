@@ -13,6 +13,7 @@ doi: "10.1016/j.bmc.2008.04.060"
 publication_year: 2008
 journal: "Bioorganic & Medicinal Chemistry"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

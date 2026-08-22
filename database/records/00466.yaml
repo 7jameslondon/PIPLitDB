@@ -12,9 +12,10 @@ doi: "10.1080/07391102.1997.10508159"
 publication_year: 1997
 journal: "Journal of Biomolecular Structure and Dynamics"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

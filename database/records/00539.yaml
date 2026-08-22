@@ -13,6 +13,7 @@ doi: "10.1039/c4sc03755c"
 publication_year: 2015
 journal: "Chemical Science"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present

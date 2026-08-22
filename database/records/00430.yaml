@@ -11,6 +11,7 @@ doi: "10.1021/bi301327v"
 publication_year: 2012
 journal: "Biochemistry"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: needed

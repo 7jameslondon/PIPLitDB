@@ -14,9 +14,10 @@ doi: "10.4161/cc.5.14.2913"
 publication_year: 2006
 journal: "Cell Cycle"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: needed
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher does not provide full HTML text for this article."

@@ -12,6 +12,7 @@ doi: "10.1021/jp045277q"
 publication_year: 2005
 journal: "The Journal of Physical Chemistry B"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable

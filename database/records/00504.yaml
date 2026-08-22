@@ -12,9 +12,10 @@ doi: "10.1016/s0040-4039(00)88790-0"
 publication_year: 1990
 journal: "Tetrahedron Letters"
 language_status: english
+human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: not_available
+  full_text_html: not_applicable
 pip_litdb_status: verified
 pip_litdb_notes: "The publisher provides only the main article PDF; no full-text HTML version or supplementary material is available from the publisher."

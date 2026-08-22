@@ -10,8 +10,13 @@ doi: "10.1021/ja028459b"
 publication_year: 2003
 journal: "Journal of the American Chemical Society"
 language_status: english
+human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
+jamies_human_only_notes:
+  tags:
+    - read_later
+    - interesting_for_cooperativity
 pip_litdb_status: verified
