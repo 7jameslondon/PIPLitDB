@@ -7,6 +7,8 @@ from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 import unittest
 
+from PIL import Image, ImageDraw
+
 from scripts.extraction.validation import _record_json_counts, validate_candidate
 
 
@@ -305,6 +307,41 @@ def _refresh_manifest_files(extraction: Path, diagnostic: Path) -> None:
     _write_json(path, manifest)
 
 
+def _install_pdf_crop_fixture(
+    extraction: Path,
+    diagnostic: Path,
+    *,
+    touches_left: bool,
+) -> None:
+    output_path = "figures/figure_001.png"
+    image = Image.new("RGB", (32, 24), "white")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((4, 5, 20, 18), fill="black")
+    if touches_left:
+        image.putpixel((0, 12), (0, 0, 0))
+    image.save(extraction / output_path, format="PNG")
+
+    manifest_path = diagnostic / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    asset = next(
+        row
+        for row in manifest["assets"]
+        if row.get("asset_id") == "figure_001"
+    )
+    asset.update(
+        {
+            "box": [10.0, 20.0, 42.0, 44.0],
+            "coordinate_system": "pdf-points-top-left",
+            "dimensions_pixels": {"width": 32, "height": 24},
+            "media_type": "image/png",
+            "page": 1,
+            "source_path": f"papers (private)/{RECORD_ID}/pdf/main.pdf",
+        }
+    )
+    _write_json(manifest_path, manifest)
+    _refresh_manifest_files(extraction, diagnostic)
+
+
 class RecordJsonValidationTests(unittest.TestCase):
     def _candidate(
         self,
@@ -426,6 +463,32 @@ class RecordJsonValidationTests(unittest.TestCase):
         self.assertEqual(manifest["assets"], _manifest_assets(_payload()))
         mismatch = self._report(extraction, diagnostic, title="Wrong title")
         self.assertIn("title_mismatch", self._codes(mismatch))
+
+    def test_pdf_crop_with_safe_whitespace_has_no_boundary_warning(self) -> None:
+        extraction, diagnostic, _ = self._candidate()
+        _install_pdf_crop_fixture(extraction, diagnostic, touches_left=False)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertTrue(report.passed, report.as_dict())
+        self.assertNotIn("pdf_crop_content_touches_boundary", self._codes(report))
+
+    def test_pdf_crop_touching_boundary_gets_advisory_warning(self) -> None:
+        extraction, diagnostic, _ = self._candidate()
+        _install_pdf_crop_fixture(extraction, diagnostic, touches_left=True)
+
+        report = self._report(extraction, diagnostic)
+
+        matches = [
+            finding
+            for finding in report.findings
+            if finding.code == "pdf_crop_content_touches_boundary"
+        ]
+        self.assertTrue(report.passed, report.as_dict())
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].severity, "cosmetic")
+        self.assertEqual(matches[0].path, "figures/figure_001.png")
+        self.assertIn("left (1 pixel)", matches[0].message)
 
     def test_presentation_figure_caption_blocks_count_as_supplementary_figures(self) -> None:
         payload = _payload()

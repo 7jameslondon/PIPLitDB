@@ -10,6 +10,7 @@ from scripts.extraction.models import EmbeddedAsset, SourceFile, SupplementExtra
 from scripts.extraction.pipeline import (
     ExtractionError,
     _asset_identity_keys,
+    _embedded_assets_after_pdf_overrides,
     _materialize_embedded_assets,
     _prepare_supplement_assets,
 )
@@ -60,6 +61,20 @@ class EmbeddedAssetTests(unittest.TestCase):
             )
             self.assertEqual(assets[0]["sha256"], hashlib.sha256(data).hexdigest())
             self.assertFalse(assets[0]["ocr_performed"])
+
+    def test_reviewed_pdf_crop_replaces_same_id_embedded_asset(self) -> None:
+        first = self._pending()
+        second = self._pending(
+            asset_id="figure_002",
+            label="Figure 2",
+            output_path="figures/main/figure_002.png",
+        )
+        remaining = _embedded_assets_after_pdf_overrides(
+            [first, second],
+            [{"asset_id": "figure_001"}],
+        )
+
+        self.assertEqual(remaining, [second])
 
     def test_rejects_traversal(self) -> None:
         pending = self._pending(output_path="../escape.png")

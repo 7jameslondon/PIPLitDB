@@ -12,7 +12,7 @@ from typing import Any, Callable, Iterable, Mapping
 import uuid
 
 from .discovery import discover_sources, source_fingerprint
-from .metadata import load_record_metadata
+from .metadata import load_record_metadata, load_record_status
 from .paths import (
     UnsafePathError,
     atomic_write_json,
@@ -57,6 +57,32 @@ class PromotionResult:
             "source_fingerprint": self.source_fingerprint,
             "accepted_finding_codes": list(self.accepted_finding_codes),
             "finding_count": self.finding_count,
+        }
+
+
+@dataclass(frozen=True)
+class StagingCleanupResult:
+    record_id: str
+    approved_run_id: str
+    staging_root: Path
+    removed: bool
+    removed_run_ids: tuple[str, ...]
+    checked_only: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        if self.checked_only:
+            status = "eligible" if self.removed_run_ids else "already_absent"
+        else:
+            status = "removed" if self.removed else "already_absent"
+        return {
+            "schema_version": "1.0",
+            "status": status,
+            "record_id": self.record_id,
+            "approved_run_id": self.approved_run_id,
+            "staging_root": str(self.staging_root),
+            "removed": self.removed,
+            "removed_run_ids": list(self.removed_run_ids),
+            "checked_only": self.checked_only,
         }
 
 
@@ -153,13 +179,17 @@ def _read_json_object(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
-def _validate_tree(root: Path, boundary: Path, label: str) -> None:
-    """Validate a directory without ever descending through a reparse point."""
-
+def _validate_directory_root(root: Path, boundary: Path, label: str) -> None:
     ensure_within(root, boundary)
     reject_reparse_chain(root, boundary)
     if not root.is_dir() or is_reparse_point(root):
         raise PromotionError(f"{label} is not a safe directory: {root}")
+
+
+def _validate_tree(root: Path, boundary: Path, label: str) -> None:
+    """Validate a directory without ever descending through a reparse point."""
+
+    _validate_directory_root(root, boundary, label)
 
     pending = [root]
     while pending:
@@ -233,7 +263,7 @@ def _recorded_source_rows(value: Any) -> tuple[tuple[Any, ...], ...]:
     return tuple(sorted(rows))
 
 
-def _verify_current_inputs(
+def _verify_current_source_inputs(
     repository_root: Path,
     record_root: Path,
     record_id: str,
@@ -241,7 +271,7 @@ def _verify_current_inputs(
     manifest: Mapping[str, Any],
     sources_document: Mapping[str, Any],
 ) -> str:
-    """Verify current source bytes and the private override against the run."""
+    """Verify current source bytes and the private override against a snapshot."""
 
     current_sources = discover_sources(repository_root, record_id)
     if _recorded_source_rows(sources_document.get("sources")) != _normalized_source_rows(
@@ -274,16 +304,97 @@ def _verify_current_inputs(
         raise PromotionError("sources.json record_id does not match the requested record")
     if manifest.get("record_id") != record_id:
         raise PromotionError("manifest.json record_id does not match the requested record")
-    if manifest.get("pipeline_code_sha256") != _pipeline_code_sha256():
-        raise PromotionError(
-            "the staged candidate was built with stale extraction pipeline code"
-        )
     for label, document in (
         ("sources.json", sources_document),
         ("manifest.json", manifest),
     ):
         if document.get("source_fingerprint") != fingerprint:
             raise PromotionError(f"{label} has a stale source fingerprint")
+    return fingerprint
+
+
+def _verify_current_inputs(
+    repository_root: Path,
+    record_root: Path,
+    record_id: str,
+    diagnostic_root: Path,
+    manifest: Mapping[str, Any],
+    sources_document: Mapping[str, Any],
+) -> str:
+    """Verify current sources and require the current extraction implementation."""
+
+    fingerprint = _verify_current_source_inputs(
+        repository_root,
+        record_root,
+        record_id,
+        diagnostic_root,
+        manifest,
+        sources_document,
+    )
+    if manifest.get("pipeline_code_sha256") != _pipeline_code_sha256():
+        raise PromotionError(
+            "the staged candidate was built with stale extraction pipeline code"
+        )
+    return fingerprint
+
+
+def _verify_approved_publication_inputs(
+    repository_root: Path,
+    record_root: Path,
+    record_id: str,
+    diagnostic_root: Path,
+    manifest: Mapping[str, Any],
+    sources_document: Mapping[str, Any],
+) -> str:
+    """Verify immutable publication inputs after the expected status change.
+
+    Public metadata is fingerprinted when a candidate is built, but approval
+    intentionally changes ``pip_litdb_status`` afterward. For cleanup, compare
+    every publication source and the private override exactly, then validate
+    the current public bibliographic metadata and approved status separately.
+    """
+
+    current_sources = discover_sources(repository_root, record_id)
+    current_rows = tuple(
+        row for row in _normalized_source_rows(current_sources) if row[0] != "public_metadata"
+    )
+    recorded_rows = tuple(
+        row
+        for row in _recorded_source_rows(sources_document.get("sources"))
+        if row[0] != "public_metadata"
+    )
+    if recorded_rows != current_rows:
+        raise PromotionError(
+            "the approved publication source inventory no longer matches current files"
+        )
+
+    current_override = record_root / "extraction_overrides.yaml"
+    approved_override = diagnostic_root / "overrides.yaml"
+    current_exists = os.path.lexists(current_override)
+    approved_exists = os.path.lexists(approved_override)
+    if current_exists:
+        reject_reparse_chain(current_override, record_root)
+        ensure_within(current_override, record_root)
+        if is_reparse_point(current_override) or not current_override.is_file():
+            raise PromotionError(f"private extraction override is unsafe: {current_override}")
+    if approved_exists and (
+        is_reparse_point(approved_override) or not approved_override.is_file()
+    ):
+        raise PromotionError(f"approved extraction override is unsafe: {approved_override}")
+    if current_exists != approved_exists:
+        raise PromotionError("the approved override does not match the current private override")
+    if current_exists and sha256_file(current_override) != sha256_file(approved_override):
+        raise PromotionError("the private extraction override changed after approval")
+
+    if sources_document.get("record_id") != record_id:
+        raise PromotionError("sources.json record_id does not match the requested record")
+    if manifest.get("record_id") != record_id:
+        raise PromotionError("manifest.json record_id does not match the requested record")
+    fingerprint = sources_document.get("source_fingerprint")
+    if not isinstance(fingerprint, str) or not fingerprint:
+        raise PromotionError("sources.json has no valid source fingerprint")
+    if manifest.get("source_fingerprint") != fingerprint:
+        raise PromotionError("manifest.json and sources.json fingerprints differ")
     return fingerprint
 
 
@@ -360,6 +471,225 @@ def _remove_temporary_tree(path: Path, record_root: Path) -> None:
     if is_reparse_point(path):
         raise PromotionError(f"refusing to remove unsafe temporary path: {path}")
     shutil.rmtree(path)
+
+
+def cleanup_approved_staging(
+    repository_root: str | Path,
+    record_id: str,
+    *,
+    remove: bool = True,
+) -> StagingCleanupResult:
+    """Remove one record's staging history after independently verifying approval.
+
+    This is deliberately separate from promotion. A failed promotion or public
+    metadata update must never destroy the reviewed candidate needed to retry.
+    """
+
+    try:
+        record_id = validate_record_id(record_id)
+        repository_root = Path(repository_root).resolve(strict=True)
+        private_root = ensure_within(repository_root / "papers (private)", repository_root)
+        reject_reparse_chain(private_root, repository_root)
+        record_root = ensure_within(private_root / record_id, private_root)
+        reject_reparse_chain(record_root, private_root)
+        staging_root = ensure_within(
+            private_root / "staging", private_root, require_exists=False
+        )
+        reject_reparse_chain(staging_root, private_root)
+        record_staging = ensure_within(
+            staging_root / record_id, staging_root, require_exists=False
+        )
+        reject_reparse_chain(record_staging, staging_root)
+    except (FileNotFoundError, OSError, UnsafePathError, ValueError) as exc:
+        raise PromotionError(f"unsafe or unavailable cleanup path: {exc}") from exc
+
+    metadata_path = repository_root / "database" / "records" / f"{record_id}.yaml"
+    try:
+        status = load_record_status(metadata_path)
+    except (FileNotFoundError, OSError, RuntimeError, ValueError) as exc:
+        raise PromotionError(f"could not verify public record status: {exc}") from exc
+    if status != "extracted_approved":
+        raise PromotionError(
+            "staging cleanup requires pip_litdb_status: extracted_approved"
+        )
+
+    live_extraction = record_root / "extraction"
+    live_diagnostic = record_root / "extraction_diagnostic"
+    try:
+        _validate_tree(live_extraction, record_root, "approved live extraction")
+        _validate_tree(live_diagnostic, record_root, "approved live diagnostics")
+    except (FileNotFoundError, OSError, UnsafePathError, ValueError) as exc:
+        raise PromotionError(f"approved live extraction is unavailable or unsafe: {exc}") from exc
+
+    approval = _read_json_object(live_diagnostic / "approval.json", "approval.json")
+    manifest_path = live_diagnostic / "manifest.json"
+    manifest = _read_json_object(manifest_path, "manifest.json")
+    sources_document = _read_json_object(
+        live_diagnostic / "sources.json", "sources.json"
+    )
+    quality = _read_json_object(live_diagnostic / "quality.json", "quality.json")
+
+    approved_run_id = approval.get("run_id")
+    try:
+        if not isinstance(approved_run_id, str):
+            raise ValueError("approval.json run_id must be a string")
+        approved_run_id = validate_run_id(approved_run_id)
+    except ValueError as exc:
+        raise PromotionError(f"approval.json has an invalid run_id: {exc}") from exc
+
+    if approval.get("status") != "approved" or approval.get("record_id") != record_id:
+        raise PromotionError("approval.json does not approve the requested record")
+    if approval.get("approved_by") != "user":
+        raise PromotionError("approval.json does not record explicit user approval")
+    if manifest.get("run_id") != approved_run_id:
+        raise PromotionError("approval.json and manifest.json identify different runs")
+    if quality.get("record_id") != record_id or quality.get("status") != "approved":
+        raise PromotionError("quality.json does not mark the requested record approved")
+    if quality.get("approval") != "approval.json":
+        raise PromotionError("quality.json does not link to approval.json")
+
+    manifest_hash = sha256_file(manifest_path)
+    if approval.get("candidate_manifest_sha256") != manifest_hash:
+        raise PromotionError("approval.json does not match the live manifest")
+
+    fingerprint = _verify_approved_publication_inputs(
+        repository_root,
+        record_root,
+        record_id,
+        live_diagnostic,
+        manifest,
+        sources_document,
+    )
+    if approval.get("source_fingerprint") != fingerprint:
+        raise PromotionError("approval.json has a stale source fingerprint")
+
+    metadata = load_record_metadata(metadata_path, record_id)
+    report = validate_candidate(
+        live_extraction,
+        live_diagnostic,
+        expected_title=metadata.title,
+        expected_metadata=metadata.as_dict(),
+    )
+    hard_findings = _hard_validation_findings(report)
+    if hard_findings:
+        raise PromotionError(
+            "approved live extraction failed integrity validation: "
+            + ", ".join(hard_findings)
+        )
+    accepted_codes = approval.get("accepted_finding_codes")
+    if not isinstance(accepted_codes, list):
+        raise PromotionError("approval.json accepted_finding_codes must be an array")
+    _check_acceptances(report, accepted_codes)
+    stored_validation = _read_json_object(
+        live_diagnostic / "validation.json", "validation.json"
+    )
+    stored_findings = stored_validation.get("findings")
+    if not isinstance(stored_findings, list):
+        raise PromotionError("validation.json findings must be an array")
+    if approval.get("accepted_findings") != stored_findings:
+        raise PromotionError("approval.json does not preserve the reviewed findings")
+    stored_codes = []
+    for finding in stored_findings:
+        if not isinstance(finding, dict) or not isinstance(finding.get("code"), str):
+            raise PromotionError("validation.json contains a malformed finding")
+        stored_codes.append(finding["code"])
+    if sorted(set(stored_codes)) != sorted(accepted_codes):
+        raise PromotionError("approval.json finding codes differ from validation.json")
+
+    live_extraction_snapshot = _tree_snapshot(live_extraction)
+    live_diagnostic_snapshot = _tree_snapshot(live_diagnostic)
+    if not os.path.lexists(record_staging):
+        return StagingCleanupResult(
+            record_id=record_id,
+            approved_run_id=approved_run_id,
+            staging_root=record_staging,
+            removed=False,
+            removed_run_ids=(),
+            checked_only=not remove,
+        )
+
+    _validate_directory_root(record_staging, staging_root, "approved record staging")
+    staged_run = record_staging / approved_run_id
+    _validate_tree(staged_run, record_staging, "approved staged run")
+    staged_extraction = staged_run / "extraction"
+    staged_diagnostic = staged_run / "extraction_diagnostic"
+    _validate_tree(staged_extraction, staged_run, "approved staged extraction")
+    _validate_tree(staged_diagnostic, staged_run, "approved staged diagnostics")
+    if sha256_file(staged_diagnostic / "manifest.json") != manifest_hash:
+        raise PromotionError("approved staged run does not match the live manifest")
+    if _tree_snapshot(staged_extraction) != live_extraction_snapshot:
+        raise PromotionError("approved staged extraction differs from the live extraction")
+    staged_diagnostic_files = {
+        path.relative_to(staged_diagnostic).as_posix(): path
+        for path in staged_diagnostic.rglob("*")
+        if path.is_file()
+    }
+    live_diagnostic_files = {
+        path.relative_to(live_diagnostic).as_posix(): path
+        for path in live_diagnostic.rglob("*")
+        if path.is_file()
+    }
+    expected_live_files = set(staged_diagnostic_files) | {"approval.json"}
+    if set(live_diagnostic_files) != expected_live_files:
+        raise PromotionError(
+            "approved staged and live diagnostics contain different file sets"
+        )
+    staged_quality = _read_json_object(
+        staged_diagnostic / "quality.json", "staged quality.json"
+    )
+    expected_quality = dict(staged_quality)
+    expected_quality.update(
+        {
+            "status": "approved",
+            "validation": "accepted_with_findings" if report.findings else "passed",
+            "approval": "approval.json",
+            "accepted_finding_codes": list(accepted_codes),
+            "accepted_finding_count": len(report.findings),
+        }
+    )
+    if quality != expected_quality:
+        raise PromotionError("approved live quality.json is not the promoted form")
+    for relative_path, staged_path in staged_diagnostic_files.items():
+        if relative_path == "quality.json":
+            continue
+        if sha256_file(staged_path) != sha256_file(live_diagnostic_files[relative_path]):
+            raise PromotionError(
+                "approved staged and live diagnostics differ at " + relative_path
+            )
+
+    removed_run_ids = tuple(
+        sorted(child.name for child in record_staging.iterdir() if child.is_dir())
+    )
+
+    if not remove:
+        return StagingCleanupResult(
+            record_id=record_id,
+            approved_run_id=approved_run_id,
+            staging_root=record_staging,
+            removed=False,
+            removed_run_ids=removed_run_ids,
+            checked_only=True,
+        )
+
+    # Close path-substitution windows immediately before the destructive step.
+    _validate_directory_root(record_staging, staging_root, "approved record staging")
+    reject_reparse_chain(record_staging, staging_root)
+    shutil.rmtree(record_staging)
+    if os.path.lexists(record_staging):
+        raise PromotionError(f"approved staging directory still exists: {record_staging}")
+    if (
+        _tree_snapshot(live_extraction) != live_extraction_snapshot
+        or _tree_snapshot(live_diagnostic) != live_diagnostic_snapshot
+    ):
+        raise PromotionError("live approved output changed during staging cleanup")
+
+    return StagingCleanupResult(
+        record_id=record_id,
+        approved_run_id=approved_run_id,
+        staging_root=record_staging,
+        removed=True,
+        removed_run_ids=removed_run_ids,
+    )
 
 
 def promote_extraction(
@@ -568,5 +898,7 @@ def promote_extraction(
 __all__ = [
     "PromotionError",
     "PromotionResult",
+    "StagingCleanupResult",
+    "cleanup_approved_staging",
     "promote_extraction",
 ]

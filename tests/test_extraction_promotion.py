@@ -9,7 +9,11 @@ import unittest
 
 from scripts.extraction.discovery import discover_sources, source_fingerprint
 from scripts.extraction.paths import atomic_write_json, sha256_file
-from scripts.extraction.promotion import PromotionError, promote_extraction
+from scripts.extraction.promotion import (
+    PromotionError,
+    cleanup_approved_staging,
+    promote_extraction,
+)
 from scripts.extraction.reporting import _pipeline_code_sha256, write_validation_result
 from scripts.extraction.validation import ValidationReport, validate_candidate
 
@@ -231,6 +235,14 @@ class ExtractionPromotionTests(unittest.TestCase):
             (candidate.diagnostic / "validation.json").read_text(encoding="utf-8")
         )
         return [finding["code"] for finding in validation["findings"]]
+
+    def _set_public_status(self, candidate: SyntheticCandidate, status: str) -> None:
+        metadata_path = (
+            candidate.root / "database" / "records" / f"{self.record_id}.yaml"
+        )
+        text = metadata_path.read_text(encoding="utf-8")
+        text = text.replace("pip_litdb_status: partial", f"pip_litdb_status: {status}")
+        metadata_path.write_text(text, encoding="utf-8")
 
     def test_refuses_a_collision_at_either_live_destination(self) -> None:
         for destination_name in ("extraction", "extraction_diagnostic"):
@@ -456,6 +468,80 @@ class ExtractionPromotionTests(unittest.TestCase):
             self.assertEqual(staged_quality["status"], "needs_review")
             self.assertEqual(result.record_id, self.record_id)
             self.assertEqual(result.run_id, self.run_id)
+
+    def test_post_approval_cleanup_removes_only_the_record_staging_tree(self) -> None:
+        with TemporaryDirectory() as directory:
+            candidate = self._make_candidate(directory)
+            sibling = (
+                candidate.root
+                / "papers (private)"
+                / "staging"
+                / "00002"
+                / "sibling-run"
+                / "keep.txt"
+            )
+            sibling.parent.mkdir(parents=True)
+            sibling.write_text("unrelated staging", encoding="utf-8")
+
+            promote_extraction(
+                candidate.root,
+                self.record_id,
+                run_id=self.run_id,
+                accepted_findings=self._finding_codes(candidate),
+            )
+            self._set_public_status(candidate, "extracted_approved")
+            live_record = candidate.record_root / "extraction" / "record.md"
+            live_approval = (
+                candidate.record_root / "extraction_diagnostic" / "approval.json"
+            )
+
+            checked = cleanup_approved_staging(
+                candidate.root, self.record_id, remove=False
+            )
+            self.assertTrue(checked.checked_only)
+            self.assertFalse(checked.removed)
+            self.assertEqual(checked.removed_run_ids, (self.run_id,))
+            self.assertTrue(candidate.run_root.is_dir())
+
+            result = cleanup_approved_staging(candidate.root, self.record_id)
+
+            self.assertTrue(result.removed)
+            self.assertEqual(result.approved_run_id, self.run_id)
+            self.assertEqual(result.removed_run_ids, (self.run_id,))
+            self.assertFalse(candidate.run_root.parent.exists())
+            self.assertTrue(live_record.is_file())
+            self.assertTrue(live_approval.is_file())
+            self.assertEqual(sibling.read_text(encoding="utf-8"), "unrelated staging")
+
+            repeated = cleanup_approved_staging(candidate.root, self.record_id)
+            self.assertFalse(repeated.removed)
+            self.assertEqual(repeated.removed_run_ids, ())
+
+    def test_post_approval_cleanup_refuses_unapproved_metadata(self) -> None:
+        with TemporaryDirectory() as directory:
+            candidate = self._make_candidate(directory)
+            promote_extraction(
+                candidate.root,
+                self.record_id,
+                run_id=self.run_id,
+                accepted_findings=self._finding_codes(candidate),
+            )
+
+            with self.assertRaisesRegex(PromotionError, "extracted_approved"):
+                cleanup_approved_staging(candidate.root, self.record_id)
+
+            self.assertTrue(candidate.run_root.is_dir())
+            self.assertTrue((candidate.record_root / "extraction").is_dir())
+
+    def test_post_approval_cleanup_refuses_missing_live_approval(self) -> None:
+        with TemporaryDirectory() as directory:
+            candidate = self._make_candidate(directory)
+            self._set_public_status(candidate, "extracted_approved")
+
+            with self.assertRaisesRegex(PromotionError, "approved live extraction"):
+                cleanup_approved_staging(candidate.root, self.record_id)
+
+            self.assertTrue(candidate.run_root.is_dir())
 
     def test_second_rename_failure_rolls_back_the_first_destination(self) -> None:
         with TemporaryDirectory() as directory:
