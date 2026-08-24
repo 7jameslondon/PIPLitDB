@@ -39,7 +39,11 @@ def _pipeline_code_sha256() -> str:
     """Fingerprint the checked-out extraction implementation and schemas."""
 
     root = Path(__file__).resolve().parent
-    files = [*root.glob("*.py"), *root.joinpath("schemas").glob("*.json")]
+    files = [
+        *root.glob("*.py"),
+        *root.glob("*.ps1"),
+        *root.joinpath("schemas").glob("*.json"),
+    ]
     digest = hashlib.sha256()
     for path in sorted(files, key=lambda item: item.relative_to(root).as_posix()):
         digest.update(path.relative_to(root).as_posix().encode("utf-8"))
@@ -383,6 +387,17 @@ def _source_coverage(
             output_ids.extend(("record-title", "record-authors", "record-citation"))
         elif source.role == "main_html" and primary_role == "main_html":
             output_ids.append("record-citation")
+        if (
+            source.role == "main_pdf"
+            and primary_role != "main_pdf"
+            and not output_ids
+        ):
+            disposition = "duplicate"
+            reason = (
+                "secondary verification source for completeness, notation, and "
+                "visual agreement with the primary HTML; no distinct canonical "
+                "output is required"
+            )
         rows.append(
             {
                 "schema_version": "1.0",

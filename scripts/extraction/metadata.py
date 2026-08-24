@@ -34,12 +34,17 @@ class RecordMetadata:
         }
 
 
-def load_record_metadata(path: Path, record_id: str) -> RecordMetadata:
+def _load_record_mapping(path: Path) -> dict[str, Any]:
     if yaml is None:
         raise RuntimeError("PyYAML is required for extraction")
     value = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
         raise ValueError(f"metadata must be a mapping: {path}")
+    return value
+
+
+def load_record_metadata(path: Path, record_id: str) -> RecordMetadata:
+    value = _load_record_mapping(path)
     title = value.get("title")
     if not isinstance(title, str) or not title.strip():
         raise ValueError(f"metadata title is missing: {path}")
@@ -67,3 +72,13 @@ def load_record_metadata(path: Path, record_id: str) -> RecordMetadata:
         doi=str(value.get("doi", "")).strip(),
         document_type=str(value.get("document_type", "")).strip(),
     )
+
+
+def load_record_status(path: Path) -> str:
+    """Read only the controlled extraction-workflow status from a record."""
+
+    value = _load_record_mapping(path)
+    status = value.get("pip_litdb_status")
+    if not isinstance(status, str) or not status.strip():
+        raise ValueError(f"pip_litdb_status is missing: {path}")
+    return status.strip()

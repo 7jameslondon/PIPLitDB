@@ -20,5 +20,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_applicable
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "J-STAGE does not provide a full-text HTML version for this article; the complete publisher article is available only as a PDF."

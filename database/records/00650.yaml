@@ -1,0 +1,25 @@
+document_type: research_article
+publication_stage: preprint
+title: "Site-specific arrangement and structure determination of minor groove binding molecules in self-assembled three-dimensional DNA crystals"
+authors:
+  - name: "Chad R. Simmons"
+  - name: "Alex Buchberger"
+  - name: "Skylar J.W. Henry"
+  - name: "Alexandra Novacek"
+  - name: "Nour Eddine Fahmi"
+  - name: "Tara MacCulloch"
+  - name: "Nicholas Stephanopoulos"
+  - name: "Hao Yan"
+doi: "10.1101/2023.10.10.561756"
+publication_year: 2023
+journal: "bioRxiv"
+related_papers:
+  - pip_litdb_id: "00018"
+    relationship_type: is_preprint_of
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
+pip_litdb_status: ready_for_extraction

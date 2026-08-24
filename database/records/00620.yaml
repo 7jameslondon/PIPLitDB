@@ -13,5 +13,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Review/Account for the Life Chemistry Award (vol. 93, issue 2, pp. 205-215), web released 2019-12-05 and published in the 2020-02-15 print issue. The local source is the complete eleven-page publisher version of record."

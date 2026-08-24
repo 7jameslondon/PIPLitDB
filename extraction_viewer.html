@@ -317,6 +317,8 @@
       margin: .6rem 0 1rem;
       max-width: 1000px;
     }
+    /* The title receives programmatic focus as a reading landmark, not as a control. */
+    .article-title:focus { outline: none; }
     .authors { color: #35443f; font-size: 1.02rem; line-height: 1.6; }
     .citation-line { color: var(--muted); font-size: .88rem; line-height: 1.55; margin-top: .85rem; }
     .metadata-grid {
@@ -422,6 +424,13 @@
       padding: 1rem;
     }
     .media-stage img { display: block; height: auto; max-height: 75vh; max-width: 100%; object-fit: contain; }
+    .zoomable-image { cursor: zoom-in; }
+    .zoomable-image:hover { filter: brightness(.97); }
+    .zoomable-image:focus-visible {
+      border-radius: 4px;
+      outline: 4px solid rgba(17, 107, 98, .38);
+      outline-offset: 4px;
+    }
     .media-stage video { background: #121817; max-height: 70vh; max-width: 100%; width: 100%; }
     .media-stage audio { max-width: 650px; width: 100%; }
     .media-caption { padding: .95rem 1.05rem 1.05rem; }
@@ -517,6 +526,81 @@
     .raw-subtitle { color: var(--muted); font-size: .76rem; margin-top: .18rem; }
     .raw-json { background: #17201e; color: #e7efec; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .78rem; line-height: 1.55; margin: 0; max-height: calc(100vh - 150px); overflow: auto; padding: 1.2rem; tab-size: 2; white-space: pre; }
 
+    body.image-preview-open { overflow: hidden; }
+    .image-lightbox {
+      background: rgba(8, 14, 13, .97);
+      color: #f5f8f7;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      inset: 0;
+      position: fixed;
+      z-index: 1000;
+    }
+    .image-lightbox-toolbar {
+      align-items: center;
+      background: rgba(19, 30, 27, .96);
+      border-bottom: 1px solid rgba(255, 255, 255, .14);
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      min-height: 4rem;
+      padding: .65rem .8rem .65rem 1rem;
+    }
+    .image-lightbox-heading { min-width: 0; }
+    .image-lightbox-title {
+      font-size: .88rem;
+      font-weight: 720;
+      max-width: min(52vw, 760px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .image-lightbox-status { color: #b9cbc6; font-size: .72rem; margin-top: .18rem; }
+    .image-lightbox-controls { align-items: center; display: flex; gap: .4rem; }
+    .image-lightbox-button {
+      background: #263a35;
+      border-color: rgba(255, 255, 255, .16);
+      color: #fff;
+      min-height: 2.45rem;
+      min-width: 2.65rem;
+      padding: .6rem .7rem;
+    }
+    .image-lightbox-button:hover { background: #345048; border-color: rgba(255, 255, 255, .28); }
+    .image-lightbox-button:focus-visible { outline-color: rgba(144, 222, 204, .8); }
+    .image-lightbox-button[aria-pressed="true"] { background: var(--accent); border-color: #64aa9c; }
+    .image-lightbox-close { font-size: 1.35rem; margin-left: .35rem; }
+    .image-lightbox-viewport {
+      min-height: 0;
+      overflow: auto;
+      scrollbar-color: #66837b #15231f;
+    }
+    .image-lightbox-viewport:focus-visible { outline: 3px solid rgba(144, 222, 204, .7); outline-offset: -3px; }
+    .image-lightbox-canvas {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 100%;
+      min-width: 100%;
+      padding: 1.5rem;
+      width: max-content;
+    }
+    .image-lightbox-image {
+      display: block;
+      flex: 0 0 auto;
+      height: auto;
+      max-height: none;
+      max-width: none;
+      object-fit: contain;
+    }
+    .image-lightbox-help {
+      background: rgba(19, 30, 27, .96);
+      border-top: 1px solid rgba(255, 255, 255, .12);
+      color: #b9cbc6;
+      font-size: .7rem;
+      padding: .5rem 1rem;
+      text-align: center;
+    }
+
     .empty-state { color: var(--muted); font-size: .86rem; font-style: italic; }
     .visually-hidden { height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; clip: rect(0 0 0 0); white-space: nowrap; }
     [hidden] { display: none !important; }
@@ -547,11 +631,17 @@
       .metadata-item, .metadata-item:nth-child(odd) { border-left: 0; border-top: 1px solid var(--line); padding: .65rem 0; }
       .metadata-item:first-child { border-top: 0; }
       .download-card { align-items: flex-start; flex-direction: column; }
+      .image-lightbox-toolbar { align-items: flex-start; flex-direction: column; gap: .55rem; }
+      .image-lightbox-heading { width: 100%; }
+      .image-lightbox-title { max-width: calc(100vw - 2rem); }
+      .image-lightbox-controls { flex-wrap: wrap; width: 100%; }
+      .image-lightbox-close { margin-left: auto; }
+      .image-lightbox-canvas { padding: .75rem; }
     }
 
     @media print {
       :root { --paper: #fff; --canvas: #fff; }
-      .topbar, .sidebar, .asset-index, .raw-panel, .landing, .library { display: none !important; }
+      .topbar, .sidebar, .asset-index, .raw-panel, .landing, .library, .image-lightbox { display: none !important; }
       .shell { max-width: none; padding: 0; }
       .workspace-grid { display: block; }
       .document { border: 0; box-shadow: none; }
@@ -650,6 +740,28 @@
     </section>
   </main>
 
+  <div class="image-lightbox" id="image-lightbox" role="dialog" aria-modal="true" aria-labelledby="image-lightbox-title" aria-describedby="image-lightbox-help" hidden>
+    <div class="image-lightbox-toolbar">
+      <div class="image-lightbox-heading">
+        <div class="image-lightbox-title" id="image-lightbox-title">Image preview</div>
+        <div class="image-lightbox-status" id="image-lightbox-status" aria-live="polite">Fit to window</div>
+      </div>
+      <div class="image-lightbox-controls" aria-label="Image zoom controls">
+        <button class="image-lightbox-button" id="image-zoom-out" type="button" aria-label="Zoom out" title="Zoom out (−)">−</button>
+        <button class="image-lightbox-button" id="image-zoom-reset" type="button" aria-label="Reset zoom to 100 percent" title="Actual size (0)">100%</button>
+        <button class="image-lightbox-button" id="image-zoom-fit" type="button" aria-label="Fit image to window" aria-pressed="true" title="Fit to window (F)">Fit</button>
+        <button class="image-lightbox-button" id="image-zoom-in" type="button" aria-label="Zoom in" title="Zoom in (+)">+</button>
+        <button class="image-lightbox-button image-lightbox-close" id="image-lightbox-close" type="button" aria-label="Close image preview" title="Close (Escape)">×</button>
+      </div>
+    </div>
+    <div class="image-lightbox-viewport" id="image-lightbox-viewport" tabindex="0">
+      <div class="image-lightbox-canvas" id="image-lightbox-canvas">
+        <img class="image-lightbox-image" id="image-lightbox-image" alt="">
+      </div>
+    </div>
+    <div class="image-lightbox-help" id="image-lightbox-help">Use + and − to zoom, Fit to fill the available window, and scroll to move around. Press Escape to close.</div>
+  </div>
+
   <script>
   (() => {
     "use strict";
@@ -658,6 +770,9 @@
     const SUPPORTED_SCHEMA_VERSIONS = new Set(["1.0", EXPECTED_SCHEMA_VERSION]);
     const EXPECTED_ASSET_BASE = "extraction_root";
     const METADATA_PREFIX_MAX_BYTES = 1024 * 1024;
+    const IMAGE_ZOOM_MIN = 0.1;
+    const IMAGE_ZOOM_MAX = 8;
+    const IMAGE_ZOOM_STEP = 1.25;
     const ALLOWED_HTML = new Set([
       "a", "abbr", "b", "br", "code", "em", "i", "li", "ol", "span",
       "strong", "sub", "sup", "u", "ul"
@@ -693,7 +808,18 @@
       copyJson: document.getElementById("copy-json"),
       backToRecords: document.getElementById("back-to-records"),
       refreshRecords: document.getElementById("refresh-records"),
-      changeRoot: document.getElementById("change-root")
+      changeRoot: document.getElementById("change-root"),
+      imageLightbox: document.getElementById("image-lightbox"),
+      imageLightboxTitle: document.getElementById("image-lightbox-title"),
+      imageLightboxStatus: document.getElementById("image-lightbox-status"),
+      imageLightboxViewport: document.getElementById("image-lightbox-viewport"),
+      imageLightboxCanvas: document.getElementById("image-lightbox-canvas"),
+      imageLightboxImage: document.getElementById("image-lightbox-image"),
+      imageZoomOut: document.getElementById("image-zoom-out"),
+      imageZoomReset: document.getElementById("image-zoom-reset"),
+      imageZoomFit: document.getElementById("image-zoom-fit"),
+      imageZoomIn: document.getElementById("image-zoom-in"),
+      imageLightboxClose: document.getElementById("image-lightbox-close")
     };
 
     const state = {
@@ -711,7 +837,13 @@
       returnFocusId: "",
       scanToken: 0,
       recordOpenToken: 0,
-      selectionToken: 0
+      selectionToken: 0,
+      imagePreview: {
+        open: false,
+        scale: 1,
+        mode: "fit",
+        trigger: null
+      }
     };
 
     function element(tag, className, text) {
@@ -738,7 +870,7 @@
     }
 
     function firstDefined(...values) {
-      return values.find(value => value !== undefined && value !== null && value !== "");
+      return values.find(value => value !== undefined && value !== null && value !== "") || "";
     }
 
     function richPlain(value) {
@@ -838,6 +970,7 @@
     }
 
     function clearObjectUrls() {
+      closeImagePreview({ restoreFocus: false });
       for (const url of state.objectUrls) URL.revokeObjectURL(url);
       state.objectUrls = [];
     }
@@ -959,6 +1092,128 @@
       }, { once: true });
     }
 
+    function clampImageZoom(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return 1;
+      return Math.min(IMAGE_ZOOM_MAX, Math.max(IMAGE_ZOOM_MIN, numeric));
+    }
+
+    function fittedImageZoom(naturalWidth, naturalHeight, availableWidth, availableHeight) {
+      const dimensions = [naturalWidth, naturalHeight, availableWidth, availableHeight].map(Number);
+      if (dimensions.some(value => !Number.isFinite(value) || value <= 0)) return 1;
+      return clampImageZoom(Math.min(availableWidth / naturalWidth, availableHeight / naturalHeight));
+    }
+
+    function imagePreviewAvailableSize() {
+      const style = getComputedStyle(dom.imageLightboxCanvas);
+      const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const verticalPadding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      return {
+        width: Math.max(1, dom.imageLightboxViewport.clientWidth - horizontalPadding),
+        height: Math.max(1, dom.imageLightboxViewport.clientHeight - verticalPadding)
+      };
+    }
+
+    function setImagePreviewZoom(value, mode = "manual", preserveCenter = true) {
+      const image = dom.imageLightboxImage;
+      const viewport = dom.imageLightboxViewport;
+      if (!state.imagePreview.open || !image.naturalWidth || !image.naturalHeight) return;
+
+      const oldWidth = Math.max(1, viewport.scrollWidth);
+      const oldHeight = Math.max(1, viewport.scrollHeight);
+      const centerX = (viewport.scrollLeft + viewport.clientWidth / 2) / oldWidth;
+      const centerY = (viewport.scrollTop + viewport.clientHeight / 2) / oldHeight;
+      const scale = clampImageZoom(value);
+      state.imagePreview.scale = scale;
+      state.imagePreview.mode = mode;
+      image.style.width = `${Math.max(1, Math.round(image.naturalWidth * scale))}px`;
+
+      const percent = Math.round(scale * 100);
+      dom.imageLightboxStatus.textContent = mode === "fit" ? `Fit to window · ${percent}%` : `Zoom · ${percent}%`;
+      dom.imageZoomFit.setAttribute("aria-pressed", String(mode === "fit"));
+
+      requestAnimationFrame(() => {
+        if (!state.imagePreview.open) return;
+        if (preserveCenter) {
+          viewport.scrollLeft = centerX * viewport.scrollWidth - viewport.clientWidth / 2;
+          viewport.scrollTop = centerY * viewport.scrollHeight - viewport.clientHeight / 2;
+        } else {
+          viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
+          viewport.scrollTop = Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2);
+        }
+      });
+    }
+
+    function fitImagePreview() {
+      const image = dom.imageLightboxImage;
+      if (!state.imagePreview.open || !image.naturalWidth || !image.naturalHeight) return;
+      const available = imagePreviewAvailableSize();
+      setImagePreviewZoom(fittedImageZoom(
+        image.naturalWidth,
+        image.naturalHeight,
+        available.width,
+        available.height
+      ), "fit", false);
+    }
+
+    function zoomImagePreviewBy(factor) {
+      setImagePreviewZoom(state.imagePreview.scale * factor, "manual");
+    }
+
+    function openImagePreview(source, altText = "") {
+      const sourceImage = source instanceof HTMLImageElement ? source : null;
+      const src = sourceImage ? (sourceImage.currentSrc || sourceImage.src) : String(source || "");
+      if (!src) return;
+
+      state.imagePreview.open = true;
+      state.imagePreview.scale = 1;
+      state.imagePreview.mode = "fit";
+      state.imagePreview.trigger = sourceImage && sourceImage.isConnected ? sourceImage : null;
+      dom.imageLightboxTitle.textContent = altText || (sourceImage && sourceImage.alt) || "Image preview";
+      dom.imageLightboxStatus.textContent = "Fitting image to window…";
+      dom.imageZoomFit.setAttribute("aria-pressed", "true");
+      dom.imageLightboxImage.alt = altText || (sourceImage && sourceImage.alt) || "Expanded image";
+      dom.imageLightboxImage.style.width = "";
+      dom.imageLightboxImage.onload = () => requestAnimationFrame(fitImagePreview);
+      dom.imageLightboxImage.onerror = () => {
+        dom.imageLightboxStatus.textContent = "The browser could not display this image.";
+      };
+      dom.imageLightboxImage.src = src;
+      dom.imageLightbox.hidden = false;
+      dom.body.classList.add("image-preview-open");
+      dom.imageLightboxClose.focus({ preventScroll: true });
+      if (dom.imageLightboxImage.complete && dom.imageLightboxImage.naturalWidth) requestAnimationFrame(fitImagePreview);
+    }
+
+    function closeImagePreview(options = {}) {
+      if (!state.imagePreview.open) return;
+      const trigger = state.imagePreview.trigger;
+      state.imagePreview.open = false;
+      state.imagePreview.trigger = null;
+      dom.imageLightbox.hidden = true;
+      dom.body.classList.remove("image-preview-open");
+      dom.imageLightboxImage.onload = null;
+      dom.imageLightboxImage.onerror = null;
+      dom.imageLightboxImage.removeAttribute("src");
+      dom.imageLightboxImage.style.width = "";
+      if (options.restoreFocus !== false && trigger && trigger.isConnected) trigger.focus({ preventScroll: true });
+    }
+
+    function enableImagePreview(image) {
+      image.classList.add("zoomable-image");
+      image.tabIndex = 0;
+      image.setAttribute("role", "button");
+      image.setAttribute("aria-label", `Open full-window preview: ${image.alt || "image"}`);
+      if (!image.title) image.title = "Open full-window image preview";
+      image.addEventListener("click", () => openImagePreview(image));
+      image.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        openImagePreview(image);
+      });
+      return image;
+    }
+
     function resolveForNode(path, node, onResolved, preResolved = null) {
       const resolver = state.resolver;
       const token = state.selectionToken;
@@ -993,6 +1248,7 @@
           image.alt = options.alt || richPlain(asset.label) || "Extracted image";
           image.loading = "lazy";
           attachRuntimeFailure(image, stage, resolved);
+          enableImagePreview(image);
           stage.append(image);
         } else if (type.startsWith("video/")) {
           const video = element("video");
@@ -1135,7 +1391,8 @@
         ["Volume", firstDefined(metadata.volume, bibliographic.volume)],
         ["Issue", firstDefined(metadata.issue, bibliographic.issue)],
         ["Pages", firstDefined(metadata.pages, bibliographic.pages, bibliographic.page_range)],
-        ["Publication date", firstDefined(metadata.publication_date, bibliographic.publication_date)]
+        ["Article number", firstDefined(metadata.article_number, bibliographic.article_number)],
+        ["Publication date", firstDefined(metadata.publication_date, bibliographic.publication_date, bibliographic.date)]
       ];
       for (const [term, value] of fields) if (value !== undefined && value !== null && value !== "") grid.append(metadataPair(term, value));
       if (grid.childElementCount) dom.articleHeader.append(grid);
@@ -1240,6 +1497,7 @@
           image.alt = `Structure ${key}`;
           image.loading = "lazy";
           attachRuntimeFailure(image, wrapper, resolved);
+          enableImagePreview(image);
           wrapper.append(image);
         }
       });
@@ -1294,6 +1552,7 @@
             image.alt = `Structure ${key}`;
             image.loading = "lazy";
             attachRuntimeFailure(image, holder, resolved);
+            enableImagePreview(image);
             holder.append(image);
           }
         });
@@ -1403,7 +1662,14 @@
           mini.append(caption);
           card.append(mini);
         }
-        renderBlocks(supplement.blocks, card);
+        // Text native to a scientific figure slide remains machine-readable in
+        // record.json, with its coordinates retained in extraction diagnostics.
+        // The complete rendered slide is the human-facing representation; a
+        // linear list of labels would erase their scientific relationships.
+        renderBlocks(
+          asArray(supplement.blocks).filter(block => block && block.kind !== "figure_text"),
+          card
+        );
         const representedAssetIds = new Set(asArray(supplement.figures).map(figure => figure && figure.asset_id).filter(Boolean));
         const representedPaths = new Set();
         if (supplement.file && supplement.file.path) representedPaths.add(supplement.file.path);
@@ -1743,6 +2009,7 @@
         throw new Error(`Could not inspect staging/${folderId}/: ${error.message || error}`);
       }
       const candidates = [];
+      const unreadableRuns = [];
       for await (const runHandle of recordStagingHandle.values()) {
         if (!runHandle || runHandle.kind !== "directory" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(runHandle.name)) continue;
         try {
@@ -1757,7 +2024,10 @@
             lastModified: Number.isFinite(Number(file.lastModified)) ? Number(file.lastModified) : 0
           });
         } catch (error) {
-          if (notFound(error)) continue;
+          if (notFound(error)) {
+            unreadableRuns.push(runHandle.name);
+            continue;
+          }
           throw new Error(`Could not inspect staging/${folderId}/${runHandle.name}/: ${error.message || error}`);
         }
       }
@@ -1765,6 +2035,13 @@
         right.lastModified - left.lastModified
         || right.runName.localeCompare(left.runName, "en", { numeric: true, sensitivity: "variant" })
       );
+      if (!candidates.length && unreadableRuns.length) {
+        const noun = unreadableRuns.length === 1 ? "directory was" : "directories were";
+        throw new Error(
+          `${unreadableRuns.length} staged run ${noun} found, but no readable extraction/record.json was available. `
+          + "The extraction may be incomplete, or the browser account may lack permission to read it."
+        );
+      }
       return candidates[0] || null;
     }
 
@@ -2037,6 +2314,59 @@
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
+    dom.imageZoomOut.addEventListener("click", () => zoomImagePreviewBy(1 / IMAGE_ZOOM_STEP));
+    dom.imageZoomReset.addEventListener("click", () => setImagePreviewZoom(1, "manual"));
+    dom.imageZoomFit.addEventListener("click", fitImagePreview);
+    dom.imageZoomIn.addEventListener("click", () => zoomImagePreviewBy(IMAGE_ZOOM_STEP));
+    dom.imageLightboxClose.addEventListener("click", closeImagePreview);
+    dom.imageLightboxViewport.addEventListener("wheel", event => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      zoomImagePreviewBy(event.deltaY < 0 ? IMAGE_ZOOM_STEP : 1 / IMAGE_ZOOM_STEP);
+    }, { passive: false });
+    dom.imageLightbox.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeImagePreview();
+        return;
+      }
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        zoomImagePreviewBy(IMAGE_ZOOM_STEP);
+        return;
+      }
+      if (event.key === "-") {
+        event.preventDefault();
+        zoomImagePreviewBy(1 / IMAGE_ZOOM_STEP);
+        return;
+      }
+      if (event.key === "0") {
+        event.preventDefault();
+        setImagePreviewZoom(1, "manual");
+        return;
+      }
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        fitImagePreview();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...dom.imageLightbox.querySelectorAll('button:not([disabled]), [tabindex="0"]')];
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    window.addEventListener("resize", () => {
+      if (state.imagePreview.open && state.imagePreview.mode === "fit") requestAnimationFrame(fitImagePreview);
+    });
+
     dom.viewToggle.addEventListener("click", () => setView(state.view === "document" ? "raw" : "document"));
     dom.printButton.addEventListener("click", () => window.print());
     dom.copyJson.addEventListener("click", async () => {
@@ -2070,7 +2400,7 @@
 
     // Small, read-only test surface for browser smoke tests.
     window.ExtractionViewer = Object.freeze({
-      renderSynthetic(record) {
+      renderSynthetic(record, assetUrls = {}) {
         state.recordOpenToken += 1;
         state.selectionToken += 1;
         const raw = JSON.stringify(record, null, 2);
@@ -2078,7 +2408,13 @@
           mode: "synthetic",
           description: "synthetic browser fixture",
           resolve(path) {
-            try { return { ok: false, path: normalizeRelativePath(path), reason: "Synthetic fixture has no binary files." }; }
+            try {
+              const safe = normalizeRelativePath(path);
+              if (Object.prototype.hasOwnProperty.call(assetUrls, safe)) {
+                return { ok: true, path: safe, url: String(assetUrls[safe]), downloadName: safe.split("/").pop() };
+              }
+              return { ok: false, path: safe, reason: "Synthetic fixture has no matching binary file." };
+            }
             catch (error) { return { ok: false, path: String(path || ""), reason: error.message }; }
           }
         });
@@ -2102,7 +2438,12 @@
           recordIds: state.records.map(entry => entry.id),
           viewableRecordIds: state.records.filter(entry => entry.valid).map(entry => entry.id),
           stagedRecordIds: state.records.filter(entry => entry.valid && entry.staged).map(entry => entry.id),
-          search: state.search
+          search: state.search,
+          imagePreview: {
+            open: state.imagePreview.open,
+            scale: state.imagePreview.scale,
+            mode: state.imagePreview.mode
+          }
         };
       }
     });

@@ -31,6 +31,235 @@ class ScienceDirectHtmlExtractionTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             return extract_html(path, "html/main.html")
 
+    def test_screen_reader_title_excludes_allowlisted_article_type_badges(self) -> None:
+        research = self.extract(
+            """<body><h1 id="screen-reader-main-title">
+            <div><span>Research paper</span></div>
+            <span>Thermodynamics <em>and</em> binding</span>
+            </h1><section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+        review = self.extract(
+            """<body><h1 id="screen-reader-main-title">
+            <div><span>Review article</span></div>
+            <span>Nested <strong>review</strong> title</span>
+            </h1><section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+
+        self.assertEqual(research.title, "Thermodynamics and binding")
+        self.assertEqual(review.title, "Nested review title")
+
+    def test_plain_and_rich_text_remove_source_space_before_punctuation(self) -> None:
+        result = self.extract(
+            """<body><h1>Whitespace normalization</h1>
+            <section><h2>Acknowledgements</h2><p>Supported by
+            <span>Example Foundation, United States</span> , at Example Lab.
+            Value 3. 14 remains source text.</p></section></body>"""
+        )
+
+        block = result.sections[0].blocks[0]
+        expected = (
+            "Supported by Example Foundation, United States, at Example Lab. "
+            "Value 3. 14 remains source text."
+        )
+        self.assertEqual(block.plain_text, expected)
+        self.assertEqual(block.markdown, expected)
+
+    def test_title_badge_filter_preserves_unknown_and_ordinary_nested_markup(self) -> None:
+        ordinary_nested = self.extract(
+            """<body><h1><span>Ordinary <em>in vivo</em> title</span></h1>
+            <section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+        unknown_screen_reader = self.extract(
+            """<body><h1 id="screen-reader-main-title"><div>Study subtitle</div>
+            <span>Primary <em>title</em></span></h1>
+            <section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+        ordinary_with_badge_text = self.extract(
+            """<body><h1><div>Research paper</div>
+            <span>Ordinary <em>title</em></span></h1>
+            <section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+
+        self.assertEqual(ordinary_nested.title, "Ordinary in vivo title")
+        self.assertEqual(unknown_screen_reader.title, "Study subtitle Primary title")
+        self.assertEqual(ordinary_with_badge_text.title, "Research paper Ordinary title")
+
+    def test_exact_table_of_contents_navigation_is_removed_without_losing_content(self) -> None:
+        result = self.extract(
+            """<body><h1>Navigation boundary</h1>
+            <div aria-label="Table of contents" role="navigation">
+              <h2>Outline</h2><ul><li>Highlights</li><li>Figures (1)</li>
+              <li>Tables (1)</li></ul>
+            </div>
+            <section><h2>Highlights</h2><ul><li>Primary finding.</li></ul></section>
+            <section><h2>Body</h2><p>Authored body text.</p>
+              <figure id="f0005"><img src="https://example.invalid/f1.jpg">
+                <figcaption>Fig. 1. Authored asset.</figcaption></figure>
+              <div id="t0005"><p>Table 1. Authored table.</p>
+                <table><tr><th>Measure</th><th>Value</th></tr>
+                <tr><td>Binding</td><td>1</td></tr></table></div>
+            </section>
+            <section><h2>Outline</h2><p>Genuine authored outline.</p></section>
+            <div aria-label="Table of contents" role="region">
+              <h2>Near-miss navigation</h2><p>Must remain.</p>
+            </div></body>"""
+        )
+
+        headings = [section.heading for section in result.sections]
+        all_text = " ".join(
+            block.plain_text
+            for section in result.sections
+            for block in section.blocks
+        )
+        self.assertNotIn("Figures (1)", all_text)
+        self.assertNotIn("Tables (1)", all_text)
+        self.assertEqual(headings.count("Outline"), 1)
+        self.assertIn("Highlights", headings)
+        self.assertIn("Body", headings)
+        self.assertIn("Near-miss navigation", headings)
+        self.assertIn("Primary finding.", all_text)
+        self.assertIn("Authored body text.", all_text)
+        self.assertIn("Genuine authored outline.", all_text)
+        self.assertIn("Must remain.", all_text)
+        self.assertEqual([item.label for item in result.figures], ["Figure 1"])
+        self.assertEqual(len(result.tables), 1)
+
+    def test_current_summary_multiaffiliations_and_short_copyright(self) -> None:
+        result = self.extract(
+            """<body>
+            <div><span>Date: </span>5 November 2026</div>
+            <div><span>Article: </span>119089</div>
+            <div><span>Volume: </span><a>Volume 317</a></div>
+            <h1 id="screen-reader-main-title"><div>Review article</div>
+              <span>Current ScienceDirect article</span></h1>
+            <div id="author-group">
+              <span><span>Alice Example</span><span id="baff1"><sup>a</sup></span>
+                <span id="baff2"><sup>b</sup></span></span>
+              <span><span>Bob Example</span><span id="baff2"><sup>b</sup></span></span>
+            </div>
+            <section><h2>Body</h2><p>Text.</p></section>
+            <div>© 2026 Example Publisher. All rights reserved.</div>
+            </body>"""
+        )
+
+        self.assertEqual(
+            result.bibliographic,
+            {
+                "article_number": "119089",
+                "date": "5 November 2026",
+                "volume": "317",
+            },
+        )
+        self.assertEqual(
+            [block.plain_text for block in result.front_matter],
+            [
+                "Affiliation assignments: Alice Example (a,b); Bob Example (b)",
+                "Copyright: © 2026 Example Publisher. All rights reserved.",
+            ],
+        )
+
+    def test_publication_banner_retains_month_year_issue_date(self) -> None:
+        result = self.extract(
+            """<body><div id="publication"><h2>Methods</h2>
+            <div><a>Volume 225</a>, May 2024, Pages 20-27</div></div>
+            <h1 id="screen-reader-main-title">Month-year article</h1>
+            <section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+
+        self.assertEqual(
+            result.bibliographic,
+            {"date": "May 2024", "pages": "20-27", "volume": "225"},
+        )
+
+    def test_definition_list_abbreviations_keep_terms_and_definitions(self) -> None:
+        result = self.extract(
+            """<body><h1>Abbreviation pairs</h1>
+            <section><h2>List of abbreviations</h2>
+              <ul id="dlist0010">
+                <dt>NF-κB</dt><dd><div id="p0010">nuclear factor kappa B</div></dd>
+                <dt>MGBs</dt><dd><div id="p0015">minor groove binders</div></dd>
+                <dt>AML:</dt><dd><div id="p0020">acute myeloid leukemia</div></dd>
+              </ul>
+            </section><section><h2>Body</h2><p>Text.</p></section></body>"""
+        )
+
+        section = result.sections[0]
+        self.assertEqual(len(section.blocks), 1)
+        self.assertEqual(section.blocks[0].kind, "list")
+        self.assertEqual(
+            section.blocks[0].plain_text,
+            "- NF-κB: nuclear factor kappa B\n"
+            "- MGBs: minor groove binders\n"
+            "- AML: acute myeloid leukemia",
+        )
+        self.assertEqual(
+            section.blocks[0].markdown,
+            "- <strong>NF-κB</strong>: nuclear factor kappa B\n"
+            "- <strong>MGBs</strong>: minor groove binders\n"
+            "- <strong>AML:</strong> acute myeloid leukemia",
+        )
+
+    def test_table_cell_lists_retain_readable_item_boundaries(self) -> None:
+        result = self.extract(
+            """<body><h1>Table list cells</h1><section><h2>Results</h2>
+            <div id="tbl1"><div id="cap0010"><p id="tspara0005">Table 1.
+            Outcomes.</p></div><div><table>
+              <thead><tr><th>Agent</th><th>Outcomes</th></tr></thead>
+              <tbody><tr><td>Compound A</td><td><ul>
+                <li><span>•</span><span><div>First outcome</div></span></li>
+                <li><span>•</span><span><div>Second outcome</div></span></li>
+              </ul></td></tr></tbody>
+            </table></div><div><div id="tspara0010">Abbreviations: ATP,
+            adenosine triphosphate.</div></div></div></section></body>"""
+        )
+
+        cell = result.tables[0].parts[0].rows[1][1]
+        self.assertEqual(cell.text, "• First outcome\n• Second outcome")
+        self.assertEqual(cell.markdown, "• First outcome<br>• Second outcome")
+        self.assertEqual(
+            result.tables[0].footnotes_plain,
+            ["Abbreviations: ATP, adenosine triphosphate."],
+        )
+
+    def test_source_rendered_display_equations_keep_order_and_notation(self) -> None:
+        result = self.extract(
+            """<body><h1>Equations</h1><section><h2>Methods</h2>
+            <div id="p0001">Before equations.
+              <span id="ufd1"><span>D<sub>f</sub> = P<sub>f</sub><sup>nˆH</sup> + (1</span></span>
+              <span id="ufd2"><span>Fraction bound = ((1/K<sub>d,app</sub>)*(P<sub>f</sub><sup>nˆH</sup>))/(1 + x)</span></span>
+              After equations.</div>
+            <div id="p0002">Inline A<sub>x</sub><sup>2</sup> remains prose;
+              <span id="ufdx">not a display equation</span>.
+              <span id="ufd3"></span><div id="ufd4">not a span</div></div>
+            </section></body>"""
+        )
+
+        methods = result.sections[0]
+        self.assertEqual(
+            [(block.kind, block.plain_text) for block in methods.blocks],
+            [
+                ("paragraph", "Before equations."),
+                ("equation", "D_{f} = P_{f}^{nˆH} + (1"),
+                (
+                    "equation",
+                    "Fraction bound = ((1/K_{d,app})*(P_{f}^{nˆH}))/(1 + x)",
+                ),
+                ("paragraph", "After equations."),
+                (
+                    "paragraph",
+                    "Inline A_{x}^{2} remains prose; not a display equation. not a span",
+                ),
+            ],
+        )
+        self.assertEqual(
+            methods.blocks[1].markdown,
+            "D<sub>f</sub> = P<sub>f</sub><sup>nˆH</sup> + (1",
+        )
+        self.assertEqual(
+            methods.blocks[2].markdown,
+            "Fraction bound = ((1/K<sub>d,app</sub>)\\*(P<sub>f</sub><sup>nˆH</sup>))/(1 + x)",
+        )
+
     def test_rendered_dom_is_extracted_as_structured_primary_content(self) -> None:
         png = base64.b64encode(PNG_BYTES).decode("ascii")
         jpeg = base64.b64encode(JPEG_BYTES).decode("ascii")

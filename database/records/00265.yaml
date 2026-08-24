@@ -14,5 +14,5 @@ human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: needed
-pip_litdb_status: verified
+  full_text_html: not_available
+pip_litdb_status: ready_for_extraction

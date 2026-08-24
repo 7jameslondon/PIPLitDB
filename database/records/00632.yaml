@@ -15,5 +15,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_applicable
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Research article (vol. 40, issue 18, pp. 3621-3624), published 1999-04-30; received 1999-01-18 and accepted 1999-03-02. The indexed local source is the complete four-page Elsevier publisher version of record. The publisher provides no full-text HTML, and no supplementary materials are listed."

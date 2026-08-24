@@ -8,6 +8,7 @@ authors:
   - name: "Heather L. Handl"
   - name: "Stephen J. Hudson"
   - name: "Richard B. Hubbard III"
+    canonical_name: "Richard B. Hubbard IV"
   - name: "J. Phillip Bowen"
   - name: "Konstantinos Kiakos"
   - name: "John A. Hartley"
@@ -21,4 +22,4 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction

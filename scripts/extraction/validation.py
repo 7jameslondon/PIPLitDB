@@ -19,6 +19,8 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 import unicodedata
 from urllib.parse import unquote, urlsplit
 
+from PIL import Image
+
 from .models import ValidationFinding
 from .paths import sha256_file
 from .record_schema import (
@@ -119,6 +121,9 @@ _URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 _TABLE_SOURCE_KINDS = frozenset({"html", "pdf", "image", "presentation"})
 _IMAGE_TABLE_SOURCE_KINDS = frozenset({"pdf", "image"})
 _EQUATION_BLOCK_KINDS = frozenset({"equation", "display_equation", "math"})
+_PDF_CROP_VISUAL_ROLES = frozenset({"figure", "scheme", "graphical_abstract"})
+_PDF_CROP_NEAR_WHITE_THRESHOLD = 245
+_PDF_CROP_MIN_BOUNDARY_PIXELS = 1
 _XLSX_MEDIA_TYPE = (
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
@@ -2522,6 +2527,115 @@ def _candidate_relative_path(raw_path: str) -> PurePosixPath | None:
     return pure
 
 
+def _validate_pdf_crop_boundaries(
+    extraction_dir: Path,
+    loaded: Mapping[str, Any],
+) -> list[ValidationFinding]:
+    """Warn when authored-looking pixels reach a rendered PDF crop boundary.
+
+    The check is deliberately advisory.  Edge-to-edge artwork can be valid, so
+    a boundary hit requires visual adjudication rather than automatic recropping
+    or rejection.  Tables are excluded because authored table rules commonly
+    and harmlessly meet the image boundary.
+    """
+
+    manifest = loaded.get("manifest.json")
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("assets"), list):
+        return []
+
+    try:
+        resolved_root = extraction_dir.resolve(strict=True)
+    except OSError:
+        return []
+
+    findings: list[ValidationFinding] = []
+    for asset in manifest["assets"]:
+        if not isinstance(asset, dict):
+            continue
+        role = str(asset.get("category") or asset.get("kind") or "")
+        role = role.strip().casefold().replace("-", "_").replace(" ", "_")
+        if role not in _PDF_CROP_VISUAL_ROLES:
+            continue
+        if asset.get("coordinate_system") != "pdf-points-top-left":
+            continue
+
+        raw_path = asset.get("output_path")
+        if not isinstance(raw_path, str):
+            continue
+        relative = _candidate_relative_path(raw_path)
+        if relative is None:
+            continue
+        candidate = extraction_dir.joinpath(*relative.parts)
+        try:
+            resolved = candidate.resolve(strict=True)
+            resolved.relative_to(resolved_root)
+        except (OSError, ValueError):
+            # Unsafe and missing asset paths are reported by the canonical asset
+            # checks; do not duplicate those findings here.
+            continue
+        if not resolved.is_file():
+            continue
+
+        media_type = str(asset.get("media_type") or "").casefold()
+        if media_type and media_type != "image/png":
+            continue
+        if not media_type and relative.suffix.casefold() != ".png":
+            continue
+
+        try:
+            with Image.open(resolved) as opened:
+                image = opened.convert("RGB")
+        except (OSError, ValueError):
+            # Image readability is outside this narrowly scoped heuristic.
+            continue
+
+        width, height = image.size
+        if width < 1 or height < 1:
+            continue
+
+        def meaningful_count(box: tuple[int, int, int, int]) -> int:
+            edge = image.crop(box)
+            return sum(
+                1
+                for pixel in edge.getdata()
+                if min(pixel) < _PDF_CROP_NEAR_WHITE_THRESHOLD
+            )
+
+        boundary_counts = {
+            "left": meaningful_count((0, 0, 1, height)),
+            "right": meaningful_count((width - 1, 0, width, height)),
+            "top": meaningful_count((0, 0, width, 1)),
+            "bottom": meaningful_count((0, height - 1, width, height)),
+        }
+        touched = [
+            (side, count)
+            for side, count in boundary_counts.items()
+            if count >= _PDF_CROP_MIN_BOUNDARY_PIXELS
+        ]
+        if not touched:
+            continue
+
+        asset_name = str(asset.get("label") or asset.get("asset_id") or relative)
+        boundary_summary = ", ".join(
+            f"{side} ({count} {'pixel' if count == 1 else 'pixels'})"
+            for side, count in touched
+        )
+        findings.append(
+            _finding(
+                "pdf_crop_content_touches_boundary",
+                "cosmetic",
+                (
+                    f"PDF crop {asset_name!r} has meaningful pixels touching the "
+                    f"{boundary_summary} boundary. Visually verify that authored "
+                    "content is complete; widen the crop if it is clipped, or "
+                    "accept the warning for intentional edge-to-edge artwork."
+                ),
+                relative.as_posix(),
+            )
+        )
+    return findings
+
+
 def _validate_manifest_file_inventory(
     extraction_dir: Path,
     loaded: Mapping[str, Any],
@@ -4564,6 +4678,7 @@ def validate_candidate(
             )
         )
     findings.extend(_validate_diagnostic_warnings(loaded))
+    findings.extend(_validate_pdf_crop_boundaries(extraction, loaded))
     findings.extend(_validate_pdf_page_analysis(loaded))
     findings.extend(_validate_pdf_ocr_diagnostics(loaded))
     findings.extend(_validate_pdf_block_provenance(loaded))

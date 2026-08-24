@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 import os
 import re
+import secrets
 import shutil
-import tempfile
+import unicodedata
 from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
@@ -66,6 +67,53 @@ class ExtractionResult:
     source_fingerprint: str
     status: str
     finding_count: int
+
+
+_TITLE_HYPHEN_EQUIVALENTS = str.maketrans({"\u2010": "-", "\u2011": "-"})
+
+
+def _reconcile_article_title(article: Any, metadata: RecordMetadata) -> None:
+    """Require source-title identity while tolerating equivalent hyphen glyphs.
+
+    Publisher HTML commonly substitutes ASCII HYPHEN-MINUS for the Unicode
+    HYPHEN or NON-BREAKING HYPHEN preserved in curated metadata. Treat only
+    those hyphen code points as identity-equivalent, then retain the exact
+    metadata title in the canonical record. Other punctuation and wording
+    differences remain blocking identity mismatches.
+    """
+
+    source_title = unicodedata.normalize("NFC", article.title).translate(
+        _TITLE_HYPHEN_EQUIVALENTS
+    )
+    metadata_title = unicodedata.normalize("NFC", metadata.title).translate(
+        _TITLE_HYPHEN_EQUIVALENTS
+    )
+    if source_title != metadata_title:
+        raise ExtractionError(
+            "article title does not match public metadata: "
+            f"{article.title!r} != {metadata.title!r}"
+        )
+    article.title = metadata.title
+
+
+def _create_build_root(record_staging: Path, run_id: str) -> Path:
+    """Create a unique build directory with the private root's permissions.
+
+    ``tempfile.mkdtemp`` deliberately uses mode ``0o700``.  On Windows that
+    suppresses ACL inheritance, which made runs created by the Codex sandbox
+    unreadable to the human user's browser.  A normal Windows directory keeps
+    the parent private ACL; POSIX builds retain the original owner-only mode.
+    """
+
+    mode = 0o777 if os.name == "nt" else 0o700
+    for _ in range(128):
+        candidate = record_staging / f".{run_id}.building-{secrets.token_hex(8)}"
+        try:
+            candidate.mkdir(mode=mode)
+        except FileExistsError:
+            continue
+        return candidate
+    raise ExtractionError("could not allocate a unique staged build directory")
 
 
 def _bundled_rapidocr_models() -> RapidOcrModelSet:
@@ -147,6 +195,7 @@ def _load_override(path: Path | None, record_id: str) -> tuple[dict[str, Any], s
         "pdf_crops",
         "supplement_exclusions",
         "front_matter",
+        "reference_entries",
         "supporting_information_additions",
         "source_anomalies",
     ):
@@ -163,7 +212,12 @@ def _apply_front_matter_overrides(
     specs: list[dict[str, Any]],
     sources: list[SourceFile],
 ) -> None:
-    """Add reviewed source details omitted from the publisher article HTML."""
+    """Add or replace reviewed front matter from stronger source evidence.
+
+    A matching label replaces one publisher-HTML block.  This lets an exact
+    PDF-backed override complete a partially archived author/affiliation row
+    without leaving two contradictory blocks in canonical content.
+    """
 
     allowed_sources = {source.relative_path for source in sources}
     for index, spec in enumerate(specs, start=1):
@@ -181,16 +235,99 @@ def _apply_front_matter_overrides(
             raise ExtractionError(
                 f"front_matter item {index} requires discovered source evidence"
             )
-        article.front_matter.append(
-            ContentBlock(
-                block_id=f"front-matter-{index:03d}",
-                kind="front_matter",
-                markdown=f"**{label}:** {value}",
-                plain_text=f"{label}: {value}",
-                source_path=source_path,
-                source_locator=source_locator,
-            )
+        replacement = ContentBlock(
+            block_id=f"front-matter-{index:03d}",
+            kind="front_matter",
+            markdown=f"**{label}:** {value}",
+            plain_text=f"{label}: {value}",
+            source_path=source_path,
+            source_locator=source_locator,
         )
+        matching = [
+            position
+            for position, block in enumerate(article.front_matter)
+            if block.plain_text.startswith(f"{label}:")
+        ]
+        if len(matching) > 1:
+            raise ExtractionError(
+                f"front_matter item {index} label matches multiple existing blocks"
+            )
+        if matching:
+            article.front_matter[matching[0]] = replacement
+        else:
+            article.front_matter.append(replacement)
+
+
+def _apply_reference_entries(
+    article: Any,
+    specs: list[dict[str, Any]],
+    sources: list[SourceFile],
+) -> None:
+    """Replace or extend an incomplete HTML bibliography from exact evidence.
+
+    This is deliberately record-specific. Existing entries may be replaced by
+    number, and new entries must extend the current bibliography contiguously;
+    gaps, reordering, duplicate specifications, and undiscovered sources fail
+    closed.
+    """
+
+    if not specs:
+        return
+
+    allowed_sources = {source.relative_path for source in sources}
+    for expected_number, block in enumerate(article.references, start=1):
+        label = re.match(r"^\s*(\d+)\.\s+", block.plain_text)
+        if label is None or int(label.group(1)) != expected_number:
+            raise ExtractionError(
+                "reference_entries requires an existing contiguous numbered bibliography"
+            )
+
+    seen: set[int] = set()
+    previous_number = 0
+    for index, spec in enumerate(specs, start=1):
+        if not isinstance(spec, dict):
+            raise ExtractionError(f"reference_entries item {index} must be a mapping")
+        raw_number = spec.get("number")
+        if isinstance(raw_number, bool):
+            raise ExtractionError(f"reference_entries item {index} has invalid number")
+        try:
+            number = int(raw_number)
+        except (TypeError, ValueError) as error:
+            raise ExtractionError(
+                f"reference_entries item {index} has invalid number"
+            ) from error
+        value = str(spec.get("value", "")).strip()
+        source_path = str(spec.get("source_path", "")).replace("\\", "/")
+        source_locator = str(spec.get("source_locator", "")).strip()
+        if (
+            number < 1
+            or number in seen
+            or number <= previous_number
+            or not value
+            or "\n" in value
+            or re.match(r"^\s*\d+[.)]\s+", value)
+            or source_path not in allowed_sources
+            or not source_locator
+        ):
+            raise ExtractionError(f"invalid reference_entries item {index}")
+        seen.add(number)
+        previous_number = number
+        block = ContentBlock(
+            block_id=f"reference-{number:03d}",
+            kind="reference",
+            markdown=f"{number}. {value}",
+            plain_text=f"{number}. {value}",
+            source_path=source_path,
+            source_locator=source_locator,
+        )
+        if number <= len(article.references):
+            article.references[number - 1] = block
+        elif number == len(article.references) + 1:
+            article.references.append(block)
+        else:
+            raise ExtractionError(
+                f"reference_entries item {index} would create a bibliography gap"
+            )
 
 
 def _apply_supporting_information_additions(
@@ -395,6 +532,23 @@ def _materialize_embedded_assets(
         seen_ids.add(asset_id)
         seen_paths.add(path_key)
     return assets
+
+
+def _embedded_assets_after_pdf_overrides(
+    pending_assets: Iterable[EmbeddedAsset],
+    crop_specs: Iterable[Mapping[str, Any]],
+) -> list[EmbeddedAsset]:
+    """Let an explicit PDF crop replace the same HTML-embedded asset.
+
+    A crop is a reviewed source-selection decision. Keeping the lower-quality
+    embedded bytes as well would create duplicate IDs and force record owners
+    to mutate otherwise valid HTML in memory merely to choose the PDF visual.
+    """
+
+    overridden_ids = {
+        _normalized_asset_id(spec.get("asset_id")) for spec in crop_specs
+    }
+    return [asset for asset in pending_assets if asset.asset_id not in overridden_ids]
 
 
 def _normalized_asset_id(value: Any) -> str:
@@ -793,6 +947,9 @@ def extract_record(
     _apply_front_matter_overrides(
         article, list(override.get("front_matter", [])), sources
     )
+    _apply_reference_entries(
+        article, list(override.get("reference_entries", [])), sources
+    )
     _apply_supporting_information_additions(
         article,
         list(override.get("supporting_information_additions", [])),
@@ -801,10 +958,7 @@ def extract_record(
     source_anomalies = _validated_source_anomalies(
         list(override.get("source_anomalies", [])), sources
     )
-    if article.title != metadata.title:
-        raise ExtractionError(
-            f"article title does not match public metadata: {article.title!r} != {metadata.title!r}"
-        )
+    _reconcile_article_title(article, metadata)
     if html_source is not None:
         pdf_inspections = _verify_pdf_text(repository_root, sources)
         if any(
@@ -828,7 +982,7 @@ def extract_record(
             }
         )
 
-    build_root = Path(tempfile.mkdtemp(prefix=f".{run_id}.building-", dir=record_staging))
+    build_root = _create_build_root(record_staging, run_id)
     extraction_root = build_root / "extraction"
     diagnostic_root = build_root / "extraction_diagnostic"
     extraction_root.mkdir()
@@ -841,14 +995,16 @@ def extract_record(
         )
         supplement_paths = [supplement.copied_path for supplement in supplements]
         reserved_output_paths = [*supplement_paths, "record.json"]
+        crop_specs = _effective_crop_specs(article, requested_crop_specs)
         embedded_assets = _materialize_embedded_assets(
-            list(article.embedded_assets),
+            _embedded_assets_after_pdf_overrides(
+                article.embedded_assets, crop_specs
+            ),
             extraction_root,
             sources,
             reserved_assets=supplement_assets,
             reserved_paths=reserved_output_paths,
         )
-        crop_specs = _effective_crop_specs(article, requested_crop_specs)
         _asset_identity_keys(
             [*supplement_assets, *embedded_assets, *crop_specs],
             reserved_paths=reserved_output_paths,

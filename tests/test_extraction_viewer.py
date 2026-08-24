@@ -117,6 +117,20 @@ class ExtractionViewerStaticTests(unittest.TestCase):
         )
         self.assertIn("SUPPORTED_SCHEMA_VERSIONS.has(record.schema_version)", schema_source)
 
+    def test_bibliographic_date_is_rendered_as_publication_date(self) -> None:
+        self.assertIn(
+            '["Publication date", firstDefined(metadata.publication_date, '
+            "bibliographic.publication_date, bibliographic.date)]",
+            self.source,
+        )
+
+    def test_bibliographic_article_number_is_rendered(self) -> None:
+        self.assertIn(
+            '["Article number", firstDefined(metadata.article_number, '
+            "bibliographic.article_number)]",
+            self.source,
+        )
+
     def test_library_has_search_refresh_and_record_navigation(self) -> None:
         search_inputs = [
             attrs
@@ -136,6 +150,11 @@ class ExtractionViewerStaticTests(unittest.TestCase):
         self.assertIn('"pushState"', self.source)
         self.assertIn("history.back()", self.source)
         self.assertIn("scrollIntoView", self.source)
+
+    def test_programmatically_focused_article_title_has_no_control_outline(self) -> None:
+        self.assertIn(".article-title:focus { outline: none; }", self.source)
+        self.assertIn("title.tabIndex = -1", self.source)
+        self.assertIn("title.focus({ preventScroll: true })", self.source)
 
     def test_library_sort_search_and_invalid_record_isolation_are_explicit(self) -> None:
         self.assertGreaterEqual(self.source.count(".sort("), 2)
@@ -338,6 +357,86 @@ const assert = require("node:assert/strict");
                 rf"\b{re.escape(function_name)}\b",
             )
 
+    def test_displayable_images_have_an_accessible_full_window_preview(self) -> None:
+        lightboxes = [
+            attrs
+            for tag, attrs in self.inventory.tags
+            if tag == "div" and attrs.get("id") == "image-lightbox"
+        ]
+        self.assertEqual(len(lightboxes), 1)
+        self.assertEqual(lightboxes[0].get("role"), "dialog")
+        self.assertEqual(lightboxes[0].get("aria-modal"), "true")
+        self.assertEqual(lightboxes[0].get("aria-labelledby"), "image-lightbox-title")
+        self.assertEqual(lightboxes[0].get("aria-describedby"), "image-lightbox-help")
+
+        button_ids = {
+            attrs.get("id")
+            for tag, attrs in self.inventory.tags
+            if tag == "button"
+        }
+        self.assertTrue(
+            {
+                "image-zoom-out",
+                "image-zoom-reset",
+                "image-zoom-fit",
+                "image-zoom-in",
+                "image-lightbox-close",
+            }.issubset(button_ids)
+        )
+        self.assertEqual(self.source.count("enableImagePreview(image);"), 3)
+        preview_source = _source_between(
+            self.source,
+            "function enableImagePreview",
+            "function resolveForNode",
+        )
+        self.assertIn('image.addEventListener("click"', preview_source)
+        self.assertIn('image.addEventListener("keydown"', preview_source)
+        self.assertIn('image.setAttribute("role", "button")', preview_source)
+        self.assertIn('image.tabIndex = 0', preview_source)
+
+        controls_source = _source_between(
+            self.source,
+            'dom.imageZoomOut.addEventListener',
+            'dom.viewToggle.addEventListener',
+        )
+        for shortcut in ('"Escape"', '"+"', '"-"', '"0"', '"f"'):
+            self.assertIn(shortcut, controls_source)
+        self.assertIn('addEventListener("wheel"', controls_source)
+        self.assertIn("event.ctrlKey", controls_source)
+        self.assertIn("closeImagePreview", controls_source)
+
+    def test_image_zoom_helpers_clamp_and_fit_deterministically(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not available for image zoom helper tests")
+
+        script = "\n".join(
+            (
+                'const assert = require("node:assert/strict");',
+                "const IMAGE_ZOOM_MIN = 0.1;",
+                "const IMAGE_ZOOM_MAX = 8;",
+                _source_between(
+                    self.source,
+                    "function clampImageZoom",
+                    "function imagePreviewAvailableSize",
+                ),
+                "assert.equal(clampImageZoom(0.01), 0.1);",
+                "assert.equal(clampImageZoom(20), 8);",
+                "assert.equal(clampImageZoom('bad'), 1);",
+                "assert.equal(fittedImageZoom(1000, 500, 500, 500), 0.5);",
+                "assert.equal(fittedImageZoom(100, 200, 800, 400), 2);",
+                "assert.equal(fittedImageZoom(0, 200, 800, 400), 1);",
+            )
+        )
+        result = subprocess.run(
+            [node, "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_record_switching_guards_async_work_and_releases_blob_urls(self) -> None:
         self.assertRegex(
             self.source,
@@ -379,9 +478,12 @@ const assert = require("node:assert/strict");
         script = "\n".join(
             (
                 'const assert = require("node:assert/strict");',
-                "function firstDefined(...values) { return values.find(value => value !== undefined && value !== null && value !== \"\") || \"\"; }",
+                _source_between(self.source, "function isObject", "function asArray"),
+                _source_between(self.source, "function firstDefined", "function safeContentHref"),
                 _source_between(self.source, "function normalizeRelativePath", "function clearObjectUrls"),
                 _source_between(self.source, "function assetMediaType", "function attachRuntimeFailure"),
+                'assert.equal(firstDefined(undefined, null, ""), "");',
+                'assert.equal(richPlain({ plain_text: "", html: "" }), "");',
                 'assert.equal(normalizeRelativePath("figures/a.png"), "figures/a.png");',
                 'for (const value of ["../a.png", "a//b.png", " a.png", "a.png ", "a\\\\b.png", "C:/a.png"]) assert.throws(() => normalizeRelativePath(value));',
                 'assert.equal(assetMediaType({ path: "figure.tiff" }, "figure.tiff"), "image/tiff");',
@@ -497,7 +599,7 @@ const assert = require("node:assert/strict");
         )
 
         figure_index = render_source.index("for (const figure of asArray(supplement.figures))")
-        blocks_index = render_source.index("renderBlocks(supplement.blocks, card)")
+        blocks_index = render_source.index("renderBlocks(")
         data_index = render_source.index('asset.kind !== "supplement_data"')
         data_append_index = render_source.index("card.append(dataSection)")
         tables_index = render_source.index('renderTableCard(table, "supplement-table")')
@@ -511,6 +613,7 @@ const assert = require("node:assert/strict");
         self.assertIn("Supplementary data files", render_source)
         self.assertIn("representedAssetIds.add(assetId)", render_source)
         self.assertIn("renderGenericAsset(asset", render_source)
+        self.assertIn('block.kind !== "figure_text"', render_source)
 
     def test_staging_fallback_is_live_first_latest_and_clearly_unapproved(self) -> None:
         node = shutil.which("node")
@@ -735,6 +838,76 @@ const root = {
             'setLibraryMessage("warning", result.stagingAccessWarning)',
             load_source,
         )
+
+    def test_unreadable_staged_run_is_listed_instead_of_silently_hidden(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not available for staged discovery tests")
+
+        helpers = "\n".join(
+            (
+                "const METADATA_PREFIX_MAX_BYTES = 1024 * 1024;",
+                _source_between(self.source, "function isObject", "function asArray"),
+                _source_between(self.source, "function asArray", "function firstDefined"),
+                _source_between(self.source, "function firstDefined", "function richPlain"),
+                _source_between(self.source, "function richPlain", "function safeContentHref"),
+                _source_between(self.source, "function jsonStringEnd", "function recordSummary"),
+                _source_between(self.source, "function notFound", "function setLibraryMessage"),
+            )
+        )
+        script = helpers + r'''
+const assert = require("node:assert/strict");
+
+function missing(name) {
+  const error = new Error(`Missing or inaccessible ${name}`);
+  error.name = "NotFoundError";
+  return error;
+}
+
+function directory(name, children = {}) {
+  return {
+    kind: "directory",
+    name,
+    async getDirectoryHandle(child) {
+      const handle = children[child];
+      if (!handle || handle.kind !== "directory") throw missing(child);
+      return handle;
+    },
+    async *values() { for (const handle of Object.values(children)) yield handle; }
+  };
+}
+
+const blockedRun = {
+  kind: "directory",
+  name: "protocol-00002-r01",
+  async getDirectoryHandle() { throw missing("extraction"); }
+};
+const recordFolder = directory("00002");
+const staging = directory("staging", {
+  "00002": directory("00002", { "protocol-00002-r01": blockedRun })
+});
+const root = directory("papers (private)", { staging, "00002": recordFolder });
+
+(async () => {
+  const result = await scanRootHandle(root);
+  assert.equal(result.records.length, 1);
+  assert.equal(result.records[0].id, "00002");
+  assert.equal(result.records[0].valid, false);
+  assert.match(result.records[0].error, /no readable extraction\/record\.json/);
+  assert.match(result.records[0].error, /permission/);
+})().catch(error => {
+  console.error(error && error.stack || error);
+  process.exitCode = 1;
+});
+'''
+        result = subprocess.run(
+            [node, "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_inline_javascript_is_syntactically_valid(self) -> None:
         node = shutil.which("node")

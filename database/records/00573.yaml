@@ -15,5 +15,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_available
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Review chapter (pp. 1–31) in the Springer book DNA Binders and Related Subjects (Topics in Current Chemistry, vol. 253)."

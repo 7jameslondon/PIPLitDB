@@ -1,27 +1,33 @@
-"""Bounded, read-only extraction for PowerPoint supplementary files.
+"""Bounded extraction for PowerPoint supplementary files.
 
 The parser reads OOXML parts directly from the ZIP package.  It does not invoke
-PowerPoint/LibreOffice, run OCR, execute macros, or unpack the archive onto the
-filesystem. Referenced media, chart workbooks, and the package thumbnail are
-materialized only through an explicitly supplied extraction root.
+PowerPoint while parsing, run OCR, execute macros, or unpack the archive onto
+the filesystem. Referenced media and chart workbooks are materialized only
+through an explicitly supplied extraction root. A separately injected renderer
+may use Microsoft PowerPoint to create complete-slide PNGs for slides that are
+scientific figures; those renders are derived assets and never replace or
+rewrite the preserved source presentation.
 """
 
 from __future__ import annotations
 
 import hashlib
 import html
+import json
 import mimetypes
 import os
 import posixpath
 import re
 import stat
+import struct
+import subprocess
 import tempfile
 import unicodedata
 import zipfile
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree as ET
 
@@ -36,6 +42,9 @@ MAX_MEMBER_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024
 MAX_XML_BYTES = 32 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 200.0
+PPTX_FIGURE_RENDER_LONG_EDGE_PIXELS = 5_000
+PPTX_FIGURE_RENDER_MIN_LONG_EDGE_PIXELS = 4_000
+PPTX_RENDER_TIMEOUT_SECONDS = 300
 
 NS = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
@@ -157,6 +166,28 @@ class _EmbeddedWorkbook:
     relationship_id: str
     workbook_part: str
     table_id: str
+
+
+@dataclass(frozen=True)
+class RenderedSlide:
+    """One complete-slide raster produced by an external presentation renderer."""
+
+    slide_number: int
+    path: Path
+    pixel_width: int
+    pixel_height: int
+    renderer: str
+    renderer_version: str
+
+
+SlideRenderer = Callable[
+    [Path, Path, tuple[int, ...], int],
+    list[RenderedSlide],
+]
+
+
+class PptxSlideRenderError(RuntimeError):
+    """Raised when a requested complete-slide rendering cannot be trusted."""
 
 
 @dataclass(frozen=True)
@@ -1213,6 +1244,246 @@ def _write_asset(extraction_root: Path, relative_path: str, data: bytes) -> None
         raise RuntimeError(f"PPTX asset copy failed verification: {destination}")
 
 
+def _png_dimensions(data: bytes) -> tuple[int, int]:
+    if (
+        len(data) < 24
+        or data[:8] != b"\x89PNG\r\n\x1a\n"
+        or data[12:16] != b"IHDR"
+    ):
+        raise PptxSlideRenderError("renderer output is not a PNG with an IHDR header")
+    width, height = struct.unpack(">II", data[16:24])
+    if width < 1 or height < 1:
+        raise PptxSlideRenderError("renderer output declares invalid PNG dimensions")
+    return width, height
+
+
+def render_powerpoint_slides(
+    pptx_path: Path,
+    output_directory: Path,
+    slide_numbers: tuple[int, ...],
+    long_edge_pixels: int,
+) -> list[RenderedSlide]:
+    """Render selected slides with Microsoft PowerPoint's native compositor.
+
+    The PowerShell bridge opens the candidate copy read-only, disables Office
+    automation macros, keeps the presentation window hidden, and exports only
+    the requested complete slides. No package objects are edited or saved.
+    """
+
+    if os.name != "nt":
+        raise PptxSlideRenderError(
+            "native Microsoft PowerPoint rendering is available only on Windows"
+        )
+    if not slide_numbers:
+        return []
+    if (
+        long_edge_pixels < PPTX_FIGURE_RENDER_MIN_LONG_EDGE_PIXELS
+        or long_edge_pixels > 12_000
+    ):
+        raise PptxSlideRenderError("requested slide-render resolution is outside policy")
+    if any(number < 1 for number in slide_numbers) or len(set(slide_numbers)) != len(
+        slide_numbers
+    ):
+        raise PptxSlideRenderError("requested slide numbers must be unique positive integers")
+
+    bridge = Path(__file__).with_name("render_powerpoint_slides.ps1")
+    if not bridge.is_file():
+        raise PptxSlideRenderError("the Microsoft PowerPoint rendering bridge is missing")
+    output_root = Path(output_directory)
+    output_root.mkdir(parents=True, exist_ok=True)
+    if any(output_root.iterdir()):
+        raise PptxSlideRenderError("slide renderer requires an empty output directory")
+
+    command = [
+        "powershell.exe",
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        str(bridge),
+        "-InputPath",
+        str(Path(pptx_path).resolve(strict=True)),
+        "-OutputDirectory",
+        str(output_root.resolve(strict=True)),
+        "-SlideNumbersCsv",
+        ",".join(str(number) for number in slide_numbers),
+        "-LongEdgePixels",
+        str(long_edge_pixels),
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=PPTX_RENDER_TIMEOUT_SECONDS,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except FileNotFoundError as exc:
+        raise PptxSlideRenderError("Windows PowerShell is unavailable") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise PptxSlideRenderError("Microsoft PowerPoint slide rendering timed out") from exc
+    if completed.returncode != 0:
+        detail = _normalize_space(completed.stderr)[-600:]
+        message = "Microsoft PowerPoint could not render the requested slide(s)"
+        if detail:
+            message += f": {detail}"
+        raise PptxSlideRenderError(message)
+
+    try:
+        payload = json.loads(completed.stdout.strip())
+    except json.JSONDecodeError as exc:
+        raise PptxSlideRenderError(
+            "Microsoft PowerPoint renderer returned malformed metadata"
+        ) from exc
+    if not isinstance(payload, list):
+        raise PptxSlideRenderError("Microsoft PowerPoint renderer metadata is not a list")
+
+    rendered: list[RenderedSlide] = []
+    for raw in payload:
+        if not isinstance(raw, dict):
+            raise PptxSlideRenderError("Microsoft PowerPoint renderer metadata is malformed")
+        try:
+            number = int(raw["slide_number"])
+            width = int(raw["pixel_width"])
+            height = int(raw["pixel_height"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PptxSlideRenderError(
+                "Microsoft PowerPoint renderer omitted required dimensions"
+            ) from exc
+        filename = str(raw.get("filename") or "")
+        if not re.fullmatch(r"slide-\d{3}\.png", filename):
+            raise PptxSlideRenderError("Microsoft PowerPoint renderer returned an unsafe filename")
+        rendered.append(
+            RenderedSlide(
+                slide_number=number,
+                path=output_root / filename,
+                pixel_width=width,
+                pixel_height=height,
+                renderer=str(raw.get("renderer") or "Microsoft PowerPoint"),
+                renderer_version=str(raw.get("renderer_version") or "unknown"),
+            )
+        )
+    return rendered
+
+
+def _slide_number_from_locator(locator: str) -> int | None:
+    match = re.search(r"(?:^|;)slide=(\d+)(?:;|$)", locator)
+    return int(match.group(1)) if match else None
+
+
+def _figure_slide_numbers(blocks: Iterable[ContentBlock]) -> tuple[int, ...]:
+    return tuple(
+        sorted(
+            {
+                slide_number
+                for block in blocks
+                if block.kind == "figure_caption"
+                and (slide_number := _slide_number_from_locator(block.source_locator))
+                is not None
+            }
+        )
+    )
+
+
+def _materialize_slide_renders(
+    *,
+    renderer: SlideRenderer,
+    pptx_path: Path,
+    slide_numbers: tuple[int, ...],
+    slide_count: int,
+    source: SourceFile,
+    supplement_id: str,
+    extraction_root: Path,
+) -> list[dict[str, Any]]:
+    if not slide_numbers:
+        return []
+    temporary_parent = ensure_within(extraction_root, extraction_root)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{supplement_id}-slide-render-", dir=temporary_parent
+    ) as temporary:
+        temporary_root = Path(temporary).resolve(strict=True)
+        rendered = renderer(
+            pptx_path,
+            temporary_root,
+            slide_numbers,
+            PPTX_FIGURE_RENDER_LONG_EDGE_PIXELS,
+        )
+        by_number: dict[int, RenderedSlide] = {}
+        for item in rendered:
+            if item.slide_number in by_number:
+                raise PptxSlideRenderError("renderer returned a duplicate slide")
+            by_number[item.slide_number] = item
+        if set(by_number) != set(slide_numbers):
+            raise PptxSlideRenderError(
+                "renderer output does not match the requested figure slides"
+            )
+
+        assets: list[dict[str, Any]] = []
+        for slide_number in slide_numbers:
+            item = by_number[slide_number]
+            try:
+                rendered_path = ensure_within(
+                    Path(item.path).resolve(strict=True), temporary_root
+                )
+                reject_reparse_chain(rendered_path, temporary_root)
+            except (FileNotFoundError, OSError) as exc:
+                raise PptxSlideRenderError("renderer output is missing or unsafe") from exc
+            if is_reparse_point(rendered_path) or not stat.S_ISREG(
+                rendered_path.lstat().st_mode
+            ):
+                raise PptxSlideRenderError("renderer output is not a regular file")
+            data = rendered_path.read_bytes()
+            width, height = _png_dimensions(data)
+            if (width, height) != (item.pixel_width, item.pixel_height):
+                raise PptxSlideRenderError(
+                    "renderer metadata disagrees with the PNG dimensions"
+                )
+            if max(width, height) < PPTX_FIGURE_RENDER_MIN_LONG_EDGE_PIXELS:
+                raise PptxSlideRenderError(
+                    "complete-slide PNG is below the minimum figure resolution"
+                )
+            output_path = (
+                PurePosixPath("supplementary")
+                / supplement_id
+                / "figures"
+                / f"slide-{slide_number:03d}.png"
+            ).as_posix()
+            _write_asset(extraction_root, output_path, data)
+            digest = hashlib.sha256(data).hexdigest()
+            assets.append(
+                {
+                    "schema_version": "1.0",
+                    "asset_id": f"{supplement_id}_slide_{slide_number:03d}_render",
+                    "category": "supplement_slide_render",
+                    "label": f"Complete high-resolution rendering of PowerPoint slide {slide_number}",
+                    "source_path": source.relative_path,
+                    "source_locator": f"slide={slide_number};render=complete-slide",
+                    "source_sha256": source.sha256,
+                    "output_path": output_path,
+                    "media_type": "image/png",
+                    "sha256": digest,
+                    "bytes": len(data),
+                    "ocr_performed": False,
+                    "parent_id": supplement_id,
+                    "content_id": digest,
+                    "render_role": "complete_slide",
+                    "presentation_slide_number": slide_number,
+                    "presentation_slide_count": slide_count,
+                    "pixel_width": width,
+                    "pixel_height": height,
+                    "render_long_edge_pixels": PPTX_FIGURE_RENDER_LONG_EDGE_PIXELS,
+                    "renderer": item.renderer,
+                    "renderer_version": item.renderer_version,
+                }
+            )
+        return assets
+
+
 def _asset_kind(media_type: str) -> str:
     if media_type.startswith("image/"):
         return "supplement_image"
@@ -1267,6 +1538,7 @@ def _materialize_media(
                 "ocr_performed": False,
                 "parent_id": supplement_id,
                 "content_id": sha256,
+                "presentation_slide_numbers": slides,
             }
         )
     return assets
@@ -1394,56 +1666,6 @@ def _validate_embedded_workbook_assets(
             )
 
 
-def _thumbnail_part(
-    archive: zipfile.ZipFile, names: set[str]
-) -> str | None:
-    for relationship in _relationships(archive, names, ""):
-        if relationship.relationship_type == "thumbnail":
-            return relationship.resolved_target
-    for candidate in ("docProps/thumbnail.jpeg", "docProps/thumbnail.jpg", "docProps/thumbnail.png"):
-        if candidate in names:
-            return candidate
-    return None
-
-
-def _materialize_thumbnail(
-    archive: zipfile.ZipFile,
-    names: set[str],
-    part: str,
-    defaults: dict[str, str],
-    overrides: dict[str, str],
-    source: SourceFile,
-    supplement_id: str,
-    extraction_root: Path,
-) -> dict[str, Any]:
-    suffix = PurePosixPath(part).suffix.casefold() or ".bin"
-    output_path = (
-        PurePosixPath("supplementary")
-        / supplement_id
-        / "previews"
-        / f"package-thumbnail{suffix}"
-    ).as_posix()
-    data = _read_member(archive, names, part)
-    _write_asset(extraction_root, output_path, data)
-    sha256 = hashlib.sha256(data).hexdigest()
-    return {
-        "schema_version": "1.0",
-        "asset_id": f"{supplement_id}_package_thumbnail",
-        "category": "supplement_slide_preview",
-        "label": "Low-resolution PowerPoint package thumbnail (not a rendered slide)",
-        "source_path": source.relative_path,
-        "source_locator": f"pptx-part={part};package-thumbnail",
-        "source_sha256": source.sha256,
-        "output_path": output_path,
-        "media_type": _media_type(part, defaults, overrides),
-        "sha256": sha256,
-        "bytes": len(data),
-        "ocr_performed": False,
-        "parent_id": supplement_id,
-        "content_id": sha256,
-    }
-
-
 def _semantic_media_labels(
     shapes: list[_Shape],
     relationships: dict[str, _Relationship],
@@ -1482,6 +1704,7 @@ def extract_pptx_supplement(
     *,
     pptx_path: Path,
     extraction_root: Path,
+    slide_renderer: SlideRenderer | None = None,
 ) -> tuple[
     list[ContentBlock],
     list[TableItem],
@@ -1490,9 +1713,10 @@ def extract_pptx_supplement(
 ]:
     """Extract one PPTX supplement without executing or rewriting the package.
 
-    Returns ``(blocks, tables, assets, warnings)``.  Assets follow the
+    Returns ``(blocks, tables, assets, warnings)``. Assets follow the
     ``SupplementExtraction.assets`` dictionary contract and are written only
-    beneath ``extraction_root``.
+    beneath ``extraction_root``. When supplied, ``slide_renderer`` is called
+    only for slides identified by native figure captions.
     """
 
     if not supplement_id or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", supplement_id):
@@ -1784,31 +2008,45 @@ def extract_pptx_supplement(
             root_path,
         )
         assets.extend(embedded_assets)
-        thumbnail = _thumbnail_part(archive, names)
-        if thumbnail and thumbnail in names:
-            thumbnail_asset = _materialize_thumbnail(
-                archive,
-                names,
-                thumbnail,
-                defaults,
-                overrides,
-                source,
-                supplement_id,
-                root_path,
-            )
-            thumbnail_asset["presentation_slide_count"] = len(slide_parts)
-            assets.append(thumbnail_asset)
-        else:
-            warnings.append(
-                _warning(
-                    "pptx_package_thumbnail_missing",
-                    "PowerPoint package has no low-resolution package thumbnail",
-                    source,
-                    supplement_id,
+        figure_slides = _figure_slide_numbers(blocks)
+        if slide_renderer is not None and figure_slides:
+            try:
+                assets.extend(
+                    _materialize_slide_renders(
+                        renderer=slide_renderer,
+                        pptx_path=path,
+                        slide_numbers=figure_slides,
+                        slide_count=len(slide_parts),
+                        source=source,
+                        supplement_id=supplement_id,
+                        extraction_root=root_path,
+                    )
                 )
-            )
+            except Exception as exc:
+                warnings.append(
+                    _warning(
+                        "pptx_figure_slide_render_failed",
+                        (
+                            "A PowerPoint slide identified as a scientific figure could "
+                            "not be rendered as a complete high-resolution PNG; package "
+                            "thumbnails are not accepted as a fallback"
+                        ),
+                        source,
+                        supplement_id,
+                        severity="structural",
+                        slide_numbers=list(figure_slides),
+                        renderer_error_type=type(exc).__name__,
+                        renderer_error=_normalize_space(str(exc))[:800],
+                    )
+                )
 
     return blocks, tables, assets, warnings
 
 
-__all__ = ["extract_pptx_supplement"]
+__all__ = [
+    "PptxSlideRenderError",
+    "RenderedSlide",
+    "SlideRenderer",
+    "extract_pptx_supplement",
+    "render_powerpoint_slides",
+]

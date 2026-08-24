@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from pathlib import Path
+import shutil
+import subprocess
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -23,7 +26,11 @@ from scripts.extraction.pdf_text_extractor import (
     PdfTextLine,
     PdfTextPage,
 )
-from scripts.extraction.pipeline import extract_record
+from scripts.extraction.pipeline import (
+    ExtractionError,
+    _reconcile_article_title,
+    extract_record,
+)
 from scripts.extraction.record_json import build_record_json, write_record_json
 from scripts.extraction.validation import ValidationReport
 
@@ -683,6 +690,26 @@ class PdfArticleExtractionTests(unittest.TestCase):
 
 
 class PipelineSourceSelectionTests(unittest.TestCase):
+    def test_title_identity_accepts_only_equivalent_hyphen_glyphs(self) -> None:
+        article = _article()
+        article.title = "Synthetic MMP-9 Article"
+        metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title="Synthetic MMP\u20109 Article",
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+
+        _reconcile_article_title(article, metadata)
+
+        self.assertEqual(article.title, metadata.title)
+        article.title = "Synthetic MMP\u20139 Article"
+        with self.assertRaisesRegex(ExtractionError, "title does not match"):
+            _reconcile_article_title(article, metadata)
+
     def _source(
         self, root: Path, role: str, relative_path: str, content: bytes, detected: str
     ) -> SourceFile:
@@ -810,6 +837,31 @@ class PipelineSourceSelectionTests(unittest.TestCase):
             "automated_pdf_html_alignment_not_implemented",
             {warning["code"] for warning in article.warnings},
         )
+
+    @unittest.skipUnless(os.name == "nt", "Windows ACL regression test")
+    def test_staged_run_keeps_parent_acl_inheritance_on_windows(self) -> None:
+        powershell = shutil.which("pwsh") or shutil.which("powershell")
+        if not powershell:
+            self.skipTest("PowerShell is required to inspect the Windows ACL")
+
+        result, _article, _mocks = self._run(include_html=False)
+        literal_path = str(result.run_root).replace("'", "''")
+        inspection = subprocess.run(
+            [
+                powershell,
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[Console]::Out.Write((Get-Acl -LiteralPath "
+                f"'{literal_path}').AreAccessRulesProtected)",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(inspection.returncode, 0, inspection.stderr)
+        self.assertEqual(inspection.stdout.strip().casefold(), "false")
 
 
 if __name__ == "__main__":

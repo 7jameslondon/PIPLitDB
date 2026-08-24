@@ -19,4 +19,4 @@ jamies_human_only_notes:
   tags:
     - read_later
     - interesting_for_cooperativity
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction

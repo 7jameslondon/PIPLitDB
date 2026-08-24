@@ -1,6 +1,6 @@
 document_type: research_article
 publication_stage: publication
-title: "DNA Alkylation of the RUNX‐Binding Sequence by CBI–PI Polyamide Conjugates**"
+title: "DNA Alkylation of the RUNX‐Binding Sequence by CBI–PI Polyamide Conjugates"
 authors:
   - name: "Rina Maeda"
   - name: "Shinji Ito"
@@ -16,4 +16,4 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction

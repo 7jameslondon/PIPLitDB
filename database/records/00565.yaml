@@ -16,5 +16,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_applicable
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Regular Article (vol. 281, issue 5, pp. 1283-1290; PMID 11243875), published 2001-03-16. An unrelated 2011 Universiti Putra Malaysia doctoral thesis on bismuth-nitrate adsorbents was previously indexed locally as the PDF and has been removed; this record represents the DOI-identified article. The publisher lists no supplementary materials and provides no full-text HTML version of this article."
