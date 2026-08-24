@@ -28,7 +28,11 @@ from .paths import (
     reject_reparse_chain,
     sha256_file,
 )
-from .pptx_supplement import extract_pptx_supplement
+from .pptx_supplement import (
+    SlideRenderer,
+    extract_pptx_supplement,
+    render_powerpoint_slides,
+)
 from .xml_supplement import extract_xml_fields
 
 
@@ -89,7 +93,7 @@ def _presentation_caption_semantics(
     source: SourceFile,
     supplement_id: str,
 ) -> tuple[list[ContentBlock], list[FigureItem]]:
-    """Merge PPT caption paragraphs and link a single-slide preview figure."""
+    """Merge captions and promote matching complete-slide renders as figures."""
 
     groups: dict[str, list[ContentBlock]] = {}
     for block in blocks:
@@ -127,60 +131,101 @@ def _presentation_caption_semantics(
             )
         )
 
-    captions = [block for block in merged if block.kind == "figure_caption"]
-    previews = [
-        asset
-        for asset in assets
-        if str(asset.get("category") or "").casefold()
-        == "supplement_slide_preview"
-    ]
-    if len(captions) != 1 or len(previews) != 1:
-        return merged, []
+    captions_by_slide: dict[int, list[ContentBlock]] = {}
+    for caption in (block for block in merged if block.kind == "figure_caption"):
+        caption_slide = re.search(
+            r"(?:^|;)slide=(\d+)(?:;|$)", caption.source_locator
+        )
+        if caption_slide:
+            captions_by_slide.setdefault(int(caption_slide.group(1)), []).append(caption)
 
-    caption = captions[0]
-    match = CAPTION_PATTERN.match(caption.plain_text)
-    if match is None or not match.group("kind").casefold().startswith("fig"):
-        return merged, []
-    preview = previews[0]
-    try:
-        slide_count = int(preview.get("presentation_slide_count") or 0)
-    except (TypeError, ValueError):
-        slide_count = 0
-    caption_slide = re.search(
-        r"(?:^|;)slide=(\d+)(?:;|$)", caption.source_locator
-    )
-    if (
-        slide_count != 1
-        or caption_slide is None
-        or int(caption_slide.group(1)) != 1
-    ):
-        return merged, []
-    figure_id = str(preview.get("asset_id") or "").strip()
-    output_path = str(preview.get("output_path") or "").strip()
-    if not figure_id or not output_path:
-        return merged, []
-    label = f"Figure {match.group('number').upper()}"
-    figure = FigureItem(
-        figure_id=figure_id,
-        source_id=caption.source_locator,
-        label=label,
-        kind="figure",
-        caption_markdown=caption.markdown,
-        caption_plain=caption.plain_text,
-        source_path=source.relative_path,
-        source_locator=caption.source_locator,
-        output_path=output_path,
-    )
-    preview["category"] = "figure"
-    # The slide's component images belong to the semantic supplementary
-    # figure. Chart workbooks retain their stronger table parent relation.
+    renders_by_slide: dict[int, dict[str, Any]] = {}
+    for asset in assets:
+        if str(asset.get("category") or "").casefold() != "supplement_slide_render":
+            continue
+        try:
+            slide_number = int(asset.get("presentation_slide_number") or 0)
+        except (TypeError, ValueError):
+            continue
+        if slide_number > 0 and slide_number not in renders_by_slide:
+            renders_by_slide[slide_number] = asset
+
+    figures: list[FigureItem] = []
+    promoted_slides: dict[int, str] = {}
+    consumed_caption_ids: set[str] = set()
+    for slide_number in sorted(renders_by_slide):
+        slide_captions = captions_by_slide.get(slide_number, [])
+        if len(slide_captions) != 1:
+            continue
+        caption = slide_captions[0]
+        match = CAPTION_PATTERN.match(caption.plain_text)
+        if match is None or not match.group("kind").casefold().startswith("fig"):
+            continue
+        render = renders_by_slide[slide_number]
+        figure_id = str(render.get("asset_id") or "").strip()
+        output_path = str(render.get("output_path") or "").strip()
+        if not figure_id or not output_path:
+            continue
+        label = f"Figure {match.group('number').upper()}"
+        figures.append(
+            FigureItem(
+                figure_id=figure_id,
+                source_id=caption.source_locator,
+                label=label,
+                kind="figure",
+                caption_markdown=caption.markdown,
+                caption_plain=caption.plain_text,
+                source_path=source.relative_path,
+                source_locator=caption.source_locator,
+                output_path=output_path,
+            )
+        )
+        render["category"] = "figure"
+        render["label"] = label
+        promoted_slides[slide_number] = figure_id
+        consumed_caption_ids.add(caption.block_id)
+
+    # Component media used by exactly one promoted slide belong to that complete
+    # figure. Shared media and chart workbooks retain their supplement/table
+    # parent because a single asset cannot have several semantic parents.
     for asset in assets:
         if (
-            str(asset.get("category") or "").casefold() == "supplement_image"
-            and asset.get("parent_id") == supplement_id
+            str(asset.get("category") or "").casefold() != "supplement_image"
+            or asset.get("parent_id") != supplement_id
         ):
-            asset["parent_id"] = figure_id
-    return [block for block in merged if block is not caption], [figure]
+            continue
+        raw_slides = asset.get("presentation_slide_numbers")
+        try:
+            media_slides = [int(value) for value in raw_slides]
+        except (TypeError, ValueError):
+            media_slides = []
+        if len(media_slides) == 1 and media_slides[0] in promoted_slides:
+            asset["parent_id"] = promoted_slides[media_slides[0]]
+
+    retained: list[ContentBlock] = []
+    for block in merged:
+        if block.block_id in consumed_caption_ids:
+            continue
+        slide_match = re.search(r"(?:^|;)slide=(\d+)(?:;|$)", block.source_locator)
+        slide_number = int(slide_match.group(1)) if slide_match else None
+        if slide_number in promoted_slides and block.kind != "speaker_note":
+            # Native text stays in record.json for machine use and keeps its
+            # coordinates in extraction diagnostics, but the viewer must not
+            # present decontextualized labels as ordinary linear prose.
+            retained.append(
+                ContentBlock(
+                    block_id=block.block_id,
+                    kind="figure_text",
+                    markdown=block.markdown,
+                    plain_text=block.plain_text,
+                    source_path=block.source_path,
+                    source_locator=block.source_locator,
+                    source_geometry=block.source_geometry,
+                )
+            )
+        else:
+            retained.append(block)
+    return retained, figures
 
 
 def _warning(
@@ -570,6 +615,8 @@ def extract_supplements(
     sources: Iterable[SourceFile],
     extraction_root: Path,
     exclusion_specs: Iterable[Mapping[str, Any]] = (),
+    *,
+    presentation_renderer: SlideRenderer | None = render_powerpoint_slides,
 ) -> list[SupplementExtraction]:
     """Copy and extract discovered supplements in deterministic source order.
 
@@ -629,6 +676,7 @@ def extract_supplements(
                 supplement_id,
                 pptx_path=destination,
                 extraction_root=extraction_root,
+                slide_renderer=presentation_renderer,
             )
             blocks, figures = _presentation_caption_semantics(
                 blocks, assets, source, supplement_id

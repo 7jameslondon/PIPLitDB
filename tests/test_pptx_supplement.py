@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import os
+import struct
 import tempfile
 import unittest
 import zipfile
+import zlib
 from pathlib import Path
 from unittest import mock
 from xml.etree import ElementTree as ET
 
 from scripts.extraction.models import SourceFile
 from scripts.extraction.pptx_supplement import (
+    RenderedSlide,
     _block_kind,
     _paragraph_text,
     _write_asset,
@@ -156,6 +159,46 @@ CHART_RELS = """<?xml version="1.0" encoding="UTF-8"?>
 WORKBOOK_BYTES = b"byte-identical-xlsx-source"
 
 
+def png_bytes(width: int, height: int) -> bytes:
+    """Return a compact, valid one-bit grayscale PNG for renderer tests."""
+
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        checksum = zlib.crc32(kind + payload) & 0xFFFFFFFF
+        return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", checksum)
+
+    header = struct.pack(">IIBBBBB", width, height, 1, 0, 0, 0, 0)
+    row = b"\x00" + (b"\xff" * ((width + 7) // 8))
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(row * height, 9))
+        + chunk(b"IEND", b"")
+    )
+
+
+def fake_slide_renderer(
+    _pptx_path: Path,
+    output_directory: Path,
+    slide_numbers: tuple[int, ...],
+    long_edge_pixels: int,
+) -> list[RenderedSlide]:
+    rendered: list[RenderedSlide] = []
+    for slide_number in slide_numbers:
+        destination = output_directory / f"slide-{slide_number:03d}.png"
+        destination.write_bytes(png_bytes(long_edge_pixels, long_edge_pixels))
+        rendered.append(
+            RenderedSlide(
+                slide_number=slide_number,
+                path=destination,
+                pixel_width=long_edge_pixels,
+                pixel_height=long_edge_pixels,
+                renderer="test renderer",
+                renderer_version="1.0",
+            )
+        )
+    return rendered
+
+
 def write_package(
     path: Path,
     *,
@@ -270,14 +313,9 @@ class PptxSupplementTests(unittest.TestCase):
             self.assertTrue(any("value type=custom" in note for note in chart.footnotes_plain))
             self.assertTrue(any("Category axis" in note for note in chart.footnotes_plain))
 
-            self.assertEqual(len(assets), 2)
+            self.assertEqual(len(assets), 1)
             media = next(
                 asset for asset in assets if asset["category"] == "supplement_image"
-            )
-            preview = next(
-                asset
-                for asset in assets
-                if asset["category"] == "supplement_slide_preview"
             )
             self.assertEqual(media["label"], "Microscopy panel")
             self.assertEqual(media["source_path"], source_for(package).relative_path)
@@ -287,17 +325,12 @@ class PptxSupplementTests(unittest.TestCase):
                 hashlib.sha256(b"byte-identical-tiff-source").hexdigest(),
             )
             self.assertFalse(media["ocr_performed"])
+            self.assertEqual(media["presentation_slide_numbers"], [1])
             self.assertEqual(
                 (extraction / media["output_path"]).read_bytes(),
                 b"byte-identical-tiff-source",
             )
-            self.assertIn("Low-resolution", preview["label"])
-            self.assertIn("not a rendered slide", preview["label"])
-            self.assertEqual(preview["presentation_slide_count"], 1)
-            self.assertEqual(
-                (extraction / preview["output_path"]).read_bytes(),
-                b"low-resolution-thumbnail",
-            )
+            self.assertFalse(any("thumbnail" in asset["asset_id"] for asset in assets))
 
             diagnostic = next(
                 warning
@@ -309,6 +342,72 @@ class PptxSupplementTests(unittest.TestCase):
             self.assertTrue(authoring_path.endswith("panel.tif"))
             self.assertNotIn(authoring_path, "\n".join(visible))
             self.assertNotIn(authoring_path, str(assets))
+
+    def test_figure_slide_is_materialized_as_complete_high_resolution_png(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "figure.pptx"
+            extraction = root / "extraction"
+            write_package(package)
+
+            _, _, assets, warnings = extract_pptx_supplement(
+                source_for(package),
+                "supplement_001",
+                pptx_path=package,
+                extraction_root=extraction,
+                slide_renderer=fake_slide_renderer,
+            )
+
+            render = next(
+                asset
+                for asset in assets
+                if asset["category"] == "supplement_slide_render"
+            )
+            self.assertEqual(render["asset_id"], "supplement_001_slide_001_render")
+            self.assertEqual(render["output_path"], "supplementary/supplement_001/figures/slide-001.png")
+            self.assertEqual(render["render_role"], "complete_slide")
+            self.assertEqual(render["presentation_slide_number"], 1)
+            self.assertEqual(render["presentation_slide_count"], 1)
+            self.assertEqual(render["pixel_width"], 5000)
+            self.assertEqual(render["pixel_height"], 5000)
+            self.assertEqual(render["media_type"], "image/png")
+            self.assertFalse(render["ocr_performed"])
+            self.assertTrue((extraction / render["output_path"]).is_file())
+            self.assertFalse(
+                any(warning["code"] == "pptx_figure_slide_render_failed" for warning in warnings)
+            )
+
+    def test_figure_slide_render_failure_is_structural_and_has_no_thumbnail_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "figure.pptx"
+            extraction = root / "extraction"
+            write_package(package)
+
+            def failing_renderer(
+                _pptx_path: Path,
+                _output_directory: Path,
+                _slide_numbers: tuple[int, ...],
+                _long_edge_pixels: int,
+            ) -> list[RenderedSlide]:
+                raise RuntimeError("synthetic render failure")
+
+            _, _, assets, warnings = extract_pptx_supplement(
+                source_for(package),
+                "supplement_001",
+                pptx_path=package,
+                extraction_root=extraction,
+                slide_renderer=failing_renderer,
+            )
+
+            warning = next(
+                warning
+                for warning in warnings
+                if warning["code"] == "pptx_figure_slide_render_failed"
+            )
+            self.assertEqual(warning["severity"], "structural")
+            self.assertEqual(warning["slide_numbers"], [1])
+            self.assertFalse(any("thumbnail" in asset["asset_id"] for asset in assets))
 
     def test_media_assets_use_natural_numeric_part_order(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
