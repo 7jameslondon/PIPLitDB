@@ -246,18 +246,30 @@ papers (private)/
     |   `-- main.pdf
     |-- html/
     |   `-- main.html
-    |-- supplementary/           # Untouched supplementary source files
+    |-- supplementary/           # Publisher files and unpacked ZIP members
     |   |-- original-name.docx
-    |   `-- original-name.ext
+    |   `-- archive-directory/
+    |       `-- original-member.ext
     |-- extraction_old/          # Temporary legacy comparison baseline
     |-- extraction/              # record.json plus linked binary/large assets
     `-- extraction_diagnostic/   # Technical reports and review material
 ```
 
 Store every supplementary source file in the record's `supplementary/`
-directory, regardless of format. Preserve its original filename, extension,
-and bytes; do not place supplementary files in `pdf/` or `html/`. The source
-directories are inputs and must not be modified by the extraction pipeline.
+directory, regardless of format. Preserve each directly downloaded file's
+original filename, extension, and bytes.
+
+When the publisher supplies a standalone `.zip` supplement, safely unpack it
+into `supplementary/`, preserving every member's archive-relative path,
+filename, extension, and decompressed bytes. Do not flatten or rename members,
+and do not retain the outer ZIP after complete extraction has been verified.
+Do not recursively unpack nested ZIP members. This exception does not apply to
+ZIP-based document formats such as `.docx`, `.xlsx`, or `.pptx`, which remain
+intact.
+
+Do not place supplementary files in `pdf/` or `html/`. After acquisition and
+any required ZIP unpacking are complete, the source directories are inputs and
+must not be modified by the extraction pipeline.
 
 The existing `extraction_old/` directories contain imperfect legacy outputs.
 They may be used only for comparison and are not authoritative publication
@@ -277,6 +289,17 @@ the record's `extraction/` directory. New-format extractions do not create
 per-table JSON or CSV files. Provenance, confidence, OCR details, and review
 material remain out of the polished record in the sibling
 `extraction_diagnostic/` directory.
+
+When a PowerPoint slide is identified by its native caption as a scientific
+figure, the extractor uses an installed Microsoft PowerPoint application to
+render the complete slide as a lossless PNG with a 5,000-pixel long edge. That
+whole-slide image is the canonical visual so chemical structures, labels,
+legends, and panels retain their positional relationships. Native slide text
+remains machine-readable in `record.json`, but the viewer does not present
+figure-label fragments as linear prose; their coordinates are retained in
+`extraction_diagnostic/`. The original PPTX and embedded media remain unchanged
+and downloadable. Low-resolution package thumbnails are never accepted as
+figure substitutes, and a failed required slide render blocks approval.
 
 For a human-friendly view, open the shared repository-root
 `extraction_viewer.html` and choose the `papers (private)/` directory. The
@@ -306,6 +329,20 @@ the engine, model hashes, page regions, confidence, and reviewed repairs only
 in `extraction_diagnostic/`. Figure and scheme pixels are excluded from OCR.
 Candidates remain staged until they have passed validation and review and the
 user explicitly approves promotion.
+
+After an approved candidate has been promoted, its live extraction and
+diagnostics have been verified, and the public record status is
+`extracted_approved`, remove that record's temporary staging history with:
+
+```powershell
+python scripts/cleanup_approved_staging.py NNNNN --check-only
+python scripts/cleanup_approved_staging.py NNNNN
+```
+
+The command refuses cleanup unless the approved live output, approval record,
+source fingerprint, validation findings, metadata status, and approved staged
+run agree. It deletes only `papers (private)/staging/NNNNN/`; live outputs and
+other records' staged work are preserved.
 
 When both a publisher copy and a PubMed Central copy of the same manuscript are available, retain
 the publisher copy as `main.pdf`; retain the PubMed Central copy only when no publisher copy is
