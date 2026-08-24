@@ -17,6 +17,7 @@ from scripts.extraction.reporting import (
     _confidence_document,
     _pdf_exclusion_coverage,
     _reconciliation_rows,
+    _source_coverage,
     write_diagnostics,
     write_validation_result,
 )
@@ -58,6 +59,34 @@ def _json_lines(path: Path) -> list[dict[str, object]]:
 
 
 class ArticleReportingTests(unittest.TestCase):
+    def test_html_primary_pdf_without_unique_outputs_is_duplicate_coverage(self) -> None:
+        sources = [
+            SourceFile(
+                role="main_pdf",
+                path=Path("unused.pdf"),
+                relative_path="pdf/main.pdf",
+                size=123,
+                sha256="0" * 64,
+                detected_format="application/pdf",
+                page_count=1,
+            ),
+            SourceFile(
+                role="main_html",
+                path=Path("unused.html"),
+                relative_path="html/main.html",
+                size=456,
+                sha256="1" * 64,
+                detected_format="text/html",
+            ),
+        ]
+
+        rows = _source_coverage(sources, _article(), [], [])
+
+        pdf = rows[0]
+        self.assertEqual(pdf["status"], "duplicate")
+        self.assertEqual(pdf["output_ids"], [])
+        self.assertIn("secondary verification source", pdf["reason"])
+
     def test_html_extraction_is_a_backward_alias_with_html_defaults(self) -> None:
         self.assertIs(HtmlExtraction, ArticleExtraction)
         article = _article()

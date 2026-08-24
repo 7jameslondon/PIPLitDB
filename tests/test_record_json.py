@@ -32,7 +32,7 @@ from scripts.extraction.record_schema import (
     load_record_schema,
     validate_record_schema,
 )
-from scripts.extraction.rich_text import rich_text_matches_plain
+from scripts.extraction.rich_text import plain_text_from_safe_html, rich_text_matches_plain
 
 
 def _block(
@@ -432,6 +432,10 @@ class RecordJsonTests(unittest.TestCase):
         content = payload["sections"][0]["blocks"][0]["content"]
         self.assertEqual(content["plain_text"], "Prior work.[1], [2]")
         self.assertEqual(content["html"], "Prior work.[1], [2]")
+        self.assertEqual(
+            plain_text_from_safe_html(content["html"]), content["plain_text"]
+        )
+        self.assertTrue(rich_text_matches_plain(content["plain_text"], content["html"]))
 
     def test_rejects_contradictory_plain_and_rich_scientific_text(self) -> None:
         metadata, article, supplements, assets = _fixture()

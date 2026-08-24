@@ -17,6 +17,10 @@ _ALLOWED_INLINE_TAGS = frozenset({"a", "br", "em", "strong", "sub", "sup"})
 _ALLOWED_FRAGMENT_TAGS = _ALLOWED_INLINE_TAGS | frozenset({"li", "ol", "ul"})
 _VOID_TAGS = frozenset({"br"})
 _MARKDOWN_LINK = re.compile(r"\[([^\]\n]+)\]\(([^()\s]+)\)")
+_CITATION_PART_LABEL = re.compile(
+    r"\d+(?:[A-Za-z])?(?:\s*[-–—,]\s*\d+(?:[A-Za-z])?)*"
+)
+_CITATION_PART_TARGET = re.compile(r"[A-Za-z](?:[-–—,][A-Za-z])*")
 _MARKDOWN_STRONG = re.compile(r"\*\*(.+?)\*\*", flags=re.DOTALL)
 _LIST_ITEM = re.compile(r"^\s*(?P<marker>-|\d+\.)\s+(?P<text>.+?)\s*$")
 _SUBSCRIPT_CHARS = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₒₓₔ"
@@ -49,6 +53,13 @@ def _expand_limited_markdown(value: str) -> str:
     """Expand the small Markdown subset emitted by the extraction program."""
 
     def link(match: re.Match[str]) -> str:
+        # Elsevier references can identify one part as ``[6](b)``. That is
+        # authored citation text, not a Markdown link whose target is ``b``.
+        # Keep this narrow so ordinary relative and external links still work.
+        if _CITATION_PART_LABEL.fullmatch(
+            match.group(1).strip()
+        ) and _CITATION_PART_TARGET.fullmatch(match.group(2)):
+            return match.group(0)
         href = html.escape(_safe_href(match.group(2)), quote=True)
         return f'<a href="{href}">{match.group(1)}</a>'
 
