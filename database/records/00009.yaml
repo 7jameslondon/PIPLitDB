@@ -24,5 +24,4 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: verified
-pip_litdb_notes: "The local supplementary archive 'supplementary.zip' was extracted into the private-paper PDF directory; its extracted content is 'pharmaceuticals-2631815-supplementary.pdf'."
+pip_litdb_status: ready_for_extraction

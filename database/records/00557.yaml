@@ -20,5 +20,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_available
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "The Oxford Academic article is open access, and the complete publisher HTML and PDF are archived locally. Its legacy supplementary section states only that supplementary material is available at NAR Online; the rendered page, link inventory, and observed Oxford assets expose no supplementary file. The referenced supplement is therefore unavailable from an allowed publisher source and is not archived locally."

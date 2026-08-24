@@ -23,4 +23,4 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction

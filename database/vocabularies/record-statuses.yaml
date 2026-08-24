@@ -10,6 +10,14 @@ verified:
   label: Verified
   description: The record metadata has been checked against an authoritative source.
 
+not_ready_for_extraction:
+  label: Not ready for extraction
+  description: The record or its source files have not passed the extraction-readiness checks and are not ready for extraction.
+
+ready_for_extraction:
+  label: Ready for extraction
+  description: The record and its source files have passed the extraction-readiness checks and are ready for extraction.
+
 extracted_approved:
   label: Extracted - Approved
   description: The record has a completed extraction that has been reviewed and approved.

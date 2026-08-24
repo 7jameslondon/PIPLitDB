@@ -14,5 +14,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Communication (vol. 46, issue 42, pp. 7956-7959; PMID 17763481), published 2007-10-22. Wiley also registered a German-edition version (DOI 10.1002/ange.200702767; Angewandte Chemie 119:8102-8105), but no corresponding PIP LitDB record exists, so no related_papers link is encoded."

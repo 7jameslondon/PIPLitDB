@@ -19,5 +19,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: not_available
-pip_litdb_status: verified
-pip_litdb_notes: "The publisher's full-text HTML version omits the article figures; consult the PDF for the complete figures. The local supplementary archive 'supplementary.zip' was extracted into the private-paper PDF directory; its extracted content is 'nar-03751-f-2015-File002.pdf'."
+pip_litdb_status: ready_for_extraction
+pip_litdb_notes: "The publisher's full-text HTML version omits the article figures; consult the PDF for the complete figures."

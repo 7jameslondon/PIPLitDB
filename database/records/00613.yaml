@@ -18,5 +18,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Research article (vol. 13, issue 1, pp. 17-24), published in February 2007 and received 2006-12-05. The local source is the complete eight-page De Gruyter publisher PDF; the article content occupies pp. 17-23 and the publisher-supplied final page is blank."

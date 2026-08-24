@@ -1,0 +1,23 @@
+document_type: research_article
+publication_stage: preprint
+title: "Single position substitution of hairpin pyrrole-imidazole polyamides imparts distinct DNA-binding profiles across the human genome"
+authors:
+  - name: "Paul B. Finn"
+  - name: "Devesh Bhimsaria"
+  - name: "Asfa Ali"
+  - name: "Asuka Eguchi"
+  - name: "Aseem Z. Ansari"
+  - name: "Peter B. Dervan"
+doi: "10.1101/2020.08.13.249730"
+publication_year: 2020
+journal: "bioRxiv"
+related_papers:
+  - pip_litdb_id: "00043"
+    relationship_type: is_preprint_of
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: present
+pip_litdb_status: ready_for_extraction

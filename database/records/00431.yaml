@@ -18,4 +18,8 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: not_available
-pip_litdb_status: verified
+jamies_human_only_notes:
+  tags:
+    - read_later
+    - important_to_me
+pip_litdb_status: ready_for_extraction

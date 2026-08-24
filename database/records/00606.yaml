@@ -11,6 +11,6 @@ human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
-  full_text_html: needed
-pip_litdb_status: verified
+  full_text_html: not_available
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Review article (vol. 8, issue 3, pp. 314-320; PMID 9666327), published in June 1998. The indexed local PDF is the complete seven-page Elsevier publisher version of record."

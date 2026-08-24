@@ -11,10 +11,13 @@ authors:
 doi: "10.1371/journal.pone.0243905"
 publication_year: 2020
 journal: "PLOS ONE"
+related_papers:
+  - pip_litdb_id: "00651"
+    relationship_type: has_preprint
 language_status: english
 human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction

@@ -14,5 +14,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "Book chapter in Micro and Nano Technologies in Bioanalysis: Methods and Protocols (Methods in Molecular Biology, vol. 544), pp. 637–653; PMID 19488729, PMCID PMC5122672; published online 2009-05-07. The local source is the complete 17-page Springer publisher version of record."

@@ -19,5 +19,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_available
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
 pip_litdb_notes: "The user has access to the publisher PDF. The user does not have access to publisher HTML, and it is unclear whether a publisher full-text HTML version exists."

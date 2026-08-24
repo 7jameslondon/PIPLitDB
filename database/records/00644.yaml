@@ -18,7 +18,7 @@ pip_litdb_notes: "This erratum removes the sentence identifying d(GCTTTAGAGGAA) 
 language_status: english
 human_user_reported_publisher_access: unknown
 pip_litdb_file_status:
-  main_pdf: needed
+  main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: verified
+pip_litdb_status: ready_for_extraction
