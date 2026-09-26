@@ -16,5 +16,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Review article (vol. 15, issue 1, pp. 17–35; PMID 17081759), available online 2006-11-01 with a 2007-01-01 issue date. The indexed local PDF is the Elsevier version of record."

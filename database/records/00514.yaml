@@ -15,10 +15,13 @@ authors:
 doi: "10.1111/all.15959"
 publication_year: 2024
 journal: "Allergy"
+related_papers:
+  - pip_litdb_id: "00661"
+    relationship_type: has_preprint
 language_status: english
 human_user_reported_publisher_access: access
 pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved

@@ -2,6 +2,7 @@
   "use strict";
 
   const config = window.PIP_LITDB_CONFIG;
+  const isTimeline = document.body.dataset.view === "timeline";
   const KNOWN_RECORD_FIELDS = new Set([
     "document_type",
     "publication_stage",
@@ -66,6 +67,10 @@
     ui.dialogId = document.querySelector("#dialog-id");
     ui.dialogContent = document.querySelector("#dialog-content");
     ui.dialogClose = document.querySelector("#dialog-close");
+    ui.timelineOverview = document.querySelector("#timeline-overview");
+    ui.timelineSummary = document.querySelector("#timeline-summary");
+    ui.timelineChart = document.querySelector("#timeline-chart");
+    ui.timelineUndated = document.querySelector("#timeline-undated");
   }
 
   function bindEvents() {
@@ -137,6 +142,9 @@
       state.isLoading = false;
       renderDatabase();
       openRecordFromHash();
+      if (isTimeline && /^#year-(\d{4}|unknown)$/.test(window.location.hash)) {
+        document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+      }
     } catch (error) {
       console.error(error);
       setErrorState(error);
@@ -557,7 +565,11 @@
     const visibleRecords = getVisibleRecords();
     const total = state.records.length;
     const databaseIsEmpty = total === 0;
-    ui.records.replaceChildren(...visibleRecords.map(createRecordCard));
+    if (isTimeline) {
+      renderTimeline(visibleRecords);
+    } else {
+      ui.records.replaceChildren(...visibleRecords.map(createRecordCard));
+    }
     ui.records.setAttribute("aria-busy", "false");
     ui.empty.hidden = visibleRecords.length !== 0;
     ui.records.hidden = visibleRecords.length === 0;
@@ -580,6 +592,98 @@
         ui.status.value,
     );
     ui.clearFilters.disabled = !hasActiveFilters;
+  }
+
+  function timelineYear(record) {
+    const year = Number(record.publication_year);
+    const latestYear = new Date().getFullYear() + 2;
+    return Number.isInteger(year) && year >= 1800 && year <= latestYear ? year : null;
+  }
+
+  function renderTimeline(records) {
+    const groups = new Map();
+    records.forEach((record) => {
+      const year = timelineYear(record);
+      if (!groups.has(year)) groups.set(year, []);
+      groups.get(year).push(record);
+    });
+
+    const years = [...groups.keys()].filter((year) => year !== null).sort((a, b) => a - b);
+    const orderedYears = ui.sort.value === "year-desc" ? [...years].reverse() : [...years];
+    if (groups.has(null)) orderedYears.push(null);
+
+    const fragment = document.createDocumentFragment();
+    orderedYears.forEach((year) => {
+      const yearRecords = groups.get(year);
+      const yearId = year === null ? "unknown" : String(year);
+      const headingId = `year-heading-${yearId}`;
+      const heading = element("header", { className: "timeline-year-heading" }, [
+        element("h2", { id: headingId, text: year === null ? "Year unknown" : year }),
+        element("p", {
+          text: `${formatNumber(yearRecords.length)} ${pluralize(yearRecords.length, "paper")}`,
+        }),
+      ]);
+      fragment.append(
+        element("section", {
+          id: `year-${yearId}`,
+          className: "timeline-year",
+          attributes: { "aria-labelledby": headingId, tabindex: "-1" },
+        }, [
+          heading,
+          element("div", { className: "timeline-papers" }, yearRecords.map(createRecordCard)),
+        ]),
+      );
+    });
+    ui.records.replaceChildren(fragment);
+
+    ui.timelineOverview.hidden = records.length === 0;
+    ui.timelineSummary.textContent = years.length
+      ? `${formatNumber(records.length)} ${pluralize(records.length, "paper")} · ${years[0]}${years.length > 1 ? `–${years[years.length - 1]}` : ""}`
+      : `${formatNumber(records.length)} ${pluralize(records.length, "paper")} · Publication years unknown`;
+    ui.timelineUndated.hidden = !groups.has(null);
+    ui.timelineUndated.textContent = groups.has(null)
+      ? `${formatNumber(groups.get(null).length)} with year unknown →`
+      : "";
+    renderTimelineChart(groups, years);
+  }
+
+  function renderTimelineChart(groups, years) {
+    ui.timelineChart.replaceChildren();
+    ui.timelineChart.hidden = years.length === 0;
+    if (!years.length) return;
+
+    const firstYear = years[0];
+    const lastYear = years[years.length - 1];
+    const maxCount = Math.max(...years.map((year) => groups.get(year).length));
+    ui.timelineChart.style.setProperty("--year-count", lastYear - firstYear + 1);
+    const fragment = document.createDocumentFragment();
+    for (let year = firstYear; year <= lastYear; year += 1) {
+      const count = groups.get(year)?.length || 0;
+      const label = `${year}: ${formatNumber(count)} ${pluralize(count, "paper")}`;
+      const showYear = year === firstYear || year === lastYear ||
+        (year % 5 === 0 && year - firstYear > 2 && lastYear - year > 2);
+      const bar = element(count ? "a" : "span", {
+        className: `timeline-bar${count ? "" : " is-empty"}`,
+        attributes: {
+          ...(count ? { href: `#year-${year}` } : {}),
+          "aria-label": count ? `${label}. Jump to year.` : label,
+          title: label,
+        },
+      }, [
+        element("span", {
+          className: "timeline-bar-track",
+          attributes: { "aria-hidden": "true" },
+        }, [element("span", { className: "timeline-bar-fill" })]),
+        element("span", {
+          className: "timeline-bar-label",
+          text: showYear ? year : "",
+          attributes: { "aria-hidden": "true" },
+        }),
+      ]);
+      bar.style.setProperty("--bar-height", `${(count / maxCount) * 100}%`);
+      fragment.append(bar);
+    }
+    ui.timelineChart.append(fragment);
   }
 
   function getVisibleRecords() {
@@ -1059,7 +1163,7 @@
       setYearRangeValues(state.yearBounds.min, state.yearBounds.max);
     }
     ui.status.value = "";
-    ui.sort.value = "year-desc";
+    ui.sort.value = isTimeline ? "year-asc" : "year-desc";
     renderDatabase();
     ui.search.focus();
   }
@@ -1076,6 +1180,7 @@
     ui.loading.hidden = false;
     ui.empty.hidden = true;
     ui.error.hidden = true;
+    if (ui.timelineOverview) ui.timelineOverview.hidden = true;
     ui.recordCount.textContent = "Loading records…";
     ui.sourceName.textContent = "Connecting…";
     ui.sourceLink.hidden = true;
@@ -1097,6 +1202,7 @@
     ui.records.hidden = true;
     ui.empty.hidden = true;
     ui.error.hidden = false;
+    if (ui.timelineOverview) ui.timelineOverview.hidden = true;
     ui.recordCount.textContent = "Database unavailable";
     ui.sourceDot.className = "source-dot is-error";
     ui.sourceName.textContent = "Connection failed";

@@ -14,5 +14,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Original article (vol. 125, issue 16, pp. 4741-4751; PMID 12696892), published online 2003-03-29 with issue date 2003-04-23."

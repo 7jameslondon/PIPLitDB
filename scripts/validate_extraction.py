@@ -17,6 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-title", required=True)
     parser.add_argument("--main-assets", type=int)
     parser.add_argument("--tables", type=int)
+    parser.add_argument("--supplement-tables", type=int)
     parser.add_argument("--supplement-figures", type=int)
     parser.add_argument("--equations", type=int)
     parser.add_argument("--presentation-embedded-files", type=int)
@@ -26,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
         for key, value in {
             "main_assets": args.main_assets,
             "tables": args.tables,
+            "supplement_tables": args.supplement_tables,
             "supplement_figures": args.supplement_figures,
             "equations": args.equations,
             "presentation_embedded_files": args.presentation_embedded_files,

@@ -160,6 +160,50 @@ h1 {
   line-height: 1.65;
 }
 
+.view-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.view-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-sm);
+  color: #d6e5e3;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.view-nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.view-nav a[aria-current="page"] {
+  border-color: #9dd9d4;
+  color: var(--ink);
+  background: #9dd9d4;
+}
+
+.view-nav a:focus-visible {
+  outline-color: #9dd9d4;
+}
+
+.view-nav svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: var(--ink);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
 .header-actions {
   display: flex;
   flex-direction: column;
@@ -1012,6 +1056,184 @@ input:focus-visible {
   white-space: pre-wrap;
 }
 
+.timeline-overview {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.timeline-overview-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.timeline-overview h2 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.timeline-summary {
+  margin: 0;
+  color: var(--accent-deep);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-chart-hint {
+  margin: 0.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.timeline-chart-scroll {
+  overflow-x: auto;
+}
+
+.timeline-chart {
+  display: grid;
+  grid-template-columns: repeat(var(--year-count), minmax(1rem, 1fr));
+  gap: 0.2rem;
+  padding: 1rem 0.25rem 0.3rem;
+}
+
+.timeline-bar {
+  position: relative;
+  display: block;
+  min-width: 0;
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+.timeline-bar-track {
+  display: flex;
+  align-items: end;
+  height: 6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.timeline-bar-fill {
+  width: 100%;
+  height: var(--bar-height);
+  min-height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.timeline-bar.is-empty .timeline-bar-fill {
+  background: var(--line);
+}
+
+a.timeline-bar:hover .timeline-bar-fill,
+a.timeline-bar:focus-visible .timeline-bar-fill {
+  background: var(--warm);
+}
+
+.timeline-bar-label {
+  position: relative;
+  left: 50%;
+  display: block;
+  width: max-content;
+  min-height: 1.5rem;
+  padding-top: 0.45rem;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+}
+
+.timeline-bar:first-child .timeline-bar-label {
+  left: 0;
+  transform: none;
+}
+
+.timeline-bar:last-child:not(:first-child) .timeline-bar-label {
+  left: auto;
+  float: right;
+  transform: none;
+}
+
+.timeline-undated {
+  display: inline-block;
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+}
+
+.timeline-year {
+  position: relative;
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 2rem;
+  padding-bottom: 2.5rem;
+  scroll-margin-top: 1.5rem;
+}
+
+.timeline-year::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 7rem;
+  width: 2px;
+  background: var(--line);
+  content: "";
+}
+
+.timeline-year::after {
+  position: absolute;
+  top: 0.9rem;
+  left: calc(7rem - 5px);
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  content: "";
+}
+
+.timeline-year:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+
+.timeline-year-heading {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+}
+
+.timeline-year-heading h2 {
+  color: var(--accent-deep);
+  font-size: 2.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-year-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.timeline-papers {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.timeline-footer {
+  margin: 0;
+  text-align: right;
+}
+
 @media (max-width: 980px) {
   .filter-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1086,6 +1308,40 @@ input:focus-visible {
 
   .skeleton-title.is-short {
     width: 100%;
+  }
+
+  .timeline-overview {
+    padding: 1rem;
+  }
+
+  .timeline-year {
+    display: block;
+    padding: 0 0 2rem 1.2rem;
+  }
+
+  .timeline-year::before {
+    left: 0.2rem;
+  }
+
+  .timeline-year::after {
+    top: 0.7rem;
+    left: calc(0.2rem - 5px);
+  }
+
+  .timeline-year-heading {
+    position: static;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .timeline-year-heading h2 {
+    font-size: 1.8rem;
+  }
+
+  .timeline-papers .record-card {
+    padding: 0.9rem;
   }
 
 }

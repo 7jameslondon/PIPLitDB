@@ -74,7 +74,10 @@
       "enum": [
         "html",
         "pdf",
-        "image"
+        "image",
+        "presentation",
+        "document",
+        "spreadsheet"
       ]
     },
     "source_image": {
@@ -87,7 +90,12 @@
       "if": {
         "properties": {
           "source_kind": {
-            "const": "html"
+            "enum": [
+              "html",
+              "presentation",
+              "document",
+              "spreadsheet"
+            ]
           }
         },
         "required": [

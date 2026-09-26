@@ -1,0 +1,23 @@
+document_type: research_article
+publication_stage: publication
+title: "Py3-FITC: a new fluorescent probe for live cell imaging of collagen-rich tissues and ionocytes"
+authors:
+  - name: "Zhaotong Wang"
+  - name: "Takamasa Mizoguchi"
+  - name: "Takahito Kuribara"
+  - name: "Masaya Nakajima"
+  - name: "Mayuu Iwata"
+  - name: "Yuka Sakamoto"
+  - name: "Hiroyuki Nakamura"
+  - name: "Toshihiko Murayama"
+  - name: "Tetsuhiro Nemoto"
+  - name: "Motoyuki Itoh"
+doi: "10.1098/rsob.200241"
+publication_year: 2021
+journal: "Open Biology"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

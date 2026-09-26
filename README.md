@@ -20,6 +20,10 @@ Articles from problematic journals should not be included. The current list of p
 
 - *Medicinal Chemistry* (OMICS Publishing Group; ISSN 2161-0444)
 
+The following publication series are excluded from the collection's scope:
+
+- *Proceedings for Annual Meeting of The Japanese Pharmacological Society* (Japanese Pharmacological Society; online ISSN 2435-4953): conference abstracts and presentation summaries. [Publisher reference](https://www.jstage.jst.go.jp/browse/jpssuppl/_pubinfo/-char/en).
+
 The YAML files are the complete and only database. Each work is stored in its own YAML file in `database/records`. The filename is the authoritative PIP LitDB ID: for example, `00001.yaml` has PIP LitDB ID `00001`. The ID is not repeated as a field inside the YAML record. Search and export tools derive the ID from the filename and include it in exported data when appropriate.
 
 The database is organized as follows:
@@ -53,7 +57,7 @@ The database records the following fields for each work:
 - Human user-reported publisher access (`human_user_reported_publisher_access`): A required current human report about access to the publisher's main full text, regardless of whether that full text is provided as HTML or PDF. Allowed values are `access`, `no_access`, and `unknown`. Automated checks must not infer this value.
 - PIP LitDB file status (`pip_litdb_file_status`): Publicly committed statuses for the project's private holdings of the main PDF, supplementary material, and full-text HTML. All three status fields are required.
 - Title
-- Authors: One ordered list of author objects. `name` preserves the name as published in the work. Optional `canonical_name` records the project's normalized form of the same author's name and should be omitted when it is identical to `name`. ORCID identifiers are not stored.
+- Authors: One ordered list of author objects. `name` preserves the name as published in the work. Optional `canonical_name` records the project's normalized form of the same author's name and should be omitted when it is identical to `name`. ORCID identifiers are not stored. A correction verified from the source to have no credited byline uses `authors: []` and must include an explanatory `pip_litdb_notes` value. This means the correction is uncredited, not that its authors are unchecked; do not substitute the authors of the corrected paper or invent an author. All other document types require at least one author, and the `authors` field is always required.
 - DOI (`doi`): The required bare DOI without a `https://doi.org/` prefix. User-facing links are generated from this value.
 - Related papers: A list containing the PIP LitDB ID and directed relationship type for each related paper. Every relationship must be stored in both related records using inverse relationship types. For example, if one record uses `is_preprint_of`, the other must use `has_preprint`.
 - Publication year: The year used in the work's formal citation. For an issue-assigned publication, use the issue year even when the article was published online in an earlier year. Crossref's `published-print` year and PubMed's citation year are preferred authoritative sources when available. Do not substitute Crossref's generic `published` or `issued` year, or PubMed's `Epub` year, when those fields represent an earlier online-first publication. For a work without an issue assignment, use the year shown in the authoritative recommended citation. Publication years must be 1800 or later and no more than two years after the current calendar year.
@@ -167,9 +171,27 @@ Run the complete validation locally with Python 3.12 or later:
 
 ```powershell
 python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
+python -X utf8 scripts/run_tests.py
 python scripts/validate_metadata.py
 ```
+
+The test runner prints concise counts and failure excerpts, saving complete logs
+and structured results in a unique directory under
+`papers (private)/diagnostics/test-runs/`. Use `--log-dir` to select the assigned
+private diagnostic area during extraction. Pass focused unittest arguments after
+`--`; inspect every failure in the saved report, including issues omitted from
+the preview. Failures, crashes, and empty test selections return a nonzero status.
+
+The runner imports the selected test modules before executing tests. If discovery
+or an import fails, it reports `discovery_failed` with zero tests run and saves all
+errors. Fix the reported problem before retrying; install `requirements.txt` with
+the same Python executable shown in the report when dependencies are missing.
+ReportLab, used to generate PDF test fixtures, is included in the requirements.
+When that package is absent from the selected Python, the runner can reuse the
+existing Windows Codex bundle in the test worker. It appends that package directory
+after the interpreter's existing paths, preserving installed-package precedence.
+No packages are installed automatically. Reports record the executable and any
+added package paths.
 
 To get the same add/remove/modify/rename summary produced for a pull request, include a base Git
 revision:
@@ -324,25 +346,88 @@ python scripts/extract_record.py NNNNN --run-id pilot-001
 python scripts/validate_extraction.py "papers (private)/staging/NNNNN/pilot-001" --expected-title "Exact title"
 ```
 
+For bounded, read-only inspection of large extraction JSON and archived HTML,
+use `python -X utf8 scripts/inspect_extraction.py --help`. The helper provides
+JSON outlines, exact value reads, literal searches, source hashes, and explicit
+pagination. Follow Section 3.6 of `EXTRACTION_PROTOCOL.md` to avoid oversized or
+repeated output while retaining complete source inspection and all review gates.
+The current extraction setting is GPT-6 Astra at High effort. GPT-5.6 Sol
+Extra High remains the historical workflow-comparison baseline.
+
+For the authorized parallel mode, use
+`python scripts/coordinate_extraction.py prepare BATCH_ID RECORD_A RECORD_B RECORD_C`
+with one to three five-digit record IDs. Each owner uses its own returned private
+workspace as its command working directory. Shared code and protected inputs
+stay frozen; general fixes go through the primary agent after all owners stop.
+The coordinator's `check` and `import` commands verify and copy the exact reviewed
+and clean runs into primary staging. They do not approve a candidate. The primary
+retains all review and acceptance gates and finalizes records serially with a
+repository-wide lock. See `EXTRACTION_PROTOCOL.md` Section 2.5 for the full
+assignment, handoff, restart and completion procedure.
+
+For several inspection requests, use `inspect_extraction.py batch <requests.json>`.
+For long reads, add `--max-output-chars 20000` on both the initial command and each
+`--cursor <next_cursor>` continuation. The selected budget includes all metadata
+and escaping; the helper still defaults to 12,000 characters when unspecified.
+Keep targeted searches and short checks small. Continue until the cursor is null;
+every requested view remains available without summarizing its content. The cursor
+pins the request file, reader, and all input files. Section 3.6 specifies output
+headroom, one response per tool result, and how to retry after truncation.
+
+Use `scripts/inventory_extraction.py sources NNNNN --save-dir <private-diagnostics>`
+for saved source inventories, or its `files <path>` command for directory listings.
+The helper returns bounded previews and compares pinned snapshots to report all
+additions, removals, and content changes. Full listings remain available on disk.
+The inspection helper's `--if-view-token` can omit an exact repeat of a view that
+the same agent already inspected and still retains. Follow Section 3.6 for scope,
+pagination, and reviewer independence; neither feature replaces source inspection
+or establishes that old diagnostics remain valid for changed inputs or code.
+
 For scanned pages, the pipeline uses pinned local OCR dependencies and records
 the engine, model hashes, page regions, confidence, and reviewed repairs only
 in `extraction_diagnostic/`. Figure and scheme pixels are excluded from OCR.
-Candidates remain staged until they have passed validation and review and the
-user explicitly approves promotion.
-
-After an approved candidate has been promoted, its live extraction and
-diagnostics have been verified, and the public record status is
-`extracted_approved`, remove that record's temporary staging history with:
+Candidates remain staged while the record-owning agent completes validation,
+source comparison, five-role review, adjudication, and a clean reproducibility
+run. Jamie's standing policy then authorizes the primary agent to finalize and
+approve a candidate automatically when every protocol gate passes:
 
 ```powershell
-python scripts/cleanup_approved_staging.py NNNNN --check-only
-python scripts/cleanup_approved_staging.py NNNNN
+python scripts/finalize_extraction.py NNNNN --run-id final-reviewed-run --repro-run-id clean-repro-run
 ```
 
-The command refuses cleanup unless the approved live output, approval record,
-source fingerprint, validation findings, metadata status, and approved staged
-run agree. It deletes only `papers (private)/staging/NNNNN/`; live outputs and
-other records' staged work are preserved.
+The finalizer records standing-policy provenance, promotes the exact reviewed
+run, sets `pip_litdb_status: extracted_approved`, updates the extraction queue,
+independently verifies the live result, and removes only that record's staging
+history. New or unresolved findings stop finalization; routine user approval is
+not requested. Approved revisions use `--replace`, which archives the prior
+live extraction and diagnostics under the private record's
+`extraction_history/`. The lower-level cleanup command remains available for
+guarded recovery and accepts both legacy explicit-user approvals and the new
+standing-policy approvals.
+
+After finalization, combine the coordinator's saved-evidence, live-file and
+browser checks in one read-only invocation:
+
+```powershell
+python scripts/check_extraction_completion.py NNNNN --test-report "papers (private)/diagnostics/<full-suite-run>/report.json" --log-dir "papers (private)/diagnostics/<assigned-area>"
+```
+
+Use the full default discovery report from `scripts/run_tests.py`. The checker
+reuses guarded live validation, checks the review inventory and recorded clean
+rebuild, verifies the test log hash and queue entry, and checks the actual viewer
+including byte-matched local downloads. It returns a compact summary and saves
+complete reports, browser output, and separate image/caption screenshots in a
+new private directory. Windows uses installed Edge with a dedicated download
+folder and private temporary browser files. Node and Playwright use installed
+or bundled runtimes; explicit paths are available through `--node` and
+`--playwright-module`.
+
+`machine_checks_passed` still requires primary-agent inspection of the saved
+screenshots and the existing source/review judgments. Confirm the supplied test
+report covers the final code. The checker does not promote, change metadata,
+remove staging, or re-extract a paper, so it can also verify a saved approved
+record. Current before/after hashes establish that its own run was read-only;
+the finalizer's original metadata-change and cleanup evidence remains required.
 
 When both a publisher copy and a PubMed Central copy of the same manuscript are available, retain
 the publisher copy as `main.pdf`; retain the PubMed Central copy only when no publisher copy is

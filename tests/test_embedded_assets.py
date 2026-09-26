@@ -11,12 +11,33 @@ from scripts.extraction.pipeline import (
     ExtractionError,
     _asset_identity_keys,
     _embedded_assets_after_pdf_overrides,
+    _enrich_assets,
     _materialize_embedded_assets,
     _prepare_supplement_assets,
 )
 
 
 class EmbeddedAssetTests(unittest.TestCase):
+    def test_pdf_crop_enrichment_retains_reviewed_supplement_parent(self) -> None:
+        rendered = [
+            {
+                "asset_id": "supplement_001_pa1_structure",
+                "output_path": "supplementary/supplement_001/pa1.png",
+            }
+        ]
+        specs = [
+            {
+                "asset_id": "supplement_001_pa1_structure",
+                "parent_id": "supplement_001",
+                "category": "supplement_image",
+                "label": "PA1",
+            }
+        ]
+
+        [asset] = _enrich_assets(rendered, specs)
+
+        self.assertEqual(asset["parent_id"], "supplement_001")
+        self.assertEqual(asset["category"], "supplement_image")
     def setUp(self) -> None:
         self.source = SourceFile(
             role="main_html",
@@ -61,6 +82,23 @@ class EmbeddedAssetTests(unittest.TestCase):
             )
             self.assertEqual(assets[0]["sha256"], hashlib.sha256(data).hexdigest())
             self.assertFalse(assets[0]["ocr_performed"])
+
+    def test_materializes_table_cell_relationship_metadata(self) -> None:
+        pending = self._pending(
+            asset_id="table_001_part_01_cell_r002_c003",
+            category="table_cell",
+            label="Table 1 graphical cell row 2 column 3",
+            output_path="tables/main/table_001_cells/part_01_r002_c003.png",
+            parent_table_id="table_001",
+            compound_id="part_01_row_2_column_3",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            [asset] = _materialize_embedded_assets(
+                [pending], Path(temporary), [self.source]
+            )
+
+        self.assertEqual(asset["parent_table_id"], "table_001")
+        self.assertEqual(asset["compound_id"], "part_01_row_2_column_3")
 
     def test_reviewed_pdf_crop_replaces_same_id_embedded_asset(self) -> None:
         first = self._pending()

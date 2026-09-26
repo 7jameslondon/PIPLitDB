@@ -1,0 +1,25 @@
+document_type: research_article
+publication_stage: publication
+title: "Investigation of a minor groove-binding polyamide targeted to E2F1 transcription factor in chronic myeloid leukaemia (CML) cells"
+authors:
+  - name: "Kourosh Hayatigolkhatmi"
+  - name: "Giacomo Padroni"
+  - name: "Wu Su"
+  - name: "Lijing Fang"
+  - name: "Eduardo Gómez-Castañeda"
+  - name: "Ya-Ching Hsieh"
+  - name: "Lorna Jackson"
+  - name: "Tessa L. Holyoake"
+  - name: "Francesca Pellicano"
+  - name: "Glenn A. Burley"
+  - name: "Heather G. Jørgensen"
+doi: "10.1016/j.bcmd.2017.11.002"
+publication_year: 2018
+journal: "Blood Cells, Molecules, and Diseases"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked
+pip_litdb_notes: "Original research published as a letter, pp. 119-122."

@@ -20,5 +20,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: not_available
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Research communication (vol. 56, issue 82, pp. 12371-12374). Springer states that its 2022 chapter with DOI 10.1007/978-981-16-8436-4_4 republishes this article with permission of the Royal Society of Chemistry. The supplementary-information PDF remains accessible and is archived locally as the complete 16-page supplementary.pdf from the exact RSC asset https://pubs.rsc.org/cc/article-supplement/676299/pdf/d0cc05158f1_suppl/."

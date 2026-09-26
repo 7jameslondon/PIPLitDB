@@ -21,5 +21,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: partial
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "The publisher lists a supplementary file named SupMat.docx, but its official download link returns a broken, unrelated legacy Word file rather than the listed DOCX; no valid copy is available from the publisher."

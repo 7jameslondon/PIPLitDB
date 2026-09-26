@@ -294,7 +294,9 @@
             "html",
             "pdf",
             "image",
-            "presentation"
+            "presentation",
+            "document",
+            "spreadsheet"
           ]
         },
         "source_image": {
@@ -308,7 +310,9 @@
               "source_kind": {
                 "enum": [
                   "html",
-                  "presentation"
+                  "presentation",
+                  "document",
+                  "spreadsheet"
                 ]
               }
             },

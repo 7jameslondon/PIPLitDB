@@ -1,0 +1,23 @@
+document_type: research_article
+publication_stage: publication
+title: "DNA sequence recognition by an isopropyl substituted thiazole polyamide"
+authors:
+  - name: "Peter L. James"
+  - name: "Elena E. Merkina"
+  - name: "Abedawn I. Khalaf"
+  - name: "Colin J. Suckling"
+  - name: "Roger D. Waigh"
+  - name: "Tom Brown"
+  - name: "Keith R. Fox"
+doi: "10.1093/nar/gkh666"
+publication_year: 2004
+journal: "Nucleic Acids Research"
+related_papers:
+  - pip_litdb_id: "00741"
+    relationship_type: has_preliminary_version
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

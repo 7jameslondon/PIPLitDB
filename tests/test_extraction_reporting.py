@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 
 from scripts.extraction.models import (
@@ -16,11 +17,13 @@ from scripts.extraction.models import (
 from scripts.extraction.reporting import (
     _confidence_document,
     _pdf_exclusion_coverage,
+    _repair_rows,
     _reconciliation_rows,
     _source_coverage,
     write_diagnostics,
     write_validation_result,
 )
+from scripts.extraction.validation import validate_candidate
 
 
 def _article(**changes: object) -> ArticleExtraction:
@@ -59,6 +62,29 @@ def _json_lines(path: Path) -> list[dict[str, object]]:
 
 
 class ArticleReportingTests(unittest.TestCase):
+    def test_supplement_repairs_are_included_in_private_repair_rows(self) -> None:
+        supplement_repair = {
+            "schema_version": "1.0",
+            "repair_id": "supplement_001-text-replacement-001",
+            "mode": "exact_literal",
+            "pattern": "gra�tude",
+            "replacement": "gratitude",
+            "occurrences": 2,
+            "reason": "The native font map lost the ti ligature.",
+            "evidence": "Both rendered words read gratitude.",
+            "source_path": "supplementary/consent.pdf",
+            "source_sha256": "a" * 64,
+            "source_locator": "native-text;exact-literal-replacement",
+        }
+
+        rows = _repair_rows(
+            _article(),
+            [SimpleNamespace(repairs=[supplement_repair])],
+        )
+
+        self.assertEqual(rows, [supplement_repair])
+        self.assertIsNot(rows[0], supplement_repair)
+
     def test_html_primary_pdf_without_unique_outputs_is_duplicate_coverage(self) -> None:
         sources = [
             SourceFile(
@@ -116,6 +142,102 @@ class ArticleReportingTests(unittest.TestCase):
         self.assertEqual(
             confidence["categories"]["graphical_abstract_image"]["level"],
             "not_applicable",
+        )
+
+    def test_supplement_only_tables_are_scientific_tables(self) -> None:
+        supplement = SimpleNamespace(warnings=[], tables=[object()])
+
+        confidence = _confidence_document(_article(), [supplement], [], [])
+
+        self.assertEqual(
+            confidence["categories"]["scientific_tables"]["level"],
+            "medium",
+        )
+        self.assertIn(
+            "machine-ready JSON",
+            confidence["categories"]["scientific_tables"]["basis"],
+        )
+
+    def test_source_anomaly_can_close_only_its_named_graphical_coverage(self) -> None:
+        article = _article(
+            figures=[
+                FigureItem(
+                    figure_id="graphical_abstract",
+                    source_id="graphical-abstract",
+                    label="Graphical Abstract",
+                    kind="graphical_abstract",
+                    caption_markdown="Authored summary.",
+                    caption_plain="Authored summary.",
+                    source_path="html/main.html",
+                    source_locator="//figure[1]",
+                )
+            ]
+        )
+        source = SourceFile(
+            role="main_html",
+            path=Path("unused.html"),
+            relative_path="html/main.html",
+            size=456,
+            sha256="1" * 64,
+            detected_format="text/html",
+        )
+        source_anomaly = {
+            "schema_version": "1.0",
+            "anomaly_id": "graphical-abstract-image-unavailable",
+            "coverage_id": "unresolved-graphical-abstract-image",
+            "source_path": "html/main.html",
+            "source_locator": "//figure[1]",
+            "observed": "The archived figure container has no image bytes.",
+            "assessment": "The source omitted the graphical-abstract pixels.",
+            "disposition": "Retain the prose and do not fabricate an image.",
+        }
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            extraction = root / "extraction"
+            extraction.mkdir()
+            (extraction / "record.md").write_text(
+                "# Synthetic article\n\nSynthetic body text.\n",
+                encoding="utf-8",
+            )
+            diagnostic = root / "extraction_diagnostic"
+            write_diagnostics(
+                diagnostic,
+                extraction,
+                record_id="00001",
+                run_id="source-limitation",
+                fingerprint="1" * 64,
+                sources=[source],
+                article=article,
+                supplements=[],
+                assets=[],
+                coverage=[],
+                override_text=None,
+                source_anomalies=[source_anomaly],
+            )
+
+            coverage = _json_lines(diagnostic / "coverage.jsonl")
+            graphical = next(
+                row
+                for row in coverage
+                if row.get("coverage_id")
+                == "unresolved-graphical-abstract-image"
+            )
+            report = validate_candidate(
+                extraction,
+                diagnostic,
+                expected_title="Synthetic article",
+            )
+
+        self.assertEqual(graphical["status"], "intentionally_excluded")
+        self.assertIn("graphical-abstract-image-unavailable", graphical["reason"])
+        self.assertNotIn(
+            "unresolved_coverage",
+            {finding.code for finding in report.findings},
+        )
+        self.assertNotIn(
+            "diagnostic_warning_graphical_abstract_image_unavailable",
+            {finding.code for finding in report.findings},
         )
 
     def test_pdf_exclusions_are_explicitly_accounted_for(self) -> None:
@@ -225,6 +347,120 @@ class ArticleReportingTests(unittest.TestCase):
         self.assertNotIn("table", rows[0]["content"])
         self.assertEqual(rows[2]["supporting_source"], "PDF caption structure")
 
+    def test_reconciliation_uses_pdf_structure_for_supplement_table_asset(self) -> None:
+        article = _article(
+            text_extraction={
+                "source_role": "main_html",
+                "source_path": "html/main.html",
+                "method": "publisher-html-semantic-extraction",
+                "ocr_performed": False,
+            }
+        )
+
+        rows = _reconciliation_rows(
+            article,
+            [],
+            [
+                {
+                    "asset_id": "supplement_001_table_s1",
+                    "category": "supplement_table",
+                    "label": "Table S1",
+                    "source_path": "supplementary/supplementary.pdf",
+                }
+            ],
+        )
+
+        self.assertEqual(rows[2]["selected_source"], "supplementary/supplementary.pdf")
+        self.assertEqual(rows[2]["supporting_source"], "PDF table structure")
+        self.assertNotIn("HTML caption structure", json.dumps(rows[2]))
+
+    def test_image_only_supplement_reporting_does_not_claim_native_text(self) -> None:
+        supplement = SimpleNamespace(
+            supplement_id="supplement_001",
+            source=SimpleNamespace(relative_path="supplementary/image-only.pdf"),
+            blocks=[],
+            figures=[object()],
+            tables=[],
+        )
+
+        rows = _reconciliation_rows(_article(), [supplement], [])
+
+        source_row = rows[-1]
+        self.assertIn("reviewed visual content", source_row["reason"])
+        self.assertNotIn("native text extracted", source_row["reason"])
+
+    def test_reviewed_supplement_blocks_do_not_imply_native_text(self) -> None:
+        supplement = SimpleNamespace(
+            supplement_id="supplement_001",
+            source=SimpleNamespace(relative_path="supplementary/scanned.pdf"),
+            blocks=[object()], figures=[], tables=[],
+        )
+        row = _reconciliation_rows(_article(), [supplement], [])[-1]
+        self.assertIn("source text represented", row["reason"])
+        self.assertNotIn("native text extracted", row["reason"])
+
+    def test_pdf_page_renders_and_table_cells_do_not_inherit_html_captions(self) -> None:
+        assets = [
+            {"asset_id": "page1", "category": "supplement_page_render",
+             "source_path": "supplementary/scanned.pdf"},
+            {"asset_id": "cell1", "category": "table_cell",
+             "source_path": "pdf/main.pdf"},
+        ]
+        rows = _reconciliation_rows(_article(), [], assets)
+        self.assertIsNone(rows[-2]["supporting_source"])
+        self.assertEqual(rows[-1]["supporting_source"], "PDF table structure")
+
+    def test_exclusion_only_supplement_reporting_acknowledges_reviewed_text(self) -> None:
+        supplement = SimpleNamespace(
+            supplement_id="supplement_002",
+            source=SimpleNamespace(relative_path="supplementary/captions.pdf"),
+            blocks=[],
+            figures=[],
+            tables=[],
+            exclusions=[
+                {
+                    "content_kind": "figure_caption",
+                    "status": "intentionally_excluded",
+                }
+            ],
+        )
+
+        rows = _reconciliation_rows(_article(), [supplement], [])
+
+        source_row = rows[-1]
+        self.assertIn("reviewed source text", source_row["reason"])
+        self.assertIn("consolidated structured items", source_row["reason"])
+        self.assertNotIn("no native text", source_row["reason"])
+
+    def test_duplicate_only_supplement_reconciliation_uses_reviewed_disposition(self) -> None:
+        page_map = "pages=1-2->pdf/main.pdf#pages=1-2"
+        evidence = "Both rendered pages are byte-identical."
+        supplement = SimpleNamespace(
+            supplement_id="supplement_002",
+            source=SimpleNamespace(relative_path="supplementary/combined.pdf"),
+            blocks=[],
+            figures=[],
+            tables=[],
+            exclusions=[
+                {
+                    "content_kind": "supplement_source_content",
+                    "status": "duplicate",
+                    "source_locator": page_map,
+                    "reason": "Publisher convenience bundle duplicates main.pdf.",
+                    "evidence": evidence,
+                }
+            ],
+        )
+
+        rows = _reconciliation_rows(_article(), [supplement], [])
+
+        source_row = rows[-1]
+        self.assertEqual(source_row["status"], "duplicate")
+        self.assertEqual(source_row["supporting_source"], page_map)
+        self.assertEqual(source_row["evidence"], evidence)
+        self.assertIn("convenience bundle duplicates", source_row["reason"])
+        self.assertNotIn("no native text", source_row["reason"])
+
     def test_pdf_primary_reporting_records_ocr_and_page_analysis(self) -> None:
         pdf_block = ContentBlock(
             block_id="block-001",
@@ -299,6 +535,7 @@ class ArticleReportingTests(unittest.TestCase):
                 coverage=[],
                 override_text=None,
                 source_anomalies=[],
+                expected_counts={"pages": 2, "main_figures": 0},
             )
 
             reconciliation = _json_lines(diagnostic / "reconciliation.jsonl")
@@ -308,6 +545,11 @@ class ArticleReportingTests(unittest.TestCase):
             )
             manifest = json.loads(
                 (diagnostic / "manifest.json").read_text(encoding="utf-8")
+            )
+            independent_report = validate_candidate(
+                extraction,
+                diagnostic,
+                expected_title="Synthetic article",
             )
             pages = _json_lines(diagnostic / "page_analysis.jsonl")
             blocks = _json_lines(diagnostic / "blocks.jsonl")
@@ -331,6 +573,14 @@ class ArticleReportingTests(unittest.TestCase):
         )
         self.assertTrue(confidence["probabilistic"])
         self.assertTrue(manifest["ocr_performed"])
+        self.assertEqual(
+            manifest["expected_counts"],
+            {"main_figures": 0, "pages": 2},
+        )
+        self.assertEqual(
+            independent_report.expected_counts,
+            {"main_figures": 0, "pages": 2},
+        )
         self.assertEqual(
             manifest["text_extraction"]["method"],
             "synthetic-pdf-glyph-layout-with-ocr-fallback",

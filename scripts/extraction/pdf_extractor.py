@@ -48,9 +48,20 @@ def render_pdf_crops(
     """Render PDF crop specifications to deterministic PNG files.
 
     Each specification must contain ``source_path`` (``source`` is accepted as
-    an alias), ``asset_id``, a one-based ``page``, ``box`` as
-    ``[left, top, right, bottom]`` in PDF points, and ``output_path`` relative
-    to *extraction_root*.  No OCR or text recognition is performed.
+    an alias), ``asset_id``, and ``output_path`` relative to
+    *extraction_root*. A normal crop declares a one-based ``page`` and ``box``
+    as ``[left, top, right, bottom]`` in PDF points. A composite crop instead
+    declares ``parts`` containing two or more such page/box mappings; the
+    rendered parts are centered and stacked vertically into one image, unless
+    ``preserve_source_layout`` retains same-page parts at their original relative
+    positions (leaving excluded caption/prose areas blank). A normal
+    crop may declare ``padding_points`` to add a deterministic white border
+    after rendering; this is useful when complete authored artwork ends exactly
+    at a crop boundary and the neighboring page content cannot be included. No
+    OCR or text recognition is performed. A one-based ``embedded_image_index``
+    selects an image object in PDFium page traversal order at its native
+    resolution, without overlaid page text. Its ``box`` must match the object's
+    page bounds within one point; this avoids silently selecting another image.
 
     The returned dictionaries are suitable for an extraction manifest.  The
     function preserves input order and rejects duplicate asset IDs or outputs.
@@ -199,26 +210,250 @@ def _render_one_crop(
     dpi: float,
     max_output_pixels: int,
 ) -> dict[str, Any]:
-    page_number = spec["page"]
+    if "parts" in spec:
+        return _render_composite_crop(
+            document,
+            source_path,
+            extraction_root,
+            spec,
+            dpi=dpi,
+            max_output_pixels=max_output_pixels,
+        )
+
+    render_image = (_render_embedded_image if "embedded_image_index" in spec
+                    else _render_crop_image)
+    extra = ({"image_index": spec["embedded_image_index"]}
+             if "embedded_image_index" in spec else {})
+    image, geometry = render_image(
+        document,
+        page_number=spec["page"],
+        box=spec["box"],
+        asset_id=spec["asset_id"],
+        dpi=dpi,
+        max_output_pixels=max_output_pixels,
+        **extra,
+    )
+    try:
+        rotation = int(spec.get("rotate_clockwise", 0))
+        if rotation:
+            rotated = image.rotate(-rotation, expand=True, fillcolor="white")
+            image.close()
+            image = rotated
+            geometry["dimensions_pixels"] = {
+                "width": image.width,
+                "height": image.height,
+            }
+            geometry["render_rotation_degrees_clockwise"] = rotation
+        padding_points = float(spec.get("padding_points", 0))
+        if padding_points:
+            padding_pixels = max(1, math.ceil(padding_points * dpi / 72.0))
+            padded_width = image.width + (2 * padding_pixels)
+            padded_height = image.height + (2 * padding_pixels)
+            if padded_width * padded_height > max_output_pixels:
+                raise PdfExtractionError(
+                    f"padded crop for {spec['asset_id']!r} would exceed "
+                    f"{max_output_pixels:,} pixels"
+                )
+            padded = Image.new("RGB", (padded_width, padded_height), "white")
+            padded.paste(image, (padding_pixels, padding_pixels))
+            image.close()
+            image = padded
+            geometry["dimensions_pixels"] = {
+                "width": image.width,
+                "height": image.height,
+            }
+            geometry["padding_points"] = _clean_number(padding_points)
+            geometry["padding_pixels"] = padding_pixels
+        png_bytes = _encode_png(image)
+        width_pixels, height_pixels = image.size
+    finally:
+        image.close()
+
+    output_relative = spec["output_path"]
+    output_path = _write_crop_output(
+        extraction_root,
+        output_relative,
+        png_bytes,
+    )
+    result = _crop_result(
+        spec,
+        source_path,
+        output_path,
+        dpi=dpi,
+        width_pixels=width_pixels,
+        height_pixels=height_pixels,
+    )
+    result.update(geometry)
+    return result
+
+
+def _render_composite_crop(
+    document: pypdfium2.PdfDocument,
+    source_path: Path,
+    extraction_root: Path,
+    spec: dict[str, Any],
+    *,
+    dpi: float,
+    max_output_pixels: int,
+) -> dict[str, Any]:
+    images: list[Image.Image] = []
+    parts: list[dict[str, Any]] = []
+    try:
+        for part_index, part in enumerate(spec["parts"], start=1):
+            image, geometry = _render_crop_image(
+                document,
+                page_number=part["page"],
+                box=part["box"],
+                asset_id=f"{spec['asset_id']} part {part_index}",
+                dpi=dpi,
+                max_output_pixels=max_output_pixels,
+            )
+            images.append(image)
+            parts.append(geometry)
+
+        source_layout = spec.get("preserve_source_layout", False)
+        if source_layout:
+            origin_x = min(part["box"][0] for part in spec["parts"])
+            origin_y = min(part["box"][1] for part in spec["parts"])
+            placements = [(round((part["box"][0] - origin_x) * dpi / 72),
+                           round((part["box"][1] - origin_y) * dpi / 72))
+                          for part in spec["parts"]]
+            width_pixels = max(left + im.width for im, (left, top) in zip(images, placements))
+            height_pixels = max(top + im.height for im, (left, top) in zip(images, placements))
+        else:
+            width_pixels = max(image.width for image in images)
+            height_pixels = sum(image.height for image in images)
+        if width_pixels * height_pixels > max_output_pixels:
+            raise PdfExtractionError(
+                f"composite crop for {spec['asset_id']!r} would exceed "
+                f"{max_output_pixels:,} pixels"
+            )
+        composite = Image.new("RGB", (width_pixels, height_pixels), "white")
+        try:
+            top = 0
+            for index, (image, part) in enumerate(zip(images, parts, strict=True)):
+                if source_layout:
+                    left, top = placements[index]
+                else:
+                    left = (width_pixels - image.width) // 2
+                composite.paste(image, (left, top))
+                part["placement_pixels"] = {
+                    "left": left,
+                    "top": top,
+                    "width": image.width,
+                    "height": image.height,
+                }
+                top += image.height
+            png_bytes = _encode_png(composite)
+        finally:
+            composite.close()
+    finally:
+        for image in images:
+            image.close()
+
+    output_relative = spec["output_path"]
+    output_path = _write_crop_output(
+        extraction_root,
+        output_relative,
+        png_bytes,
+    )
+    result = _crop_result(
+        spec,
+        source_path,
+        output_path,
+        dpi=dpi,
+        width_pixels=width_pixels,
+        height_pixels=height_pixels,
+    )
+    result.update(
+        {
+            "parts": parts,
+            "composition": {
+                "layout": "source",
+                "alignment": "source_coordinates",
+            } if source_layout else {
+                "layout": "vertical",
+                "alignment": "center",
+                "gap_pixels": 0,
+            },
+        }
+    )
+    return result
+
+
+def _render_embedded_image(document, *, page_number, box, asset_id, dpi,
+                           max_output_pixels, image_index):
+    if page_number > len(document):
+        raise PdfExtractionError(f"page {page_number} is outside the PDF")
+    page = document[page_number - 1]
+    try:
+        width, height = page.get_size()
+        _validate_box(box, width, height, asset_id=asset_id)
+        objects = list(page.get_objects(filter=[pypdfium2.raw.FPDF_PAGEOBJ_IMAGE]))
+        if image_index > len(objects):
+            raise PdfExtractionError(f"embedded image {image_index} is outside PDF page {page_number}")
+        obj = objects[image_index - 1]
+        left, bottom, right, top = obj.get_bounds()
+        actual_box = [left, height - top, right, height - bottom]
+        if any(abs(a - b) > 1 for a, b in zip(box, actual_box)):
+            raise PdfExtractionError("embedded image bounds differ from reviewed box")
+        metadata = obj.get_metadata()
+        if metadata.width * metadata.height > max_output_pixels:
+            raise PdfExtractionError("embedded image exceeds output pixel limit")
+        bitmap = obj.get_bitmap(render=True, scale_to_original=True)
+        try:
+            shared = bitmap.to_pil()
+            try:
+                normalized = _to_rgb_on_white(shared)
+                try:
+                    image = normalized.copy()
+                finally:
+                    if normalized is not shared:
+                        normalized.close()
+            finally:
+                shared.close()
+        finally:
+            bitmap.close()
+        if image.width * image.height > max_output_pixels:
+            image.close()
+            raise PdfExtractionError("embedded image exceeds output pixel limit")
+        return image, {"page": page_number, "box": actual_box,
+                       "coordinate_system": "pdf-points-top-left",
+                       "page_dimensions_points": {"width": width, "height": height},
+                       "dimensions_pixels": {"width": image.width, "height": image.height},
+                       "method": "pdfium-embedded-image-native-resolution",
+                       "embedded_image_index": image_index}
+    finally:
+        page.close()
+
+
+def _render_crop_image(
+    document: pypdfium2.PdfDocument,
+    *,
+    page_number: int,
+    box: Sequence[float],
+    asset_id: str,
+    dpi: float,
+    max_output_pixels: int,
+) -> tuple[Image.Image, dict[str, Any]]:
     page_count = len(document)
     if page_number > page_count:
         raise PdfExtractionError(
-            f"page {page_number} is outside {spec['source_path']!r} "
-            f"({page_count} pages)"
+            f"page {page_number} is outside the PDF ({page_count} pages)"
         )
 
     page = document[page_number - 1]
     try:
         page_width, page_height = page.get_size()
         left, top, right, bottom = _validate_box(
-            spec["box"], page_width, page_height, asset_id=spec["asset_id"]
+            box, page_width, page_height, asset_id=asset_id
         )
         scale = dpi / 72.0
         expected_width = max(1, math.ceil((right - left) * scale))
         expected_height = max(1, math.ceil((bottom - top) * scale))
         if expected_width * expected_height > max_output_pixels:
             raise PdfExtractionError(
-                f"crop for {spec['asset_id']!r} would exceed "
+                f"crop for {asset_id!r} would exceed "
                 f"{max_output_pixels:,} pixels"
             )
 
@@ -253,8 +488,8 @@ def _render_one_crop(
                 bitmap.close()
         except Exception as exc:
             raise PdfExtractionError(
-                f"could not render {spec['asset_id']!r} from "
-                f"{spec['source_path']!r}: {exc}"
+                f"could not render {asset_id!r} from "
+                f"PDF page {page_number}: {exc}"
             ) from exc
     finally:
         page.close()
@@ -265,33 +500,16 @@ def _render_one_crop(
         normalized_image = _to_rgb_on_white(image)
         if normalized_image.width * normalized_image.height > max_output_pixels:
             raise PdfExtractionError(
-                f"rendered crop for {spec['asset_id']!r} exceeds "
+                f"rendered crop for {asset_id!r} exceeds "
                 f"{max_output_pixels:,} pixels"
             )
-        png_bytes = _encode_png(normalized_image)
         width_pixels, height_pixels = normalized_image.size
+        result_image = normalized_image.copy()
     finally:
         image.close()
         if "normalized_image" in locals() and normalized_image is not image:
             normalized_image.close()
-
-    output_relative = spec["output_path"]
-    output_path = _resolve_output_path(extraction_root, output_relative)
-    try:
-        atomic_write_bytes(output_path, png_bytes)
-    except OSError as exc:
-        raise PdfExtractionError(
-            f"could not write PDF crop output {output_relative!r}: {exc}"
-        ) from exc
-    # Recheck after the atomic replace so a filesystem race cannot silently
-    # redirect the manifest to a location outside the extraction root.
-    ensure_within(output_path, extraction_root, require_exists=True)
-
-    result: dict[str, Any] = {
-        "schema_version": "1.0",
-        "asset_id": spec["asset_id"],
-        "source_path": spec["source_path"],
-        "source_sha256": sha256_file(source_path),
+    return result_image, {
         "page": page_number,
         "box": [
             _clean_number(left),
@@ -304,8 +522,47 @@ def _render_one_crop(
             "width": _clean_number(page_width),
             "height": _clean_number(page_height),
         },
+        "dimensions_pixels": {
+            "width": width_pixels,
+            "height": height_pixels,
+        },
+    }
+
+
+def _write_crop_output(
+    extraction_root: Path,
+    output_relative: str,
+    png_bytes: bytes,
+) -> Path:
+    output_path = _resolve_output_path(extraction_root, output_relative)
+    try:
+        atomic_write_bytes(output_path, png_bytes)
+    except OSError as exc:
+        raise PdfExtractionError(
+            f"could not write PDF crop output {output_relative!r}: {exc}"
+        ) from exc
+    # Recheck after the atomic replace so a filesystem race cannot silently
+    # redirect the manifest to a location outside the extraction root.
+    ensure_within(output_path, extraction_root, require_exists=True)
+    return output_path
+
+
+def _crop_result(
+    spec: Mapping[str, Any],
+    source_path: Path,
+    output_path: Path,
+    *,
+    dpi: float,
+    width_pixels: int,
+    height_pixels: int,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "schema_version": "1.0",
+        "asset_id": spec["asset_id"],
+        "source_path": spec["source_path"],
+        "source_sha256": sha256_file(source_path),
         "dpi": _clean_number(dpi),
-        "output_path": output_relative,
+        "output_path": spec["output_path"],
         "media_type": "image/png",
         "sha256": sha256_file(output_path),
         "bytes": output_path.stat().st_size,
@@ -339,18 +596,33 @@ def _normalize_crop_spec(
             f"crop specification {index} has an invalid asset_id"
         )
 
-    page = raw_spec.get("page")
-    if isinstance(page, bool) or not isinstance(page, int) or page < 1:
-        raise PdfExtractionError(
-            f"crop specification {index} page must be a positive integer"
-        )
-
-    box = raw_spec.get("box")
-    if not isinstance(box, (list, tuple)) or len(box) != 4:
-        raise PdfExtractionError(
-            f"crop specification {index} box must contain four numbers"
-        )
-    numeric_box = [_finite_number(value, "box") for value in box]
+    raw_parts = raw_spec.get("parts")
+    if raw_parts is None:
+        page, numeric_box = _normalize_crop_part(raw_spec, context=f"crop specification {index}")
+        parts = None
+    else:
+        if "page" in raw_spec or "box" in raw_spec:
+            raise PdfExtractionError(
+                f"crop specification {index} cannot combine page/box with parts"
+            )
+        if (
+            not isinstance(raw_parts, (list, tuple))
+            or len(raw_parts) < 2
+        ):
+            raise PdfExtractionError(
+                f"crop specification {index} parts must contain at least two mappings"
+            )
+        parts = []
+        for part_index, raw_part in enumerate(raw_parts, start=1):
+            if not isinstance(raw_part, Mapping):
+                raise PdfExtractionError(
+                    f"crop specification {index} part {part_index} must be a mapping"
+                )
+            part_page, part_box = _normalize_crop_part(
+                raw_part,
+                context=f"crop specification {index} part {part_index}",
+            )
+            parts.append({"page": part_page, "box": part_box})
 
     if "output_path" not in raw_spec:
         raise PdfExtractionError(
@@ -365,16 +637,72 @@ def _normalize_crop_spec(
     normalized: dict[str, Any] = {
         "source_path": source_path,
         "asset_id": asset_id,
-        "page": page,
-        "box": numeric_box,
         "output_path": output_path,
     }
+    if parts is None:
+        normalized.update({"page": page, "box": numeric_box})
+    else:
+        normalized["parts"] = parts
+    if "embedded_image_index" in raw_spec:
+        image_index = raw_spec["embedded_image_index"]
+        if (parts is not None or isinstance(image_index, bool)
+                or not isinstance(image_index, int) or image_index < 1):
+            raise PdfExtractionError("embedded_image_index requires a positive integer and single page/box")
+        normalized["embedded_image_index"] = image_index
+    preserve_layout = raw_spec.get("preserve_source_layout", False)
+    if not isinstance(preserve_layout, bool):
+        raise PdfExtractionError("preserve_source_layout must be a boolean")
+    if preserve_layout:
+        if parts is None or len({part["page"] for part in parts}) != 1:
+            raise PdfExtractionError("preserve_source_layout requires same-page parts")
+        normalized["preserve_source_layout"] = True
     if "kind" in raw_spec:
         kind = raw_spec["kind"]
         if not isinstance(kind, str) or not kind.strip():
             raise PdfExtractionError("crop kind must be a non-empty string")
         normalized["kind"] = kind.strip()
+    raw_rotation = raw_spec.get("rotate_clockwise", 0)
+    if (
+        isinstance(raw_rotation, bool)
+        or not isinstance(raw_rotation, int)
+        or raw_rotation not in {0, 90, 180, 270}
+    ):
+        raise PdfExtractionError(
+            "crop rotate_clockwise must be one of 0, 90, 180, or 270"
+        )
+    if parts is not None and raw_rotation:
+        raise PdfExtractionError(
+            "composite PDF crops cannot use rotate_clockwise"
+        )
+    if raw_rotation:
+        normalized["rotate_clockwise"] = raw_rotation
+    raw_padding = raw_spec.get("padding_points", 0)
+    padding_points = _finite_number(raw_padding, "padding_points")
+    if padding_points < 0 or padding_points > 72:
+        raise PdfExtractionError(
+            "crop padding_points must be between 0 and 72"
+        )
+    if parts is not None and padding_points:
+        raise PdfExtractionError(
+            "composite PDF crops cannot use padding_points"
+        )
+    if padding_points:
+        normalized["padding_points"] = padding_points
     return normalized
+
+
+def _normalize_crop_part(
+    raw_part: Mapping[str, Any],
+    *,
+    context: str,
+) -> tuple[int, list[float]]:
+    page = raw_part.get("page")
+    if isinstance(page, bool) or not isinstance(page, int) or page < 1:
+        raise PdfExtractionError(f"{context} page must be a positive integer")
+    box = raw_part.get("box")
+    if not isinstance(box, (list, tuple)) or len(box) != 4:
+        raise PdfExtractionError(f"{context} box must contain four numbers")
+    return page, [_finite_number(value, "box") for value in box]
 
 
 def _normalize_relative_path(value: Any, field: str) -> tuple[str, tuple[str, ...]]:
@@ -483,7 +811,11 @@ def _validate_box(
     left, top, right, bottom = box
     if left < 0 or top < 0 or right <= left or bottom <= top:
         raise PdfExtractionError(f"crop box is invalid for {asset_id!r}")
-    tolerance = 1e-6
+    # PDF page boxes commonly round a six-decimal binary-float dimension to
+    # two decimals in inventory tooling (for example 841.919983 -> 841.92).
+    # Accept only that sub-thousandth-point representation noise; materially
+    # out-of-bounds crops still fail closed.
+    tolerance = 1e-4
     if right > page_width + tolerance or bottom > page_height + tolerance:
         raise PdfExtractionError(
             f"crop box exceeds the PDF page for {asset_id!r} "

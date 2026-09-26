@@ -17,5 +17,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Research article (vol. 167, pp. 1-11), published online 2019-08-21 and in the December 2019 issue; PMID 31445072, PMCID PMC6883780. The indexed local PDF is the complete 11-page Elsevier version of record. The publisher page provides no supplementary material."

@@ -67,6 +67,22 @@ class ExtractionViewerStaticTests(unittest.TestCase):
         self.assertIn("DROP_CONTENT_HTML", self.source)
         self.assertNotRegex(self.source, r"\bfetch\s*\(")
 
+    def test_long_unbroken_scientific_text_wraps_without_changing_content(self) -> None:
+        # DNA sequences and chemical names must not disappear behind a media
+        # card's rounded overflow boundary. Wrapping is presentational only.
+        rule = re.search(r"(?m)^\s*\.text-block\s*\{([^}]+)\}", self.source)
+        self.assertIsNotNone(rule)
+        self.assertRegex(rule.group(1), r"overflow-wrap\s*:\s*anywhere\s*;")
+
+    def test_authored_bold_remains_distinct_inside_table_headers(self) -> None:
+        header = re.search(r"(?m)^\s*th\s*\{([^}]+)\}", self.source)
+        authored = re.search(r"(?m)^\s*th strong\s*\{([^}]+)\}", self.source)
+        self.assertIsNotNone(header)
+        self.assertIsNotNone(authored)
+        header_weight = int(re.search(r"font-weight\s*:\s*(\d+)", header.group(1)).group(1))
+        authored_weight = int(re.search(r"font-weight\s*:\s*(\d+)", authored.group(1)).group(1))
+        self.assertGreater(authored_weight, header_weight)
+
     def test_private_root_picker_is_the_only_loading_mode(self) -> None:
         file_inputs = [
             attrs
@@ -131,6 +147,100 @@ class ExtractionViewerStaticTests(unittest.TestCase):
             self.source,
         )
 
+    def test_source_byline_group_is_promoted_once_with_metadata_fallback(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not available for viewer byline tests")
+
+        script = "\n".join(
+            (
+                'const assert = require("node:assert/strict");',
+                _source_between(self.source, "function isObject", "function asArray"),
+                _source_between(self.source, "function asArray", "function firstDefined"),
+                _source_between(self.source, "function firstDefined", "function richPlain"),
+                _source_between(self.source, "function richPlain", "function safeContentHref"),
+                _source_between(self.source, "function blockContent", "function renderBlock"),
+                'const emptyByline = { kind: "byline", content: { plain_text: "", html: "" } };',
+                'const sourceByline = { block_id: "source-byline", kind: "BYLINE", content: { plain_text: "Ada¹ and Ben²", html: "<strong>Ada¹ and Ben²</strong>" } };',
+                'const affiliation = { block_id: "affiliations", kind: "affiliations", content: { plain_text: "¹ One; ² Two", html: "¹ One; ² Two" } };',
+                'const secondAffiliation = { block_id: "second-affiliations", kind: "AFFILIATIONS", content: { plain_text: "³ Three", html: "<em>³ Three</em>" } };',
+                'const authorNote = { block_id: "author-note", kind: "author_note", content: { plain_text: "Equal contributors" } };',
+                'const detachedAffiliation = { block_id: "detached-affiliations", kind: "affiliations", content: { plain_text: "Correspondence elsewhere" } };',
+                'const additionalByline = { block_id: "translated-byline", kind: "byline", content: { plain_text: "Translated names", html: "<em>Translated names</em>" } };',
+                'const record = { record: { authors: [{ name: "Ada" }, { name: "Ben" }] }, front_matter: [emptyByline, sourceByline, affiliation, secondAffiliation, authorNote, detachedAffiliation, additionalByline] };',
+                'const selected = selectHeaderSourceGroup(record);',
+                'assert.equal(selected.block, sourceByline);',
+                'assert.equal(selected.index, 1);',
+                'assert.equal(blockContent(selected.block).html, "<strong>Ada¹ and Ben²</strong>");',
+                'assert.deepEqual(selected.blocks.map(entry => entry.block), [sourceByline, affiliation, secondAffiliation]);',
+                'assert.deepEqual(frontMatterBlocksForBody(record, selected), [emptyByline, authorNote, detachedAffiliation, additionalByline]);',
+                'assert.deepEqual(record.front_matter, [emptyByline, sourceByline, affiliation, secondAffiliation, authorNote, detachedAffiliation, additionalByline]);',
+                'const fallback = { record: { authors: [{ name: "Ada" }] }, front_matter: [authorNote] };',
+                'assert.equal(selectHeaderSourceGroup(fallback), null);',
+                'assert.deepEqual(frontMatterBlocksForBody(fallback, null), [authorNote]);',
+                'assert.deepEqual(frontMatterBlocksForBody(record, { block: affiliation, index: 0 }), record.front_matter);',
+                'const emptyAffiliation = { kind: "affiliations", content: { plain_text: "", html: "" } };',
+                'const interrupted = { front_matter: [sourceByline, emptyAffiliation, detachedAffiliation] };',
+                'const interruptedSelection = selectHeaderSourceGroup(interrupted);',
+                'assert.deepEqual(interruptedSelection.blocks.map(entry => entry.block), [sourceByline]);',
+                'assert.deepEqual(frontMatterBlocksForBody(interrupted, interruptedSelection), [emptyAffiliation, detachedAffiliation]);',
+            )
+        )
+        result = subprocess.run(
+            [node, "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        header_source = _source_between(
+            self.source,
+            "function renderHeader(record",
+            "function renderFrontMatter",
+        )
+        self.assertIn("renderHeaderSourceGroup(headerSourceGroup)", header_source)
+        self.assertIn('authors.join(", ")', header_source)
+        self.assertLess(
+            header_source.index("renderHeaderSourceGroup(headerSourceGroup)"),
+            header_source.index('element("div", "citation-line", citation)'),
+        )
+        group_source = _source_between(
+            self.source,
+            "function renderHeaderSourceGroup",
+            "function renderHeader(record",
+        )
+        self.assertIn('group.setAttribute("role", "group")', group_source)
+        self.assertIn('"Authors and affiliations"', group_source)
+        self.assertLess(
+            group_source.index('renderHeaderSourceBlock(groupedBlocks[0], "authors")'),
+            group_source.index('renderHeaderSourceBlock(entry, "header-affiliations")'),
+        )
+        contents_source = _source_between(
+            self.source,
+            "function renderContents",
+            "function renderToc",
+        )
+        self.assertIn("const headerSourceGroup = selectHeaderSourceGroup(record)", contents_source)
+        self.assertIn("renderHeader(record, headerSourceGroup)", contents_source)
+        self.assertIn("renderFrontMatter(record, dom.articleBody, headerSourceGroup)", contents_source)
+        self.assertLess(
+            contents_source.index("renderHeader(record, headerSourceGroup)"),
+            contents_source.index("renderAssetIndex(record, dom.articleBody)"),
+        )
+
+    def test_section_renderer_preserves_schema_heading_depth(self) -> None:
+        renderer = _source_between(
+            self.source,
+            "function renderSection",
+            "function metadataPair",
+        )
+
+        self.assertIn("Math.min(6, Math.max(2", renderer)
+        self.assertIn(".section-heading-level-5", self.source)
+        self.assertIn(".section-heading-level-6", self.source)
+
     def test_library_has_search_refresh_and_record_navigation(self) -> None:
         search_inputs = [
             attrs
@@ -150,6 +260,19 @@ class ExtractionViewerStaticTests(unittest.TestCase):
         self.assertIn('"pushState"', self.source)
         self.assertIn("history.back()", self.source)
         self.assertIn("scrollIntoView", self.source)
+
+    def test_semantic_supplement_figures_do_not_duplicate_source_preview(self) -> None:
+        renderer = _source_between(
+            self.source,
+            "function renderSupplements",
+            "function renderUnreferencedAssets",
+        )
+
+        self.assertIn("const hasSemanticFigures", renderer)
+        self.assertIn(
+            "browserCanPreviewMedia(fileType) && !hasSemanticFigures",
+            renderer,
+        )
 
     def test_programmatically_focused_article_title_has_no_control_outline(self) -> None:
         self.assertIn(".article-title:focus { outline: none; }", self.source)
@@ -490,6 +613,7 @@ const assert = require("node:assert/strict");
                 'assert.equal(assetMediaType({ path: "figure.emf" }, "figure.emf"), "image/emf");',
                 'assert.equal(assetMediaType({ path: "figure.wdp" }, "figure.wdp"), "image/vnd.ms-photo");',
                 'assert.equal(browserCanDisplayImage("image/png"), true);',
+                'assert.equal(browserCanDisplayImage("image/svg+xml"), true);',
                 'assert.equal(browserCanDisplayImage("image/tiff"), false);',
                 'assert.equal(browserCanDisplayImage("image/emf"), false);',
                 'assert.equal(browserCanDisplayImage("image/x-emf"), false);',
@@ -527,8 +651,36 @@ const assert = require("node:assert/strict");
         self.assertIn('record.content_format !== "safe-html"', self.source)
         self.assertIn("Asset unavailable", self.source)
 
+    def test_sanitizer_preserves_safe_lettered_ordered_list_type(self) -> None:
+        sanitizer = _source_between(
+            self.source,
+            "function sanitizeMarkup",
+            "function richFragment",
+        )
+        self.assertIn('tag === "ol"', sanitizer)
+        self.assertIn('/^[aA]$/.test(node.getAttribute("type") || "")', sanitizer)
+        self.assertIn('clean.setAttribute("type", node.getAttribute("type"))', sanitizer)
+
+    def test_source_omission_is_not_rendered_as_a_broken_asset(self) -> None:
+        render_source = _source_between(
+            self.source,
+            "function renderFigures",
+            "function tableCellStructure",
+        )
+
+        self.assertIn("function sourceAssetUnavailable", self.source)
+        self.assertIn('element("div", "asset-unavailable")', self.source)
+        self.assertIn("Not supplied by the publisher", self.source)
+        self.assertIn("figure.asset_id", render_source)
+        self.assertIn("sourceAssetUnavailable()", render_source)
+        self.assertIn(
+            'assetError(figure.asset_id, "The referenced asset_id is not present in record.json assets.")',
+            render_source,
+        )
+
     def test_large_slide_asset_sets_are_collapsed_and_unsupported_images_download(self) -> None:
-        self.assertIn("Embedded slide assets (${components.length})", self.source)
+        self.assertIn('allSlideAssets ? "Embedded slide assets" : "Supplementary assets"', self.source)
+        self.assertIn("${assetGroupLabel} (${components.length})", self.source)
         self.assertIn("components.length > 12", self.source)
         self.assertIn('details.addEventListener("toggle"', self.source)
         self.assertIn("if (!details.open || rendered) return", self.source)
@@ -558,7 +710,7 @@ const assert = require("node:assert/strict");
             self.assertIn("browserCanDisplayImage", source)
             self.assertIn("downloadCard", source)
 
-    def test_supplement_labels_prefer_the_first_figure_label(self) -> None:
+    def test_supplement_labels_prefer_preserved_filename_before_figure_label(self) -> None:
         node = shutil.which("node")
         if not node:
             self.skipTest("Node.js is not available for supplement label tests")
@@ -569,7 +721,8 @@ const assert = require("node:assert/strict");
                 _source_between(self.source, "function asArray", "function firstDefined"),
                 _source_between(self.source, "function firstDefined", "function richPlain"),
                 _source_between(self.source, "function supplementDisplayLabel", "function supplementFile"),
-                'assert.equal(supplementDisplayLabel({ label: "Explicit", supplement_id: "supplement_001", figures: [{ label: "Figure SI1" }] }), "Explicit");',
+                'assert.equal(supplementDisplayLabel({ label: "Explicit", file: { path: "supplementary/support.pdf" }, supplement_id: "supplement_001", figures: [{ label: "Figure SI1" }] }), "Explicit");',
+                'assert.equal(supplementDisplayLabel({ file: { path: "supplementary/supplement_001/support.pdf" }, supplement_id: "supplement_001", figures: [{ label: "Figure SI1" }] }), "support.pdf");',
                 'assert.equal(supplementDisplayLabel({ supplement_id: "supplement_001", figures: [{ label: "Figure SI1" }] }), "Figure SI1");',
                 'assert.equal(supplementDisplayLabel({ supplement_id: "supplement_001", figures: [{}, { label: "Figure SI2" }] }), "Figure SI2");',
                 'assert.equal(supplementDisplayLabel({ supplement_id: "supplement_001", figures: [] }), "supplement_001");',
@@ -590,6 +743,77 @@ const assert = require("node:assert/strict");
             "function renderSupplements",
         )
         self.assertIn("supplementDisplayLabel(supplement)", supplement_file_source)
+
+    def test_figure_caption_display_deduplicates_only_exact_label_prefixes(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not available for caption display tests")
+
+        helpers = "\n".join(
+            (
+                _source_between(self.source, "function isObject", "function asArray"),
+                _source_between(self.source, "function asArray", "function firstDefined"),
+                _source_between(self.source, "function firstDefined", "function richPlain"),
+                _source_between(self.source, "function richPlain", "function safeContentHref"),
+            )
+        )
+        script = helpers + r'''
+const assert = require("node:assert/strict");
+assert.equal(captionDisplayText("Figure 1. Exact caption", "Figure 1"), "Exact caption");
+assert.equal(captionDisplayText("Figure 1.\nExact caption", "Figure 1"), "Exact caption");
+assert.equal(captionDisplayText("Figure 1.", "Figure 1"), "");
+assert.equal(captionDisplayText("Figure 1: Exact caption", "Figure 1"), "Exact caption");
+assert.equal(captionDisplayText("Figure 1:\nExact caption", "Figure 1"), "Exact caption");
+assert.equal(captionDisplayText("Figure 1:", "Figure 1"), "");
+assert.equal(captionDisplayText("Figure 1 Exact caption", "Figure 1"), "Exact caption");
+assert.equal(captionDisplayText("Figure 1", "Figure 1"), "");
+assert.equal(captionDisplayText("Table 1. Summary", "Table 1"), "Summary");
+assert.equal(
+  captionDisplayText({ plain_text: "Figure 1. K_{d} value", html: "<strong>Figure 1.</strong> <em>K</em><sub>d</sub> value" }, "Figure 1"),
+  "K_{d} value"
+);
+assert.equal(captionDisplayText("Figure 10. Near miss", "Figure 1"), "Figure 10. Near miss");
+assert.equal(captionDisplayText("Figure 1A. Near miss", "Figure 1"), "Figure 1A. Near miss");
+assert.equal(captionDisplayText("Figure S9.Left to Right", "Figure S9"), "Left to Right");
+assert.equal(captionDisplayText("Scheme S1:Synthesis", "Scheme S1"), "Synthesis");
+assert.equal(captionDisplayText("Figure S30:13C NMR", "Figure S30"), "13C NMR");
+assert.equal(captionDisplayText("Figure 1:Near miss", "Figure 1"), "Near miss");
+assert.equal(captionDisplayText("Figure 1.lowercase near miss", "Figure 1"), "Figure 1.lowercase near miss");
+assert.equal(captionDisplayText("Figure 1.5 decimal near miss", "Figure 1"), "Figure 1.5 decimal near miss");
+assert.equal(captionDisplayText("Figure 1:13 lowercase near miss", "Figure 1"), "Figure 1:13 lowercase near miss");
+assert.equal(captionDisplayText("Table 1.Summary near miss", "Table 1"), "Table 1.Summary near miss");
+assert.equal(captionDisplayText("Figure 1, near miss", "Figure 1"), "Figure 1, near miss");
+assert.equal(captionDisplayText("Figure 1; near miss", "Figure 1"), "Figure 1; near miss");
+assert.equal(captionDisplayText("See Figure 1. Near miss", "Figure 1"), "See Figure 1. Near miss");
+assert.equal(captionDisplayText("Visual Abstract.", "Graphical Abstract"), "Visual Abstract.");
+assert.equal(figureAccessibleText("Figure 1", "Figure 1. Exact caption"), "Figure 1. Exact caption");
+assert.equal(figureAccessibleText("Figure 1", "Figure 1: Exact caption"), "Figure 1. Exact caption");
+assert.equal(figureAccessibleText("Figure S9", "Figure S9.Left to Right"), "Figure S9. Left to Right");
+assert.equal(figureAccessibleText("Figure S30", "Figure S30:13C NMR"), "Figure S30. 13C NMR");
+assert.equal(figureAccessibleText("Figure 1", "Caption without label"), "Figure 1. Caption without label");
+assert.equal(figureAccessibleText("Figure 1", "Figure 10. Near miss"), "Figure 1. Figure 10. Near miss");
+'''
+        result = subprocess.run(
+            [node, "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        display_source = _source_between(
+            self.source,
+            "function stripLeadingRenderedText",
+            "function safeDomId",
+        )
+        self.assertIn("document.createTreeWalker", display_source)
+        self.assertIn("NodeFilter.SHOW_TEXT", display_source)
+        self.assertNotIn("innerHTML", display_source)
+        self.assertNotIn("caption.plain_text =", display_source)
+        self.assertGreaterEqual(self.source.count("captionDisplayElement(figure.caption"), 2)
+        self.assertGreaterEqual(self.source.count("figureAccessibleText("), 3)
+        self.assertIn('captionDisplayElement(table.title, tableLabel, "table-title")', self.source)
 
     def test_supplement_figures_and_data_render_before_blocks_and_tables(self) -> None:
         render_source = _source_between(
@@ -614,6 +838,47 @@ const assert = require("node:assert/strict");
         self.assertIn("representedAssetIds.add(assetId)", render_source)
         self.assertIn("renderGenericAsset(asset", render_source)
         self.assertIn('block.kind !== "figure_text"', render_source)
+
+    def test_top_level_supplement_media_is_previewed_and_remains_downloadable(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not available for media classification tests")
+
+        helpers = _source_between(
+            self.source,
+            "function browserCanDisplayImage",
+            "function attachRuntimeFailure",
+        )
+        script = helpers + r'''
+const assert = require("node:assert/strict");
+assert.equal(browserCanPreviewMedia("video/mp4"), true);
+assert.equal(browserCanPreviewMedia("VIDEO/MP4"), true);
+assert.equal(browserCanPreviewMedia("audio/mpeg"), true);
+assert.equal(browserCanPreviewMedia("image/png"), true);
+assert.equal(browserCanPreviewMedia("application/pdf"), false);
+assert.equal(browserCanPreviewMedia("application/octet-stream"), false);
+'''
+        result = subprocess.run(
+            [node, "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        render_source = _source_between(
+            self.source,
+            "function renderSupplements",
+            "function renderGenericAsset",
+        )
+        self.assertIn("browserCanPreviewMedia(fileType)", render_source)
+        self.assertIn('safeDomId("supplement-file", supplement.supplement_id)', render_source)
+        self.assertIn("card.append(downloadCard(file))", render_source)
+        self.assertLess(
+            render_source.index("browserCanPreviewMedia(fileType)"),
+            render_source.index("card.append(downloadCard(file))"),
+        )
 
     def test_staging_fallback_is_live_first_latest_and_clearly_unapproved(self) -> None:
         node = shutil.which("node")

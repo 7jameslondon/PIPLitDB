@@ -4,7 +4,10 @@ import unittest
 from pathlib import Path
 
 from scripts.extraction.models import ContentBlock, SourceFile
-from scripts.extraction.supplements import _presentation_caption_semantics
+from scripts.extraction.supplements import (
+    _presentation_caption_semantics,
+    _promote_reviewed_presentation_slide_figures,
+)
 
 
 def block(
@@ -167,6 +170,40 @@ class PresentationSupplementSemanticsTests(unittest.TestCase):
         self.assertEqual(len(retained), 1)
         self.assertEqual(retained[0].kind, "figure_caption")
         self.assertEqual(retained[0].plain_text, "Figure SI2. Result.\nContinuation.")
+
+    def test_reviewed_mapping_accepts_render_already_promoted_by_native_caption(self) -> None:
+        assets = [
+            {
+                "asset_id": "supplement_005_slide_001_render",
+                "category": "figure",
+                "output_path": "supplementary/supplement_005/figures/slide-001.png",
+                "parent_id": "supplement_005",
+                "presentation_slide_number": 1,
+                "presentation_slide_count": 1,
+            }
+        ]
+        specs = [
+            {
+                "asset_id": "supplement_005_slide_001_render",
+                "label": "Supplementary Figure 1",
+                "kind": "figure",
+                "caption_markdown": "Supplementary Figure 1. Reviewed caption.",
+                "caption_plain": "Supplementary Figure 1. Reviewed caption.",
+                "source_locator": "visible-heading=Supplementary Figure 1;reviewed",
+                "output_path": "supplementary/supplement_005/figures/slide-001.png",
+                "expected_frames": 1,
+                "frame": 1,
+            }
+        ]
+
+        figures = _promote_reviewed_presentation_slide_figures(
+            self.source, "supplement_005", specs, assets
+        )
+
+        self.assertEqual(len(figures), 1)
+        self.assertEqual(figures[0].caption_plain, specs[0]["caption_plain"])
+        self.assertEqual(assets[0]["category"], "figure")
+        self.assertEqual(assets[0]["label"], "Supplementary Figure 1")
 
 
 if __name__ == "__main__":

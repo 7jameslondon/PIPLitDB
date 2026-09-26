@@ -1,0 +1,17 @@
+document_type: research_article
+publication_stage: publication
+title: "Design of stapled DNA-minor-groove-binding molecules with a mutable atom simulated annealing method"
+authors:
+  - name: "Wynn L. Walker"
+  - name: "Mary L. Kopka"
+  - name: "Richard E. Dickerson"
+  - name: "David S. Goodsell"
+doi: "10.1023/a:1007985019866"
+publication_year: 1997
+journal: "Journal of Computer-Aided Molecular Design"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

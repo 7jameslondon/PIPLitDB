@@ -1,0 +1,23 @@
+document_type: review
+publication_stage: publication
+title: "Target Practice: Aiming at Satellite Repeats with DNA Minor Groove Binders"
+authors:
+  - name: "G. Susbielle"
+    canonical_name: "Guillaume Susbielle"
+  - name: "R. Blattes"
+    canonical_name: "Roxane Blattes"
+  - name: "V. Brevet"
+    canonical_name: "Vanessa Brevet"
+  - name: "C. Monod"
+    canonical_name: "Caroline Monod"
+  - name: "E. Kas"
+    canonical_name: "Emmanuel Käs"
+doi: "10.2174/1568011054222355"
+publication_year: 2005
+journal: "Current Medicinal Chemistry - Anti-Cancer Agents"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

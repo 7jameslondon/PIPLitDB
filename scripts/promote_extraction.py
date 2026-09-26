@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Promote one explicitly approved staged extraction into its record."""
+"""Manually promote one extraction after explicit user approval (legacy path)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,11 @@ import json
 from pathlib import Path
 import sys
 
-from extraction.promotion import PromotionError, promote_extraction
+from extraction.promotion import (
+    EXPLICIT_USER_APPROVAL,
+    PromotionError,
+    promote_extraction,
+)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -21,6 +25,11 @@ def _parser() -> argparse.ArgumentParser:
         default=[],
         metavar="CODE",
         help="accept one current validation finding code (repeat for every code)",
+    )
+    parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="replace an approved live extraction and archive its prior revision",
     )
     parser.add_argument(
         "--repository-root",
@@ -39,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
             args.record_id,
             run_id=args.run_id,
             accepted_findings=args.accept_finding,
+            approval_mode=EXPLICIT_USER_APPROVAL,
+            replace=args.replace,
         )
     except KeyboardInterrupt:
         return 130

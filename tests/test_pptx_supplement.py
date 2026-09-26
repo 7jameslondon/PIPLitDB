@@ -19,6 +19,7 @@ from scripts.extraction.pptx_supplement import (
     _write_asset,
     extract_pptx_supplement,
 )
+from scripts.extraction.supplements import extract_supplements
 
 
 CONTENT_TYPES = """<?xml version="1.0" encoding="UTF-8"?>
@@ -118,6 +119,21 @@ SLIDE_RELS_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
   <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
   <Relationship Id="rIdNotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/>
 </Relationships>
+"""
+
+IMAGE_ONLY_SLIDE = """<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+ xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+ <p:cSld><p:spTree>
+  <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>
+  <p:pic>
+    <p:nvPicPr><p:cNvPr id="2" name="Full-slide source image"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr>
+    <p:blipFill><a:blip r:embed="rIdImage"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>
+    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="10000000" cy="10000000"/></a:xfrm></p:spPr>
+  </p:pic>
+ </p:spTree></p:cSld>
+</p:sld>
 """
 
 NOTES = """<?xml version="1.0" encoding="UTF-8"?>
@@ -261,6 +277,88 @@ class PptxSupplementTests(unittest.TestCase):
         self.assertEqual(markdown, "β γ μ")
         self.assertEqual(plain, "β γ μ")
 
+    def test_image_only_slide_gets_complete_high_resolution_render(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "supplementary.pptx"
+            extraction = root / "extraction"
+            write_package(
+                package,
+                extra_entries={"ppt/slides/slide1.xml": IMAGE_ONLY_SLIDE.encode()},
+            )
+
+            blocks, tables, assets, warnings = extract_pptx_supplement(
+                source_for(package),
+                "supplement_001",
+                pptx_path=package,
+                extraction_root=extraction,
+                slide_renderer=fake_slide_renderer,
+            )
+
+            self.assertEqual([block.kind for block in blocks], ["speaker_note"])
+            self.assertEqual(tables, [])
+            self.assertEqual(warnings, [])
+            renders = [
+                asset
+                for asset in assets
+                if asset["category"] == "supplement_slide_render"
+            ]
+            self.assertEqual(len(renders), 1)
+            self.assertEqual(renders[0]["presentation_slide_number"], 1)
+            self.assertEqual(renders[0]["render_long_edge_pixels"], 5000)
+            self.assertTrue(
+                (extraction / str(renders[0]["output_path"])).is_file()
+            )
+
+    def test_reviewed_image_only_slide_is_promoted_to_structured_figure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "supplementary.pptx"
+            extraction = root / "extraction"
+            write_package(
+                package,
+                extra_entries={"ppt/slides/slide1.xml": IMAGE_ONLY_SLIDE.encode()},
+            )
+            source = source_for(package)
+            figure_id = "supplement_001_slide_001_render"
+            output_path = "supplementary/supplement_001/figures/slide-001.png"
+
+            supplement = extract_supplements(
+                [source],
+                extraction,
+                presentation_renderer=fake_slide_renderer,
+                standalone_image_specs=[
+                    {
+                        "source_path": source.relative_path,
+                        "source_sha256": source.sha256,
+                        "asset_id": figure_id,
+                        "label": "Supplementary Figure 1",
+                        "caption_plain": "Supplementary Figure 1. Synthetic caption.",
+                        "caption_markdown": "Supplementary Figure 1. Synthetic caption.",
+                        "source_locator": "visible-heading=Supplementary Figure 1;reviewed",
+                        "output_path": output_path,
+                        "expected_frames": 1,
+                        "frame": 1,
+                        "kind": "figure",
+                        "reason": "The image-only publisher slide was visually reviewed.",
+                        "evidence": "The exact source hash and visible heading identify the figure.",
+                    }
+                ],
+            )[0]
+
+            self.assertEqual(len(supplement.figures), 1)
+            self.assertEqual(supplement.figures[0].figure_id, figure_id)
+            self.assertEqual(supplement.figures[0].output_path, output_path)
+            render = next(asset for asset in supplement.assets if asset["asset_id"] == figure_id)
+            self.assertEqual(render["category"], "figure")
+            media = next(
+                asset
+                for asset in supplement.assets
+                if asset["category"] == "supplement_image"
+            )
+            self.assertEqual(media["parent_id"], figure_id)
+            self.assertTrue((extraction / output_path).is_file())
+
     def test_semantic_extraction_and_byte_identical_assets(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -376,6 +474,34 @@ class PptxSupplementTests(unittest.TestCase):
             self.assertFalse(
                 any(warning["code"] == "pptx_figure_slide_render_failed" for warning in warnings)
             )
+
+    def test_reviewed_slide_can_require_complete_render_without_native_caption(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "reviewed-figure.pptx"
+            extraction = root / "extraction"
+            slide = SLIDE.replace(
+                "Supplementary Figure SI1. Synthetic caption.",
+                "Reviewed panel heading",
+            )
+            write_package(package, extra_entries={"ppt/slides/slide1.xml": slide.encode()})
+
+            _, _, assets, _ = extract_pptx_supplement(
+                source_for(package),
+                "supplement_001",
+                pptx_path=package,
+                extraction_root=extraction,
+                slide_renderer=fake_slide_renderer,
+                required_render_slides=(1,),
+            )
+
+            render = next(
+                asset
+                for asset in assets
+                if asset["category"] == "supplement_slide_render"
+            )
+            self.assertEqual(render["presentation_slide_number"], 1)
+            self.assertTrue((extraction / render["output_path"]).is_file())
 
     def test_figure_slide_render_failure_is_structural_and_has_no_thumbnail_fallback(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

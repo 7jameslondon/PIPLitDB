@@ -1705,6 +1705,7 @@ def extract_pptx_supplement(
     pptx_path: Path,
     extraction_root: Path,
     slide_renderer: SlideRenderer | None = None,
+    required_render_slides: Iterable[int] = (),
 ) -> tuple[
     list[ContentBlock],
     list[TableItem],
@@ -1716,7 +1717,9 @@ def extract_pptx_supplement(
     Returns ``(blocks, tables, assets, warnings)``. Assets follow the
     ``SupplementExtraction.assets`` dictionary contract and are written only
     beneath ``extraction_root``. When supplied, ``slide_renderer`` is called
-    only for slides identified by native figure captions.
+    for slides identified by native figure captions and for image-only slides
+    whose authored layout would otherwise have no browser-readable complete-
+    slide representation.
     """
 
     if not supplement_id or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", supplement_id):
@@ -1745,6 +1748,7 @@ def extract_pptx_supplement(
     warnings: list[dict[str, Any]] = []
     semantic_media_labels: dict[str, list[str]] = defaultdict(list)
     chart_table_ids: dict[str, str] = {}
+    image_only_slides: set[int] = set()
 
     try:
         archive = zipfile.ZipFile(path)
@@ -1780,6 +1784,13 @@ def extract_pptx_supplement(
                 )
                 continue
             shapes = _iter_shapes(tree)
+            if any(_local_name(shape.element.tag) == "pic" for shape in shapes) and not any(
+                _shape_paragraphs(shape)
+                or shape.element.find(".//a:tbl", NS) is not None
+                or bool(_chart_relationship_id(shape))
+                for shape in shapes
+            ):
+                image_only_slides.add(slide_number)
             slide_relationships = _relationships(archive, names, slide_part)
             relationship_by_id = {
                 relationship.relationship_id: relationship
@@ -2009,13 +2020,16 @@ def extract_pptx_supplement(
         )
         assets.extend(embedded_assets)
         figure_slides = _figure_slide_numbers(blocks)
-        if slide_renderer is not None and figure_slides:
+        full_render_slides = tuple(
+            sorted(set(figure_slides) | image_only_slides | set(required_render_slides))
+        )
+        if slide_renderer is not None and full_render_slides:
             try:
                 assets.extend(
                     _materialize_slide_renders(
                         renderer=slide_renderer,
                         pptx_path=path,
-                        slide_numbers=figure_slides,
+                        slide_numbers=full_render_slides,
                         slide_count=len(slide_parts),
                         source=source,
                         supplement_id=supplement_id,
@@ -2027,14 +2041,14 @@ def extract_pptx_supplement(
                     _warning(
                         "pptx_figure_slide_render_failed",
                         (
-                            "A PowerPoint slide identified as a scientific figure could "
-                            "not be rendered as a complete high-resolution PNG; package "
+                            "A PowerPoint slide requiring complete-layout preservation "
+                            "could not be rendered as a high-resolution PNG; package "
                             "thumbnails are not accepted as a fallback"
                         ),
                         source,
                         supplement_id,
                         severity="structural",
-                        slide_numbers=list(figure_slides),
+                        slide_numbers=list(full_render_slides),
                         renderer_error_type=type(exc).__name__,
                         renderer_error=_normalize_space(str(exc))[:800],
                     )

@@ -1,0 +1,74 @@
+version: 1
+
+# Keep separately deposited data/figures/movies out of the paper review queue.
+# Their metadata and exclusion reason remain in observations.jsonl.
+filters:
+  exclude_attached_material: true
+
+# Matching applies to titles and abstracts after punctuation normalization.
+# Terms within a rule must all match; matching any rule stages a candidate.
+match_rules:
+  - name: pyrrole-imidazole polyamides
+    all: [pyrrol, imidazol, polyamid]
+  - name: Py-Im polyamides
+    all: ["py im", polyamid]
+  - name: PI polyamides
+    all: ["pi polyamid"]
+  - name: DNA-binding polyamides
+    all: ["dna binding", polyamid]
+    unless_title: ["peptide nucleic", "polyamide nucleic", "polyamide nucleotide", pna, pamam, polyamidoamine, "poly amidoamine", "poly amido amine", dendrimer, dendriplex]
+  - name: hairpin polyamides
+    all: [hairpin, polyamid]
+    unless_title: ["peptide nucleic", "polyamide nucleic", "polyamide nucleotide", pna, pamam, polyamidoamine, "poly amidoamine", "poly amido amine", dendrimer, dendriplex]
+  - name: minor-groove polyamides
+    all: ["minor groove", polyamid]
+    unless_title: ["peptide nucleic", "polyamide nucleic", "polyamide nucleotide", pna, pamam, polyamidoamine, "poly amidoamine", "poly amido amine", dendrimer, dendriplex]
+  - name: lexitropsins
+    all: [lexitropsin]
+  - name: compact PyIm polyamides
+    all: [pyim, polyamid]
+  - name: Py-Im DNA recognition
+    all: ["py im", dna]
+  - name: synthetic genome readers
+    all: ["synthetic genome reader"]
+  - name: SynGR DNA targeting
+    all: [syngr, dna]
+  - name: SynTEF DNA targeting
+    all: [syntef, dna]
+
+http:
+  timeout_seconds: 30
+  retries: 3
+  min_interval_seconds: 1.2
+  # Optional contact email for API identification; blank works without an account.
+  contact_email: ""
+
+sources:
+  europe_pmc:
+    enabled: true
+    lookback_years: 5
+    page_size: 250
+    max_pages: 100
+    queries:
+      - '(pyrrole AND imidazole AND polyamide*) OR "DNA-binding polyamide" OR "hairpin polyamide" OR "Py-Im polyamide" OR "PI polyamide" OR (polyamide* AND "minor groove") OR lexitropsin* OR "synthetic genome reader" OR (SynGR* AND DNA) OR (SynTEF* AND DNA) OR (PyIm* AND polyamide*) OR ("Py-Im" AND DNA)'
+  crossref:
+    enabled: true
+    lookback_years: 5
+    page_size: 1000
+    max_pages: 100
+    queries:
+      # Generic DNA/binding terms are noisy in Crossref's broad matching.
+      # Search both inflections, then apply the topic rules locally.
+      - 'polyamide'
+      - 'polyamides'
+      - 'lexitropsin'
+      - 'lexitropsins'
+      - 'synthetic genome readers'
+      - 'SynGR DNA'
+      - 'SynTEF DNA'
+  biorxiv:
+    enabled: false
+    lookback_years: 5
+    max_pages: 100
+    # Empty means all subject categories, filtered locally by match_rules.
+    category: ""

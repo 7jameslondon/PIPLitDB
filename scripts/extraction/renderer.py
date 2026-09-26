@@ -29,7 +29,7 @@ def _target(path: str) -> str:
 
 
 _MEASUREMENT_RE = re.compile(
-    r"^\s*(?P<relation>[≤≥<>]?)\s*(?P<mantissa>\d+(?:\.\d+)?)"
+    r"^\s*(?P<relation>[≤≥⩽⩾<>]?)\s*(?P<mantissa>\d+(?:\.\s*\d+)?)"
     r"(?:\s*\(±(?P<uncertainty>\d+(?:\.\d+)?)\))?"
     r"\s*×\s*10\^\{(?P<exponent>[−-]?\d+)\}"
 )
@@ -37,26 +37,59 @@ _SPECIFICITY_RE = re.compile(
     r"\[\s*(?P<relation>[≤≥<>]?)\s*(?P<value>\d+(?:\.\d+)?)\s*\]"
 )
 _FOOTNOTE_RE = re.compile(r"\^\{\[([A-Za-z])\]\}")
-_RELATIONS = {"": "=", "≤": "<=", "≥": ">=", "<": "<", ">": ">"}
+_RELATIONS = {"": "=", "≤": "<=", "≥": ">=", "⩽": "<=", "⩾": ">=", "<": "<", ">": ">"}
 
 
 def machine_table_records(table: TableItem) -> list[dict[str, Any]]:
     """Create typed long-form records when a table contains Ka measurements."""
 
-    records: list[dict[str, Any]] = []
+    records: list[dict[str, Any]] = [dict(record) for record in table.machine_records]
     if "K_{a}" not in table.title_plain and "K a" not in table.title_plain:
         return records
-    for part in table.parts:
+    for part_index, part in enumerate(table.parts, start=1):
         if len(part.rows) < 2 or len(part.rows[0]) < 2:
             continue
         headers = part.rows[0]
+        has_emphasized_measurements = any(
+            "<strong>" in cell.markdown for row in part.rows[1:] for cell in row[1:]
+        )
+        # A Ka title alone does not establish a compound-by-DNA-sequence
+        # matrix. Other authored tables have base pairs or experimental
+        # conditions on their axes; retain those through the lossless rows.
+        if not re.match(
+            r"^(?:polyamide|compound|ligand|oligomer|agent)\b",
+            headers[0].text.strip(),
+            flags=re.IGNORECASE,
+        ):
+            continue
         group_match = re.search(r"\bon\s+(.+)$", headers[0].text, re.IGNORECASE)
         source_group = group_match.group(1).strip() if group_match else headers[0].text
-        for row in part.rows[1:]:
+        for row_index, row in enumerate(part.rows[1:], start=2):
             if len(row) != len(headers):
                 continue
             compound_id = re.sub(r"\s+", "", row[0].text)
+            structure_asset = table.structure_assets.get(compound_id)
+            if structure_asset is None:
+                graphical_cell = re.compile(
+                    rf"^part_{part_index:02d}_row_{row_index:03d}_"
+                    r"column_001(?:_image_\d{2})?$"
+                )
+                row_assets = [
+                    key for key in table.structure_assets if graphical_cell.fullmatch(key)
+                ]
+                if len(row_assets) == 1:
+                    structure_key = row_assets[0]
+                    structure_asset = table.structure_assets[structure_key]
+                    if not compound_id:
+                        compound_id = structure_key
             for column_index, cell in enumerate(row[1:], start=1):
+                if not re.fullmatch(
+                    r"(?:5[′']\s*[-–]?\s*)?[ACGTURYSWKMBDHVN]{3,}"
+                    r"(?:\s*[-–]?\s*3[′'])?",
+                    headers[column_index].text.strip(),
+                    flags=re.IGNORECASE,
+                ):
+                    continue
                 match = _MEASUREMENT_RE.match(cell.text)
                 if not match:
                     continue
@@ -65,7 +98,7 @@ def machine_table_records(table: TableItem) -> list[dict[str, Any]]:
                 )
                 association_constant: dict[str, Any] = {
                     "relation": _RELATIONS[match.group("relation")],
-                    "mantissa": float(match.group("mantissa")),
+                    "mantissa": float(re.sub(r"\s+", "", match.group("mantissa"))),
                     "exponent": int(match.group("exponent").replace("−", "-")),
                     "unit": "M^-1",
                 }
@@ -84,9 +117,9 @@ def machine_table_records(table: TableItem) -> list[dict[str, Any]]:
                         "part_id": part.part_id,
                         "source_group": source_group,
                         "compound_id": compound_id,
-                        "structure_asset": table.structure_assets.get(compound_id),
+                        "structure_asset": structure_asset,
                         "sequence": headers[column_index].text,
-                        "match_site": "<strong>" in cell.markdown,
+                        "match_site": ("<strong>" in cell.markdown) if has_emphasized_measurements else None,
                         "association_constant": association_constant,
                         "specificity": specificity,
                         "footnotes": _FOOTNOTE_RE.findall(cell.text),
@@ -98,7 +131,11 @@ def machine_table_records(table: TableItem) -> list[dict[str, Any]]:
 
 def typed_table_footnotes(table: TableItem) -> list[dict[str, str]]:
     typed: list[dict[str, str]] = []
-    marker = re.compile(r"\[([A-Za-z])\]\s*")
+    marker = re.compile(
+        r"(?<!\S)(?:\[((?:[ivxlcdm]{2,5})|[A-Za-z])\]|"
+        r"((?:[ivxlcdm]{2,5})|[A-Za-z])\))\s*",
+        flags=re.IGNORECASE,
+    )
     for value in table.footnotes_plain:
         matches = list(marker.finditer(value))
         for index, match in enumerate(matches):
@@ -107,7 +144,7 @@ def typed_table_footnotes(table: TableItem) -> list[dict[str, str]]:
             if text:
                 typed.append(
                     {
-                        "label": match.group(1).lower(),
+                        "label": (match.group(1) or match.group(2)).lower(),
                         "scope": "table",
                         "text": text,
                     }

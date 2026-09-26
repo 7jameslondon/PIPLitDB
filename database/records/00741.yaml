@@ -1,0 +1,26 @@
+document_type: research_article
+publication_stage: publication
+title: "DNA binding of a short lexitropsin"
+authors:
+  - name: "Nahoum G Anthony"
+  - name: "Keith R Fox"
+  - name: "Blair F Johnston"
+  - name: "Abedawn I Khalaf"
+  - name: "Simon P Mackay"
+  - name: "Iain S McGroarty"
+  - name: "John A Parkinson"
+  - name: "Graham G Skellern"
+  - name: "Colin J Suckling"
+  - name: "Roger D Waigh"
+doi: "10.1016/j.bmcl.2003.11.068"
+publication_year: 2004
+journal: "Bioorganic & Medicinal Chemistry Letters"
+related_papers:
+  - pip_litdb_id: "00738"
+    relationship_type: is_preliminary_version_of
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

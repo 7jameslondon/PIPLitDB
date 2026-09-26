@@ -43,6 +43,7 @@ COUNT_KEYS = (
     "main_schemes",
     "main_figures_and_schemes",
     "tables",
+    "supplementary_tables",
     "supplementary_figures",
     "supplementary_files",
     "presentation_embedded_files",
@@ -59,6 +60,8 @@ _COUNT_ALIASES = {
     "main_assets": "main_figures_and_schemes",
     "figures_and_schemes": "main_figures_and_schemes",
     "table_captions": "tables",
+    "supplement_tables": "supplementary_tables",
+    "supplementary_table_captions": "supplementary_tables",
     "supplement_figures": "supplementary_figures",
     "supplementary_figure_captions": "supplementary_figures",
     "supplements": "supplementary_files",
@@ -118,7 +121,9 @@ _PDF_SINGLE_BLOCK_LOCATOR_RE = re.compile(
 )
 _DRIVE_PATH_RE = re.compile(r"^[A-Za-z]:")
 _URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
-_TABLE_SOURCE_KINDS = frozenset({"html", "pdf", "image", "presentation"})
+_TABLE_SOURCE_KINDS = frozenset(
+    {"html", "pdf", "image", "presentation", "document"}
+)
 _IMAGE_TABLE_SOURCE_KINDS = frozenset({"pdf", "image"})
 _EQUATION_BLOCK_KINDS = frozenset({"equation", "display_equation", "math"})
 _PDF_CROP_VISUAL_ROLES = frozenset({"figure", "scheme", "graphical_abstract"})
@@ -827,12 +832,12 @@ def _validate_diagnostic_warnings(loaded: Mapping[str, Any]) -> list[ValidationF
     if not isinstance(rows, list):
         return []
     coverage = loaded.get("coverage.jsonl")
-    graphical_abstract_is_covered = bool(
+    graphical_abstract_is_accounted_for = bool(
         isinstance(coverage, list)
         and any(
             isinstance(row, dict)
             and row.get("coverage_id") == "unresolved-graphical-abstract-image"
-            and row.get("status") == "unresolved"
+            and row.get("status") in {"unresolved", "intentionally_excluded"}
             for row in coverage
         )
     )
@@ -841,7 +846,10 @@ def _validate_diagnostic_warnings(loaded: Mapping[str, Any]) -> list[ValidationF
         if not isinstance(row, dict):
             continue
         code = str(row.get("code") or "unspecified")
-        if code == "graphical_abstract_image_unavailable" and graphical_abstract_is_covered:
+        if (
+            code == "graphical_abstract_image_unavailable"
+            and graphical_abstract_is_accounted_for
+        ):
             continue
         raw_severity = str(row.get("severity") or "structural").casefold()
         severity = raw_severity if raw_severity in SEVERITIES else "structural"
@@ -1970,20 +1978,46 @@ def _validate_pdf_ocr_diagnostics(
             if role not in _OCR_VISUAL_ROLES:
                 continue
             asset_id = asset.get("asset_id")
-            page = asset.get("page")
-            box = _ocr_box(asset.get("box"))
             asset_path = f"manifest.json.assets[{index}]"
             asset_source_path = asset.get("source_path")
             asset_source_hash = asset.get("source_sha256")
+            raw_parts = asset.get("parts")
+            if raw_parts is None:
+                geometry_parts: list[Mapping[str, Any]] = [asset]
+            elif (
+                not isinstance(raw_parts, list)
+                or len(raw_parts) < 2
+                or "page" in asset
+                or "box" in asset
+            ):
+                geometry_parts = []
+            else:
+                geometry_parts = [
+                    part for part in raw_parts if isinstance(part, Mapping)
+                ]
+                if len(geometry_parts) != len(raw_parts):
+                    geometry_parts = []
+            normalized_parts: list[
+                tuple[int, tuple[float, float, float, float]]
+            ] = []
+            for part in geometry_parts:
+                part_page = part.get("page")
+                part_box = _ocr_box(part.get("box"))
+                if (
+                    not isinstance(part_page, int)
+                    or isinstance(part_page, bool)
+                    or part_page < 1
+                    or (isinstance(page_count, int) and part_page > page_count)
+                    or part_box is None
+                    or part.get("coordinate_system") != "pdf-points-top-left"
+                ):
+                    normalized_parts = []
+                    break
+                normalized_parts.append((part_page, part_box))
             if (
                 not isinstance(asset_id, str)
                 or not asset_id.strip()
-                or not isinstance(page, int)
-                or isinstance(page, bool)
-                or page < 1
-                or (isinstance(page_count, int) and page > page_count)
-                or box is None
-                or asset.get("coordinate_system") != "pdf-points-top-left"
+                or not normalized_parts
             ):
                 findings.append(
                     _finding(
@@ -2021,9 +2055,10 @@ def _validate_pdf_ocr_diagnostics(
                     )
                 )
             assert isinstance(asset_id, str)
-            assert isinstance(page, int)
-            assert box is not None
-            visual_assets.append((asset_id, role, page, box))
+            visual_assets.extend(
+                (asset_id, role, part_page, part_box)
+                for part_page, part_box in normalized_parts
+            )
 
     for region_id, page, region_box, dimensions, masked, observations in parsed_regions:
         for exclusion_index, exclusion in enumerate(masked, start=1):
@@ -2298,6 +2333,18 @@ def _validate_pdf_block_provenance(
         geometry = row.get("source_geometry")
         geometry_pages = _source_geometry_pages(geometry, page_count)
         row_source_path = row.get("source_path")
+        # Mixed-source recovery retains a native HTML abstract heading. Its
+        # provenance is an HTML locator, not invented PDF line geometry.
+        supporting_path = text_extraction.get("supporting_source")
+        if (
+            row_source_path == supporting_path
+            and isinstance(supporting_path, str)
+            and isinstance(sources, list)
+            and any(isinstance(source, dict) and source.get("role") == "main_html"
+                    and source.get("path") == supporting_path for source in sources)
+            and isinstance(locator, str) and locator.strip()
+        ):
+            continue
         if (
             not isinstance(row_source_path, str)
             or row_source_path.replace("\\", "/") != source_path
@@ -3233,13 +3280,16 @@ def _table_derivative_findings(
         image_path = str(raw_image_path).strip() if raw_image_path is not None else ""
         canonical_image = table_root / f"{table_id}.png"
 
-        if source_kind == "html":
+        if source_kind in {"html", "presentation", "document"}:
             if declared_kind is not None and (image_path or canonical_image.is_file()):
                 findings.append(
                     _finding(
+                        # Keep the established finding code for promotion and
+                        # acceptance compatibility; the message covers every
+                        # native semantic-table source kind.
                         "unexpected_html_table_source_image",
                         "structural",
-                        f"{label} is HTML-native and must not emit a redundant full-table image.",
+                        f"{label} is {source_kind}-native and must not emit a redundant full-table image.",
                         image_path or canonical_image.relative_to(extraction_dir).as_posix(),
                     )
                 )
@@ -3334,6 +3384,8 @@ def _caption_counts(record_text: str, extraction_dir: Path) -> dict[str, int]:
         elif active_h2 == "supplementary materials":
             if kind == "figure" and identifier.startswith("S"):
                 supplementary_figures.add(identifier)
+            elif kind == "table" and identifier.startswith("S"):
+                tables.add(identifier)
 
     supplement_root = extraction_dir / "supplementary"
     # Original preserved supplements live either directly below
@@ -3447,7 +3499,7 @@ def _count_findings(
 
 _RECORD_JSON_MEDIA_TYPE = "application/vnd.pip-litdb.record+json"
 _SAFE_RECORD_TAGS = frozenset(
-    {"a", "br", "em", "strong", "sub", "sup", "li", "ol", "ul"}
+    {"a", "br", "em", "strong", "sub", "sup", "u", "li", "ol", "ul", "span"}
 )
 _VOID_RECORD_TAGS = frozenset({"br"})
 _SUBSCRIPT_RECORD_CHARS = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₒₓₔ"
@@ -3455,6 +3507,9 @@ _SUPERSCRIPT_RECORD_CHARS = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁱⁿ"
 _RECORD_SCRIPT_TRANSLATION = str.maketrans(
     "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₒₓₔ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁱⁿ",
     "0123456789+-=()aeoxə0123456789+-=()in",
+)
+_ADJACENT_RECORD_SCRIPT_RUNS = re.compile(
+    r"(?P<marker>[_^])\{(?P<left>[^{}]*)\}(?P=marker)\{(?P<right>[^{}]*)\}"
 )
 _DIAGNOSTIC_ONLY_RECORD_KEYS = frozenset(
     {
@@ -3499,6 +3554,20 @@ class _SafeRecordHtmlParser(HTMLParser):
                     or (parsed.scheme and parsed.scheme.casefold() not in {"http", "https", "mailto"})
                 ):
                     self.errors.append("link uses an unsafe target")
+        elif folded == "span":
+            if attrs and (
+                len(attrs) != 1
+                or attrs[0][0].casefold() != "style"
+                or not re.fullmatch(r"color:#[0-9a-fA-F]{6}", attrs[0][1] or "")
+            ):
+                self.errors.append("spans may contain only a six-digit hex text color")
+        elif folded == "ol":
+            if attrs and (
+                len(attrs) != 1
+                or attrs[0][0].casefold() != "type"
+                or attrs[0][1] not in {"a", "A"}
+            ):
+                self.errors.append("ordered lists may contain only type a or A")
         elif attrs:
             self.errors.append(f"tag <{folded}> may not have attributes")
         if folded in {"br", "li"}:
@@ -3541,7 +3610,20 @@ class _SafeRecordHtmlParser(HTMLParser):
 
     @property
     def visible_text(self) -> str:
-        return "".join(self.text_parts)
+        result = "".join(self.text_parts)
+        # Independently mirror the serializer's semantic treatment of one
+        # continuous script that publisher HTML split into adjacent elements
+        # at an emphasis boundary. Intervening whitespace or a different
+        # script kind remains meaning-bearing and is never collapsed.
+        while _ADJACENT_RECORD_SCRIPT_RUNS.search(result):
+            result = _ADJACENT_RECORD_SCRIPT_RUNS.sub(
+                lambda match: (
+                    f"{match.group('marker')}"
+                    f"{{{match.group('left')}{match.group('right')}}}"
+                ),
+                result,
+            )
+        return result
 
 
 def _normalize_record_visible_text(value: str) -> str:
@@ -3564,7 +3646,6 @@ def _normalize_record_visible_text(value: str) -> str:
     # their markers so exponent and charge contradictions are still rejected.
     value = re.sub(r"\^\{([IVXLCDM]+)\}", r"\1", value)
     value = unicodedata.normalize("NFKC", value).replace("\u00a0", " ")
-    value = re.sub(r"(?m)^\s*(?:[-*•]|\d+[.)])\s+", "", value)
     return " ".join(value.split())
 
 
@@ -3631,6 +3712,25 @@ def _resolve_json_pointer(document: Any, pointer: str) -> tuple[bool, Any]:
 
 def _record_json_content_findings(payload: Mapping[str, Any]) -> list[ValidationFinding]:
     findings: list[ValidationFinding] = []
+    sections = payload.get("sections")
+    if (
+        isinstance(sections, list)
+        and sections
+        and not any(
+            isinstance(section, Mapping)
+            and isinstance(section.get("blocks"), list)
+            and bool(section["blocks"])
+            for section in sections
+        )
+    ):
+        findings.append(
+            _finding(
+                "article_body_empty",
+                "scientific",
+                "Every canonical article section is empty; main body extraction is missing.",
+                "record.json/sections",
+            )
+        )
     checks: Sequence[tuple[str, str, str, re.Pattern[str]]] = (
         (
             "publisher_equation_placeholder",
@@ -3749,8 +3849,35 @@ def _record_json_dual_text_findings(
                 errors = (str(exc),)
             if errors:
                 continue
+            semantic_plain = parser.visible_text
+            if re.fullmatch(
+                r'\s*<(?:ol(?:\s+type="[aA]")?|ul)>.*</(?:ol|ul)>\s*',
+                rich_html,
+                re.DOTALL,
+            ):
+                # Markdown/plain list markers and semantic HTML list structure
+                # encode the same boundary.  Remove markers only for an actual
+                # outer list fragment; doing this globally erases authored
+                # significance markers such as ``* p <0.05`` after a line
+                # break in a figure caption.
+                def strip_outer_marker(value: str) -> str:
+                    return re.sub(
+                        r"(?m)^\s*(?:[-*•]|\d+[.)]|[A-Za-z][.)])\s+",
+                        "",
+                        value,
+                    )
+
+                # The canonical plain form carries one explicit structural
+                # marker per item.  This independent HTML parser deliberately
+                # does not synthesize CSS list markers, so stripping a marker
+                # from ``semantic_plain`` would instead erase authored text.
+                # That distinction matters for review legends such as
+                # ``• of special interest`` / ``•• of outstanding interest``:
+                # the second authored bullet remains visible inside the
+                # semantic list item after the first becomes list structure.
+                plain_text = strip_outer_marker(plain_text)
             if _normalize_record_visible_text(plain_text) != _normalize_record_visible_text(
-                parser.visible_text
+                semantic_plain
             ):
                 findings.append(
                     _finding(
@@ -4166,14 +4293,29 @@ def _record_json_counts(payload: Mapping[str, Any]) -> dict[str, int]:
         if isinstance(figure, dict)
         and str(figure.get("kind", "")).casefold() == "scheme"
     )
-    supplementary_figures = 0
+    supplementary_figures = sum(
+        1
+        for figure in payload.get("figures", [])
+        if isinstance(figure, dict)
+        and str(figure.get("kind", "")).casefold() == "supplement_figure"
+    )
+    supplementary_tables = 0
     presentation_table_supplements: dict[str, str] = {}
     for supplement in payload.get("supplements", []):
         if not isinstance(supplement, dict):
             continue
+        equations += sum(
+            1
+            for block in supplement.get("blocks", [])
+            if isinstance(block, dict)
+            and str(block.get("kind", "")).casefold() in _EQUATION_BLOCK_KINDS
+        )
+        supplement_tables = supplement.get("tables", [])
+        if isinstance(supplement_tables, list):
+            supplementary_tables += len(supplement_tables)
         supplement_id = supplement.get("supplement_id")
         if isinstance(supplement_id, str):
-            for table in supplement.get("tables", []):
+            for table in supplement_tables:
                 if (
                     isinstance(table, dict)
                     and str(table.get("source_kind", "")).casefold()
@@ -4225,6 +4367,7 @@ def _record_json_counts(payload: Mapping[str, Any]) -> dict[str, int]:
         "main_schemes": main_schemes,
         "main_figures_and_schemes": main_figures + main_schemes,
         "tables": len(payload.get("tables", [])),
+        "supplementary_tables": supplementary_tables,
         "supplementary_figures": supplementary_figures,
         "supplementary_files": len(payload.get("supplements", [])),
         "presentation_embedded_files": presentation_embedded_files,

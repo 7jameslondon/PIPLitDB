@@ -1,0 +1,17 @@
+document_type: correction
+publication_stage: publication
+title: "Correction for Oh et al., RNA polymerase II trapped on a molecular treadmill: Structural basis of persistent transcriptional arrest by a minor groove DNA binder"
+authors: []
+doi: "10.1073/pnas.2218607119"
+publication_year: 2022
+journal: "Proceedings of the National Academy of Sciences"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked
+related_papers:
+  - pip_litdb_id: "00516"
+    relationship_type: corrects
+pip_litdb_notes: "Published without a credited author byline. Corrects the colour code for the downstream DNA duplex region of n-3 pretranslocation in Figure 6 of paper 00516; the online article was corrected."

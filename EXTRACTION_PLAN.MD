@@ -67,7 +67,7 @@ papers (private)/00559/
     ├── warnings.jsonl
     ├── confidence.json
     ├── quality.json
-    ├── overrides.yaml
+    ├── overrides.yaml                 # Canonical approved override snapshot
     └── reviews/
 ```
 
@@ -232,10 +232,11 @@ reparse points, relative paths, or path traversal cannot escape
 `papers (private)/staging/`. Source discovery must always exclude the staging
 root.
 
-Staging is temporary rather than permanent extraction history. After explicit
-approval, successful promotion, verification of the live extraction and live
-diagnostics, and the public status change to `extracted_approved`, run the
-guarded post-approval cleanup for that record. The cleanup must independently
+Staging is temporary rather than permanent extraction history. After the exact
+candidate passes all protocol gates, the primary agent uses Jamie's standing
+policy to finalize it automatically, verify the live extraction and diagnostics,
+set the public status to `extracted_approved`, and run guarded cleanup for that
+record. The cleanup must independently
 verify the live approval, manifest, source fingerprint, validation findings,
 approved status, and equality of the approved staged and live extraction
 before deleting `papers (private)/staging/<record-id>/`. It must preserve the
@@ -533,7 +534,7 @@ normal reading. It contains:
 - Suspected omissions or ambiguities.
 - Automated validation results.
 - Agent-review findings.
-- Reproducible human-approved overrides.
+- Reproducible evidence-backed overrides.
 - Final status: `draft`, `needs_review`, `reviewed`, or `approved`.
 
 `record.json` does not link to this directory and contains none of its
@@ -609,7 +610,7 @@ The command-line interface should support:
 - Extraction without review.
 - Validation of an existing candidate.
 - Review-panel execution.
-- Explicit promotion of an approved candidate.
+- Guarded standing-policy finalization of a reviewed, reproducible candidate.
 - Later, batch processing.
 
 The system should be modular so PDF, OCR, table, or equation engines can be
@@ -625,20 +626,23 @@ Generate extraction candidates under `papers (private)/staging/` first. The
 script must:
 
 - Never modify source PDFs, HTML, or supplements.
-- Never overwrite an existing extraction by default.
+- Never overwrite an existing extraction by default; approved revisions use a
+  guarded replacement path that archives the prior live version.
 - Validate all links and files before promotion.
 - Refuse promotion when the staged manifest's extraction-code fingerprint no
   longer matches the currently checked-out pipeline.
 - Use atomic directory promotion.
-- Require explicit replacement authorization for existing extractions.
-- Preserve reproducible overrides across reruns.
-- Avoid altering public YAML metadata.
+- Require the explicit `--replace` finalization mode for existing extractions.
+- Preserve the manifest-bound approved override in `extraction_diagnostic/overrides.yaml` across reruns; use any record-root `extraction_overrides.yaml` only as a temporary working copy and remove it after guarded approval.
+- Alter only the controlled public `pip_litdb_status` field during finalization;
+  never alter `jamies_human_only_notes`.
 - Remove a record's entire staging directory only through guarded
   post-approval cleanup after its approved live copy and public status have
   been verified.
 
-Every candidate remains staged until it has been reviewed, approved, promoted,
-verified live, and removed by the guarded post-approval cleanup.
+Every candidate remains staged until it has been reviewed and reproduced. The
+primary agent then automatically approves, promotes, verifies, updates status
+and queue, and removes it through the guarded standing-policy finalizer.
 
 ## 15. Automated Validation
 
@@ -695,9 +699,17 @@ may fall back to the legacy `record.md` contract. This is compatibility for
 already-produced records only; the current extraction pipeline always writes
 `record.json`.
 
-## 16. Independent Review Panel
+## 16. Review Modes
 
-For the early pilots, five independent reviewers inspect every page and asset:
+The normal extraction and efficiency-comparison baseline is one record owner
+performing five sequential self-reviews, followed by separate adjudication
+and primary-agent finalization. Use GPT-6 Astra High unless Jamie
+requests a different setting. Freeze the candidate and code before review.
+All source, test, reproduction, and acceptance requirements still apply.
+
+Jamie has authorized batches of up to three concurrent records with one Astra High owner per paper in isolated private workspace copies. Shared runtime and protected inputs remain frozen, guarded imports preserve the exact reviewed runs, and the primary finalizes records serially under a repository-wide lock. Shared fixes require stopping all owners and rebuilding/reviewing affected candidates against a new common snapshot. This changes paper scheduling, not the review mode or acceptance gates. See `EXTRACTION_PROTOCOL.md` Section 2.5.
+
+The five required roles are:
 
 1. Text and reading-order reviewer.
 2. Scientific notation, equations, and table reviewer.
@@ -706,8 +718,16 @@ For the early pilots, five independent reviewers inspect every page and asset:
 5. Adversarial reviewer looking for hidden omissions or unsupported
    corrections.
 
-The reviewers work independently before their findings are combined. A
-separate adjudication pass reconciles disagreements.
+Label owner-performed roles as self-review. Keep each role's evidence and
+findings distinct and complete; a separate adjudication pass resolves them.
+
+Early pilots used an independent-review panel. That remains a separate mode
+when Jamie explicitly requests it: read-only reviewers independently inspect
+the complete sources and frozen candidate before the owner adjudicates.
+Do not add that panel to the normal baseline solely to measure efficiency,
+and do not present self-review as independent review. Keep the selected
+mode fixed when comparing workflows; equivalent defect detection is not
+assumed. `EXTRACTION_PROTOCOL.md` Sections 2 and 8 define the current process.
 
 Findings use these levels:
 
@@ -739,7 +759,8 @@ The first pilot followed this process:
 12. Turn recurring defects into general pipeline rules.
 13. Use record-specific overrides only when a general solution is
     inappropriate.
-14. Rerun and repeat until the user approves the result.
+14. Rerun and repeat until every finalization gate passes, then have the primary
+    agent approve automatically under the standing policy.
 15. Preserve the approved output as the private golden regression case.
 
 ## 18. Additional Pilots
@@ -776,7 +797,8 @@ Only after the pilot set is stable:
    records.
 8. Produce a per-record review summary.
 9. Inspect every record for consistency, missing assets, and anomalies.
-10. Promote only approved packages.
+10. Automatically finalize only packages that pass every standing-policy gate;
+    leave blocked packages staged and report their unresolved issue.
 
 Existing extractions must not be mass-replaced until the new pipeline has
 demonstrated better results across the representative pilot set.
@@ -812,7 +834,8 @@ A record produced under the canonical JSON contract is complete only when:
 - No unresolved critical or scientific findings remain.
 - A clean rerun produces the same content.
 - The review panel completes and disagreements are resolved.
-- The user approves the final extraction.
+- The primary agent records standing-policy approval after every preceding gate
+  passes; routine candidate approval is not requested from the user.
 
 Archived legacy `record.md` packages remain governed by their original
 acceptance evidence and the compatibility validator. They are historical

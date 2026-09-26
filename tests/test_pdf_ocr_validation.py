@@ -187,6 +187,27 @@ class PdfOcrDiagnosticValidationTests(unittest.TestCase):
     def test_complete_ocr_ledger_passes(self) -> None:
         self.assertEqual(_validate_pdf_ocr_diagnostics(_loaded()), [])
 
+    def test_multipart_visual_asset_matches_each_ocr_exclusion_by_part(self) -> None:
+        loaded = deepcopy(_loaded())
+        asset = loaded["manifest.json"]["assets"][0]  # type: ignore[index]
+        page = asset.pop("page")
+        box = asset.pop("box")
+        coordinate_system = asset.pop("coordinate_system")
+        asset["parts"] = [
+            {
+                "page": page,
+                "box": box,
+                "coordinate_system": coordinate_system,
+            },
+            {
+                "page": page,
+                "box": [200.0, 200.0, 220.0, 220.0],
+                "coordinate_system": coordinate_system,
+            },
+        ]
+
+        self.assertEqual(_validate_pdf_ocr_diagnostics(loaded), [])
+
     def test_html_and_native_pdf_candidates_are_unchanged(self) -> None:
         html = deepcopy(_loaded())
         html["manifest.json"]["text_extraction"]["source_role"] = "main_html"  # type: ignore[index]

@@ -4,6 +4,13 @@ This directory contains a static HTML, CSS, and JavaScript interface for the
 public metadata database. It reads the canonical YAML files at runtime and does
 not generate or maintain a second database.
 
+Use **Timeline** in the header to open `timeline.html`, which shows every paper
+grouped by publication year, oldest first. The year overview shows publication
+counts; select a bar to jump to that year. Search, year range, and metadata
+filters update both the overview and the paper timeline. The sort control can
+reverse the chronology, and each paper opens the same details dialog as the
+database view. **Browse papers** returns to the main page.
+
 ## Local preview
 
 Start a static server from the repository root so that the records directory is

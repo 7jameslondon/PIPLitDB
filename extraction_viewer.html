@@ -24,7 +24,7 @@
       --shadow: 0 18px 45px rgba(26, 43, 38, .09);
       --radius: 16px;
       --reading-width: 820px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Segoe UI Symbol", "Cambria Math", sans-serif;
       color: var(--ink);
       background: var(--canvas);
     }
@@ -319,7 +319,9 @@
     }
     /* The title receives programmatic focus as a reading landmark, not as a control. */
     .article-title:focus { outline: none; }
-    .authors { color: #35443f; font-size: 1.02rem; line-height: 1.6; }
+    .header-source-group { display: grid; gap: .32rem; }
+    .authors { color: #35443f; font-size: 1.02rem; line-height: 1.6; margin: 0; }
+    .header-affiliations { color: #52605c; font-size: .86rem; line-height: 1.48; margin: 0; max-width: 900px; }
     .citation-line { color: var(--muted); font-size: .88rem; line-height: 1.55; margin-top: .85rem; }
     .metadata-grid {
       display: grid;
@@ -351,10 +353,14 @@
       margin: 2rem 0 .85rem;
     }
     .section-heading-level-4 { font-size: 1.04rem; margin: 1.6rem 0 .7rem; }
-    .text-block { color: #26332f; font-family: Georgia, "Times New Roman", serif; font-size: 1.035rem; line-height: 1.76; margin: 0 0 1.08rem; }
+    .section-heading-level-5 { font-size: .98rem; margin: 1.45rem 0 .65rem; }
+    .section-heading-level-6 { font-size: .92rem; margin: 1.35rem 0 .6rem; }
+    .text-block { color: #26332f; font-family: Georgia, "Times New Roman", "Segoe UI Symbol", "Cambria Math", serif; font-size: 1.035rem; line-height: 1.76; margin: 0 0 1.08rem; overflow-wrap: anywhere; }
     .text-block sub, td sub, th sub { font-size: .74em; }
     .text-block sup, td sup, th sup { font-size: .7em; }
     .text-block code { background: #eef2f0; border-radius: 4px; font-family: ui-monospace, monospace; font-size: .86em; padding: .08em .28em; }
+    .enclosed-symbol { display: inline-flex; align-items: center; justify-content: center; border: 1px solid currentColor; border-radius: 50%; width: .9em; height: .9em; font-size: .9em; line-height: 1; margin: 0 .1em; vertical-align: baseline; }
+    .enclosure-mark { display: none; }
     .text-block mark { background: #fff0a8; }
     .block-id { scroll-margin-top: 90px; }
     blockquote.text-block { border-left: 4px solid #b7d8d1; color: #485650; margin-left: 0; padding-left: 1rem; }
@@ -456,6 +462,23 @@
     .asset-error strong { font-size: .84rem; }
     .asset-error code { overflow-wrap: anywhere; }
 
+    .asset-unavailable {
+      align-items: flex-start;
+      background: var(--warm-soft);
+      border: 1px solid #efd69e;
+      border-radius: 9px;
+      color: #70490f;
+      display: flex;
+      flex-direction: column;
+      font-size: .82rem;
+      gap: .28rem;
+      line-height: 1.45;
+      margin: .75rem;
+      padding: .8rem .9rem;
+      width: 100%;
+    }
+    .asset-unavailable strong { font-size: .84rem; }
+
     .table-card {
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -470,7 +493,8 @@
     table { border-collapse: collapse; font-size: .84rem; line-height: 1.42; min-width: 100%; }
     th, td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--soft-line); padding: .62rem .72rem; text-align: left; vertical-align: top; }
     th:last-child, td:last-child { border-right: 0; }
-    th { background: #edf4f1; color: #24342f; font-weight: 750; }
+    th { background: #edf4f1; color: #24342f; font-weight: 600; }
+    th strong { font-weight: 900; }
     tr:last-child td, tr:last-child th { border-bottom: 0; }
     .table-part + .table-part { border-top: 4px solid var(--line); }
     .table-part-label { background: #fafbf9; color: var(--muted); font-size: .68rem; font-weight: 700; letter-spacing: .05em; padding: .45rem .7rem; text-transform: uppercase; }
@@ -585,6 +609,8 @@
       width: max-content;
     }
     .image-lightbox-image {
+      /* Archived transparent line art needs the same light backing as paper. */
+      background: #fff;
       display: block;
       flex: 0 0 auto;
       height: auto;
@@ -850,6 +876,7 @@
       const node = document.createElement(tag);
       if (className) node.className = className;
       if (text !== undefined && text !== null) node.textContent = String(text);
+      if (node.textContent.includes("\u20dd")) renderEnclosingMarks(node);
       return node;
     }
 
@@ -883,6 +910,38 @@
       return String(value);
     }
 
+    function repeatedCaptionLabelPrefix(caption, label) {
+      const captionText = richPlain(caption);
+      const labelText = richPlain(label).trim();
+      if (!labelText || !captionText.startsWith(labelText)) return "";
+      const suffix = captionText.slice(labelText.length);
+      if (suffix === "" || /^\s/.test(suffix)) return labelText;
+      if (/^[.:]/.test(suffix) && (suffix.length === 1 || /^\s/.test(suffix.slice(1)))) {
+        return `${labelText}${suffix[0]}`;
+      }
+      if (
+        /^(?:Figure|Scheme)\b/i.test(labelText)
+        && /^(?:[.:]\p{Lu}|[.:]\d+\p{Lu})/u.test(suffix)
+      ) {
+        return `${labelText}${suffix[0]}`;
+      }
+      return "";
+    }
+
+    function captionDisplayText(caption, label) {
+      const captionText = richPlain(caption);
+      const prefix = repeatedCaptionLabelPrefix(caption, label);
+      return prefix ? captionText.slice(prefix.length).replace(/^\s+/, "") : captionText;
+    }
+
+    function figureAccessibleText(label, caption) {
+      const labelText = richPlain(label).trim();
+      const captionText = captionDisplayText(caption, label);
+      if (!labelText) return captionText;
+      if (!captionText) return labelText;
+      return `${labelText}${/[.!?:;]$/.test(labelText) ? " " : ". "}${captionText}`;
+    }
+
     function safeContentHref(value) {
       const href = String(value || "").trim();
       if (/^#[A-Za-z0-9_.:-]+$/.test(href)) return href;
@@ -910,7 +969,11 @@
         }
 
         const clean = document.createElement(tag);
-        if (tag === "abbr" && node.hasAttribute("title")) {
+        if (tag === "ol" && /^[aA]$/.test(node.getAttribute("type") || "")) {
+          clean.setAttribute("type", node.getAttribute("type"));
+        } else if (tag === "span" && /^color:#[0-9a-f]{6}$/i.test(node.getAttribute("style") || "")) {
+          clean.setAttribute("style", node.getAttribute("style").toLowerCase());
+        } else if (tag === "abbr" && node.hasAttribute("title")) {
           clean.setAttribute("title", node.getAttribute("title"));
         } else if (tag === "a" && node.hasAttribute("href")) {
           const href = safeContentHref(node.getAttribute("href"));
@@ -942,10 +1005,63 @@
       return document.createTextNode(richPlain(value));
     }
 
+    function renderEnclosingMarks(node) {
+      // Render Unicode combining circles without platform-dependent mark
+      // placement. The original base and mark remain verbatim in textContent.
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      for (const textNode of textNodes) {
+        if (!textNode.nodeValue.includes("\u20dd")) continue;
+        const fragment = document.createDocumentFragment();
+        const parts = textNode.nodeValue.split(/([^\s]\u20dd)/u);
+        for (const part of parts) {
+          if (part.endsWith("\u20dd")) {
+            const symbol = document.createElement("span");
+            symbol.className = "enclosed-symbol";
+            symbol.textContent = part.slice(0, -1);
+            symbol.setAttribute("aria-label", part);
+            const mark = document.createElement("span");
+            mark.className = "enclosure-mark";
+            mark.textContent = "\u20dd";
+            symbol.append(mark);
+            fragment.append(symbol);
+          } else fragment.append(document.createTextNode(part));
+        }
+        textNode.replaceWith(fragment);
+      }
+    }
+
     function richElement(tag, value, className) {
       const node = element(tag, className);
       node.append(richFragment(value));
+      if (node.textContent.includes("\u20dd")) renderEnclosingMarks(node);
       return node;
+    }
+
+    function stripLeadingRenderedText(node, prefix) {
+      if (!prefix || !node.textContent.startsWith(prefix)) return node;
+      let remaining = prefix.length;
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      for (const textNode of textNodes) {
+        if (remaining >= textNode.data.length) {
+          remaining -= textNode.data.length;
+          textNode.data = "";
+          continue;
+        }
+        textNode.data = textNode.data.slice(remaining).replace(/^\s+/, "");
+        remaining = 0;
+        break;
+      }
+      while (node.firstChild && !node.firstChild.textContent.trim()) node.firstChild.remove();
+      return node;
+    }
+
+    function captionDisplayElement(caption, label, className = "text-block") {
+      const node = richElement("div", caption, className);
+      return stripLeadingRenderedText(node, repeatedCaptionLabelPrefix(caption, label));
     }
 
     function safeDomId(prefix, value) {
@@ -1017,6 +1133,16 @@
       return box;
     }
 
+    function sourceAssetUnavailable() {
+      const box = element("div", "asset-unavailable");
+      append(
+        box,
+        element("strong", "", "Not supplied by the publisher"),
+        element("span", "", "The source declares this item but does not provide an image file.")
+      );
+      return box;
+    }
+
     function recordAssetMap(record) {
       const map = new Map();
       for (const asset of asArray(record.assets)) {
@@ -1081,8 +1207,15 @@
     function browserCanDisplayImage(type) {
       return new Set([
         "image/avif", "image/bmp", "image/gif", "image/jpeg", "image/png",
-        "image/webp"
+        "image/svg+xml", "image/webp"
       ]).has(String(type || "").toLowerCase());
+    }
+
+    function browserCanPreviewMedia(type) {
+      const normalized = String(type || "").toLowerCase();
+      return browserCanDisplayImage(normalized)
+        || normalized.startsWith("video/")
+        || normalized.startsWith("audio/");
     }
 
     function attachRuntimeFailure(media, stage, resolved) {
@@ -1170,6 +1303,7 @@
       state.imagePreview.mode = "fit";
       state.imagePreview.trigger = sourceImage && sourceImage.isConnected ? sourceImage : null;
       dom.imageLightboxTitle.textContent = altText || (sourceImage && sourceImage.alt) || "Image preview";
+      if (dom.imageLightboxTitle.textContent.includes("\u20dd")) renderEnclosingMarks(dom.imageLightboxTitle);
       dom.imageLightboxStatus.textContent = "Fitting image to window…";
       dom.imageZoomFit.setAttribute("aria-pressed", "true");
       dom.imageLightboxImage.alt = altText || (sourceImage && sourceImage.alt) || "Expanded image";
@@ -1307,6 +1441,47 @@
       return firstDefined(block.content, block.text, block.title, "");
     }
 
+    function selectHeaderSourceGroup(record) {
+      const blocks = asArray(record && record.front_matter);
+      for (let index = 0; index < blocks.length; index += 1) {
+        const block = blocks[index];
+        if (!isObject(block)) continue;
+        const kind = String(firstDefined(block.kind, block.type, "")).trim().toLowerCase();
+        if (kind !== "byline" || !richPlain(blockContent(block)).trim()) continue;
+        const groupedBlocks = [{ block, index }];
+        for (let groupedIndex = index + 1; groupedIndex < blocks.length; groupedIndex += 1) {
+          const groupedBlock = blocks[groupedIndex];
+          if (!isObject(groupedBlock)) break;
+          const groupedKind = String(firstDefined(groupedBlock.kind, groupedBlock.type, "")).trim().toLowerCase();
+          if (groupedKind !== "affiliations" || !richPlain(blockContent(groupedBlock)).trim()) break;
+          groupedBlocks.push({ block: groupedBlock, index: groupedIndex });
+        }
+        return { block, index, blocks: groupedBlocks };
+      }
+      return null;
+    }
+
+    function frontMatterBlocksForBody(record, headerSourceGroup) {
+      const blocks = asArray(record && record.front_matter);
+      const consumedIndices = new Set();
+      const groupedBlocks = asArray(headerSourceGroup && headerSourceGroup.blocks);
+      const validGroupStart = headerSourceGroup
+        && Number.isInteger(headerSourceGroup.index)
+        && blocks[headerSourceGroup.index] === headerSourceGroup.block
+        && groupedBlocks.length
+        && groupedBlocks[0].block === headerSourceGroup.block
+        && groupedBlocks[0].index === headerSourceGroup.index;
+      if (validGroupStart) {
+        for (let offset = 0; offset < groupedBlocks.length; offset += 1) {
+          const entry = groupedBlocks[offset];
+          const expectedIndex = headerSourceGroup.index + offset;
+          if (!entry || entry.index !== expectedIndex || blocks[expectedIndex] !== entry.block) break;
+          consumedIndices.add(expectedIndex);
+        }
+      }
+      return blocks.filter((_, index) => !consumedIndices.has(index));
+    }
+
     function renderBlock(block, options = {}) {
       if (!isObject(block)) return richElement("p", block, "text-block");
       const kind = String(firstDefined(block.kind, block.type, "paragraph")).toLowerCase();
@@ -1354,7 +1529,7 @@
     function renderSection(section, index) {
       const sectionNode = element("section", "content-section");
       sectionNode.id = safeDomId("section", firstDefined(section.section_id, index + 1));
-      const level = Math.min(4, Math.max(2, Number(section.level) || 2));
+      const level = Math.min(6, Math.max(2, Number(section.level) || 2));
       const heading = richElement(`h${level}`, firstDefined(section.heading, section.title, `Section ${index + 1}`), level > 2 ? `section-heading-level-${level}` : "");
       heading.dataset.tocLabel = sectionHeadingText(section);
       sectionNode.append(heading);
@@ -1369,14 +1544,39 @@
       return item;
     }
 
-    function renderHeader(record) {
+    function renderHeaderSourceBlock(entry, className) {
+      const node = richElement("div", blockContent(entry.block), className);
+      if (entry.block.block_id) {
+        node.id = safeDomId("block", entry.block.block_id);
+        node.classList.add("block-id");
+      }
+      return node;
+    }
+
+    function renderHeaderSourceGroup(headerSourceGroup) {
+      const groupedBlocks = asArray(headerSourceGroup.blocks);
+      const group = element("div", "header-source-group");
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", groupedBlocks.length > 1 ? "Authors and affiliations" : "Authors");
+      group.append(renderHeaderSourceBlock(groupedBlocks[0], "authors"));
+      for (const entry of groupedBlocks.slice(1)) {
+        group.append(renderHeaderSourceBlock(entry, "header-affiliations"));
+      }
+      return group;
+    }
+
+    function renderHeader(record, headerSourceGroup) {
       const metadata = isObject(record.record) ? record.record : {};
       const id = firstDefined(metadata.record_id, metadata.id, "Unknown record");
       dom.articleHeader.append(element("div", "record-id", `Record ${id}`));
       dom.articleHeader.append(richElement("h1", firstDefined(metadata.title, "Untitled record"), "article-title"));
 
-      const authors = asArray(metadata.authors).map(author => richPlain(firstDefined(author && author.name, author))).filter(Boolean);
-      if (authors.length) dom.articleHeader.append(element("div", "authors", authors.join(", ")));
+      if (headerSourceGroup) {
+        dom.articleHeader.append(renderHeaderSourceGroup(headerSourceGroup));
+      } else {
+        const authors = asArray(metadata.authors).map(author => richPlain(firstDefined(author && author.name, author))).filter(Boolean);
+        if (authors.length) dom.articleHeader.append(element("div", "authors", authors.join(", ")));
+      }
 
       const journal = firstDefined(metadata.journal, metadata.bibliographic && metadata.bibliographic.journal);
       const year = firstDefined(metadata.publication_year, metadata.year, metadata.bibliographic && metadata.bibliographic.publication_year);
@@ -1398,8 +1598,8 @@
       if (grid.childElementCount) dom.articleHeader.append(grid);
     }
 
-    function renderFrontMatter(record, body) {
-      const blocks = asArray(record.front_matter);
+    function renderFrontMatter(record, body, headerSourceGroup) {
+      const blocks = frontMatterBlocksForBody(record, headerSourceGroup);
       if (!blocks.length) return;
       const section = element("section", "content-section");
       section.id = "front-matter";
@@ -1460,14 +1660,21 @@
         const label = firstDefined(figure.label, figure.kind, "Figure");
         if (!asset) {
           const stage = element("div", "media-stage");
-          stage.append(assetError(figure.asset_id || "", figure.asset_id ? "The referenced asset_id is not present in record.json assets." : "No image was supplied by the source."));
+          stage.append(
+            figure.asset_id
+              ? assetError(figure.asset_id, "The referenced asset_id is not present in record.json assets.")
+              : sourceAssetUnavailable()
+          );
           card.append(stage);
         } else {
-          card.append(mediaStage(asset, { alt: `${richPlain(label)}. ${richPlain(figure.caption)}`.trim() }));
+          card.append(mediaStage(asset, { alt: figureAccessibleText(label, figure.caption) }));
         }
         const caption = element("figcaption", "media-caption");
         caption.append(element("div", "media-label", richPlain(label)));
-        if (figure.caption) caption.append(richElement("div", figure.caption, "text-block"));
+        if (figure.caption) {
+          const captionBody = captionDisplayElement(figure.caption, label);
+          if (captionBody.textContent.trim()) caption.append(captionBody);
+        }
         const path = assetPath(asset);
         if (path) caption.append(element("div", "media-path", path));
         card.append(caption);
@@ -1477,42 +1684,56 @@
       body.append(section);
     }
 
-    function tableCellStructure(cell, structureAssets, displayedStructures) {
-      const cellText = richPlain(firstDefined(cell && cell.plain_text, cell && cell.text, ""));
-      const normalized = cellText.replace(/\s+/g, "").toLocaleLowerCase();
-      const entry = Object.entries(structureAssets).find(([key]) => key.replace(/\s+/g, "").toLocaleLowerCase() === normalized);
-      if (!entry) return null;
-      const [key, path] = entry;
-      displayedStructures.add(key);
+    function tableCellStructure(cell, structureAssets, displayedStructures, columnIndex, partIndex, rowIndex) {
+      // Coordinate keys preserve graphical cells even when the cell has no text.
+      const coordinate = `part_${String(partIndex + 1).padStart(2, "0")}_row_${String(rowIndex + 1).padStart(3, "0")}_column_${String(columnIndex + 1).padStart(3, "0")}`;
+      const coordinatePattern = new RegExp(`^${coordinate}(?:_image_\\d{2})?$`);
+      let entries = Object.entries(structureAssets).filter(([key]) => coordinatePattern.test(key));
+      // Named structure keys identify row labels, not coincidentally equal
+      // measurements elsewhere in that row (for example a specificity of 1).
+      if (!entries.length) {
+        if (columnIndex !== 0 || (cell && cell.header)) return null;
+        const cellText = richPlain(firstDefined(cell && cell.plain_text, cell && cell.text, ""));
+        const normalized = cellText.replace(/\s+/g, "").toLocaleLowerCase();
+        const entry = Object.entries(structureAssets).find(([key]) => key.replace(/\s+/g, "").toLocaleLowerCase() === normalized);
+        if (!entry) return null;
+        entries = [entry];
+      }
       const wrapper = element("div", "cell-structure");
-      wrapper.append(element("span", "progress-line", "Loading structure…"));
-      resolveForNode(path, wrapper, resolved => {
-        wrapper.replaceChildren();
-        if (!resolved.ok) wrapper.append(assetError(resolved.path, resolved.reason));
-        else if (!browserCanDisplayImage(assetMediaType({ path }, path))) {
-          wrapper.append(downloadCard({ path, media_type: assetMediaType({ path }, path), label: `Structure ${key}` }, resolved));
-        } else {
-          const image = element("img");
-          image.src = resolved.url;
-          image.alt = `Structure ${key}`;
-          image.loading = "lazy";
-          attachRuntimeFailure(image, wrapper, resolved);
-          enableImagePreview(image);
-          wrapper.append(image);
-        }
-      });
+      for (const [key, path] of entries) {
+        displayedStructures.add(key);
+        const holder = element("div");
+        wrapper.append(holder);
+        holder.append(element("span", "progress-line", "Loading structure…"));
+        resolveForNode(path, holder, resolved => {
+          holder.replaceChildren();
+          if (!resolved.ok) holder.append(assetError(resolved.path, resolved.reason));
+          else if (!browserCanDisplayImage(assetMediaType({ path }, path))) {
+            holder.append(downloadCard({ path, media_type: assetMediaType({ path }, path), label: `Structure ${key}` }, resolved));
+          } else {
+            const image = element("img");
+            image.src = resolved.url;
+            image.alt = `Structure ${key}`;
+            image.loading = "lazy";
+            attachRuntimeFailure(image, holder, resolved);
+            enableImagePreview(image);
+            holder.append(image);
+          }
+        });
+      }
       return wrapper;
     }
 
     function renderTablePart(part, index, total, structureAssets, displayedStructures) {
       const wrapper = element("div", "table-part");
-      if (total > 1) wrapper.append(element("div", "table-part-label", firstDefined(part.part_id, `Part ${index + 1}`)));
+      // part_id is machine identity, never an authored heading. Source group
+      // labels belong to the table rows and are rendered with those rows.
       const scroll = element("div", "table-scroll");
       const table = element("table");
       const tbody = element("tbody");
-      for (const row of asArray(part.rows)) {
+      for (const [rowIndex, row] of asArray(part.rows).entries()) {
         const tr = element("tr");
-        for (const cell of asArray(row)) {
+        for (const [columnIndex, cell] of asArray(row).entries()) {
           const td = element(cell && cell.header ? "th" : "td");
           if (cell && cell.header) td.scope = "col";
           const rowspan = Number(cell && cell.rowspan);
@@ -1521,7 +1742,7 @@
           if (Number.isInteger(colspan) && colspan > 1) td.colSpan = colspan;
           if (cell && typeof cell.html === "string" && cell.html) td.append(sanitizeMarkup(cell.html));
           else td.append(richFragment(firstDefined(cell && cell.plain_text, cell && cell.text, "")));
-          const structure = tableCellStructure(cell, structureAssets, displayedStructures);
+          const structure = tableCellStructure(cell, structureAssets, displayedStructures, columnIndex, index, rowIndex);
           if (structure) td.append(structure);
           tr.append(td);
         }
@@ -1566,8 +1787,12 @@
       const card = element("section", "table-card");
       card.id = safeDomId(idPrefix, table.table_id);
       const head = element("header", "table-heading");
-      append(head, element("div", "table-label", richPlain(firstDefined(table.label, "Table"))));
-      if (table.title) head.append(richElement("div", table.title, "table-title"));
+      const tableLabel = firstDefined(table.label, "Table");
+      append(head, element("div", "table-label", richPlain(tableLabel)));
+      if (table.title) {
+        const title = captionDisplayElement(table.title, tableLabel, "table-title");
+        if (title.textContent.trim()) head.append(title);
+      }
       card.append(head);
       const parts = asArray(table.parts);
       const structureAssets = isObject(table.structure_assets) ? table.structure_assets : {};
@@ -1618,8 +1843,13 @@
 
     function supplementDisplayLabel(supplement) {
       const firstFigure = asArray(supplement && supplement.figures).find(figure => figure && figure.label);
+      const filePath = supplement && supplement.file && supplement.file.path;
+      const fileName = typeof filePath === "string"
+        ? filePath.replace(/\\/g, "/").split("/").filter(Boolean).at(-1)
+        : "";
       return firstDefined(
         supplement && supplement.label,
+        fileName,
         firstFigure && firstFigure.label,
         supplement && supplement.supplement_id,
         "Supplement"
@@ -1645,20 +1875,33 @@
         card.id = safeDomId("supplement", supplement.supplement_id);
         card.append(element("div", "supplement-title", richPlain(supplementDisplayLabel(supplement))));
         const file = supplementFile(supplement);
-        if (file) card.append(downloadCard(file));
+        if (file) {
+          const fileType = assetMediaType(file, assetPath(file));
+          const hasSemanticFigures = asArray(supplement.figures).some(
+            figure => figure && figure.asset_id
+          );
+          if (browserCanPreviewMedia(fileType) && !hasSemanticFigures) {
+            card.append(renderGenericAsset(file, safeDomId("supplement-file", supplement.supplement_id)));
+          }
+          card.append(downloadCard(file));
+        }
         else card.append(assetError("", "No preserved supplementary file is declared."));
         for (const figure of asArray(supplement.figures)) {
           const mini = element("figure", "media-card");
           mini.id = safeDomId("supplement-figure", figure.figure_id);
           const asset = assetFromFigure(figure, assetMap);
-          mini.append(asset ? mediaStage(asset, { alt: richPlain(figure.label) }) : (() => {
+          const figureLabel = firstDefined(figure.label, "Supplementary figure");
+          mini.append(asset ? mediaStage(asset, { alt: figureAccessibleText(figureLabel, figure.caption) }) : (() => {
             const stage = element("div", "media-stage");
             stage.append(assetError(figure.asset_id || "", "Supplementary figure asset is unavailable."));
             return stage;
           })());
           const caption = element("figcaption", "media-caption");
-          append(caption, element("div", "media-label", richPlain(firstDefined(figure.label, "Supplementary figure"))));
-          if (figure.caption) caption.append(richElement("div", figure.caption, "text-block"));
+          append(caption, element("div", "media-label", richPlain(figureLabel)));
+          if (figure.caption) {
+            const captionBody = captionDisplayElement(figure.caption, figureLabel);
+            if (captionBody.textContent.trim()) caption.append(captionBody);
+          }
           mini.append(caption);
           card.append(mini);
         }
@@ -1720,7 +1963,11 @@
         }
         if (components.length > 12) {
           const details = element("details", "embedded-assets");
-          details.append(element("summary", "", `Embedded slide assets (${components.length})`));
+          const allSlideAssets = components.every(asset => /(?:^|_)(?:slide|presentation)(?:_|$)/i.test([
+            asset && asset.kind, asset && asset.asset_id
+          ].filter(Boolean).join(" ")));
+          const assetGroupLabel = allSlideAssets ? "Embedded slide assets" : "Supplementary assets";
+          details.append(element("summary", "", `${assetGroupLabel} (${components.length})`));
           const list = element("div", "embedded-assets-list");
           details.append(list);
           let rendered = false;
@@ -1745,7 +1992,7 @@
     function renderGenericAsset(asset, id) {
       const path = assetPath(asset);
       const type = assetMediaType(asset, path);
-      if (browserCanDisplayImage(type) || type.startsWith("video/") || type.startsWith("audio/")) {
+      if (browserCanPreviewMedia(type)) {
         const card = element("figure", "media-card");
         card.id = id;
         card.append(mediaStage(asset, { alt: richPlain(asset.label) }));
@@ -1787,7 +2034,7 @@
       const list = element("div", "reference-list");
       for (const reference of references) {
         const item = element("div", "reference-item");
-        if (/^\s*(?:\[\d+\]|\d+[.)])\s+/.test(richPlain(blockContent(reference)))) item.classList.add("source-numbered");
+        if (/^\s*(?:\[\d+[A-Za-z]?\]|\d+[A-Za-z]?[.)])\s+/.test(richPlain(blockContent(reference)))) item.classList.add("source-numbered");
         item.append(renderBlock(reference));
         list.append(item);
       }
@@ -1798,9 +2045,10 @@
     function renderContents(record) {
       dom.articleHeader.replaceChildren();
       dom.articleBody.replaceChildren();
-      renderHeader(record);
+      const headerSourceGroup = selectHeaderSourceGroup(record);
+      renderHeader(record, headerSourceGroup);
       renderAssetIndex(record, dom.articleBody);
-      renderFrontMatter(record, dom.articleBody);
+      renderFrontMatter(record, dom.articleBody, headerSourceGroup);
       asArray(record.sections).forEach((section, index) => dom.articleBody.append(renderSection(section, index)));
       renderFigures(record, dom.articleBody);
       renderTables(record, dom.articleBody);

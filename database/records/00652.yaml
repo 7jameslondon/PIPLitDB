@@ -1,0 +1,21 @@
+document_type: research_article
+publication_stage: publication
+title: "Inhibition of GLI-Mediated Transcription by Cyclic Pyrrole-Imidazole Polyamide in Cancer Stem Cells"
+authors:
+  - name: "Vinodh J Sahayasheela"
+    canonical_name: "Vinodh J. Sahayasheela"
+  - name: "Zutao Yu"
+  - name: "Yuki Hirose"
+  - name: "Ganesh N Pandian"
+    canonical_name: "Ganesh N. Pandian"
+  - name: "Toshikazu Bando"
+  - name: "Hiroshi Sugiyama"
+doi: "10.1246/bcsj.20210453"
+publication_year: 2022
+journal: "Bulletin of the Chemical Society of Japan"
+language_status: english
+human_user_reported_publisher_access: no_access
+pip_litdb_file_status:
+  main_pdf: present
+  supplementary_material: present
+  full_text_html: unchecked

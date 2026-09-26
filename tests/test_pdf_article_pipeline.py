@@ -19,6 +19,7 @@ from scripts.extraction.models import (
 )
 from scripts.extraction.pdf_article_extractor import (
     PdfArticleExtractionError,
+    _glyph_overrides,
     extract_pdf_article,
 )
 from scripts.extraction.pdf_text_extractor import (
@@ -28,6 +29,7 @@ from scripts.extraction.pdf_text_extractor import (
 )
 from scripts.extraction.pipeline import (
     ExtractionError,
+    _apply_rich_text_overrides,
     _reconcile_article_title,
     extract_record,
 )
@@ -168,6 +170,590 @@ def _article() -> ArticleExtraction:
 
 
 class PdfArticleExtractionTests(unittest.TestCase):
+    def test_pdf_article_config_accepts_unicode_codepoint_glyph_overrides(self) -> None:
+        self.assertEqual(
+            _glyph_overrides(
+                {
+                    "glyph_overrides": [
+                        {"font": "TimesNewRomanPSMT", "code": "U+0001", "value": "μ"},
+                        {"font": "TimesNewRomanPSMT", "code": "u+81", "value": "•"},
+                        {"font": "TimesNewRomanPSMT", "code": "raw:3", "value": "Δ"},
+                    ]
+                }
+            ),
+            {
+                "TimesNewRomanPSMT": {
+                    "U+0001": "μ",
+                    "U+0081": "•",
+                    "RAW:3": "Δ",
+                }
+            },
+        )
+
+    def test_configured_region_boundary_forces_paragraph_break(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="native_text",
+                    lines=[
+                        _line(
+                            1,
+                            70,
+                            "1. Introduction. The model terms are",
+                            source_region_id="region-before",
+                        ),
+                        _line(
+                            1,
+                            90,
+                            "where the next paragraph defines them.",
+                            source_region_id="region-after",
+                        ),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            config={"paragraph_break_before_regions": ["region-after"]},
+            text_document=document,
+        )
+
+        self.assertEqual(
+            [block.plain_text for block in article.sections[0].blocks],
+            [
+                "The model terms are",
+                "where the next paragraph defines them.",
+            ],
+        )
+
+    def test_configured_region_boundary_rejects_duplicate_ids(self) -> None:
+        with self.assertRaisesRegex(PdfArticleExtractionError, "duplicates"):
+            extract_pdf_article(
+                Path("synthetic.pdf"),
+                PDF_RELATIVE_PATH,
+                _metadata(),
+                config={
+                    "paragraph_break_before_regions": ["region-after", "region-after"]
+                },
+                text_document=_decoded_document(),
+            )
+
+    def test_configured_abstract_heading_uses_heading_not_body_geometry(self) -> None:
+        abstract_heading = _line(
+            1,
+            50,
+            "ABSTRACT",
+            left=72,
+            right=150,
+            source_region_id="abstract-heading",
+        )
+        abstract_body = _line(
+            1,
+            75,
+            "Exact abstract body.",
+            source_region_id="abstract-body",
+        )
+        introduction_heading = _line(
+            1,
+            110,
+            "INTRODUCTION",
+            source_region_id="introduction-heading",
+        )
+        introduction_body = _line(1, 135, "Article body.")
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="native_text",
+                    lines=[
+                        abstract_heading,
+                        abstract_body,
+                        introduction_heading,
+                        introduction_body,
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            config={
+                "abstract_region_ids": ["abstract-body"],
+                "section_headings": [
+                    {
+                        "region_id": "abstract-heading",
+                        "title": "Abstract",
+                        "level": 2,
+                    },
+                    {
+                        "region_id": "introduction-heading",
+                        "title": "Introduction",
+                        "level": 2,
+                    },
+                ],
+            },
+            text_document=document,
+        )
+
+        self.assertEqual(
+            [section.section_id for section in article.sections],
+            ["section-abstract", "section-introduction"],
+        )
+        abstract = article.sections[0]
+        self.assertEqual(abstract.source_geometry, [{"page": 1, "bbox": list(abstract_heading.bbox)}])
+        self.assertEqual(
+            abstract.blocks[0].source_geometry,
+            [{"page": 1, "bbox": list(abstract_body.bbox)}],
+        )
+        self.assertEqual(abstract.blocks[0].plain_text, "Exact abstract body.")
+
+    def test_configured_front_matter_can_preserve_specific_unlabeled_rich_kind(self) -> None:
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            config={
+                "front_matter_regions": [
+                    {
+                        "page": 1,
+                        "box": [72, 40, 500, 60],
+                        "field": "byline",
+                        "kind": "byline",
+                        "reviewed_value": "Test Author¹",
+                        "reviewed_markdown": "<strong>Test Author¹</strong>",
+                    }
+                ]
+            },
+            text_document=_decoded_document(),
+        )
+
+        block = article.front_matter[0]
+        self.assertEqual(block.block_id, "front-matter-byline")
+        self.assertEqual(block.kind, "byline")
+        self.assertEqual(block.plain_text, "Test Author¹")
+        self.assertEqual(block.markdown, "<strong>Test Author¹</strong>")
+
+    def test_source_pinned_rich_text_override_changes_only_formatting(self) -> None:
+        article = _article()
+        source = SourceFile(
+            role="main_pdf",
+            path=Path("synthetic.pdf"),
+            relative_path=PDF_RELATIVE_PATH,
+            size=10,
+            sha256="a" * 64,
+            detected_format="pdf",
+            page_count=1,
+        )
+        spec = {
+            "target_id": "body-001",
+            "expected_plain_text": "Synthetic body.",
+            "expected_markdown": "Synthetic body.",
+            "replacement_markdown": "Synthetic <em>body</em>.",
+            "source_path": PDF_RELATIVE_PATH,
+            "source_sha256": "a" * 64,
+            "source_locator": "PDF page 1, body paragraph",
+            "reason": "Restore directly reviewed emphasis.",
+            "evidence": "The source prints body in italics.",
+        }
+
+        _apply_rich_text_overrides(article, [spec], [source])
+
+        block = article.sections[0].blocks[0]
+        self.assertEqual(block.plain_text, "Synthetic body.")
+        self.assertEqual(block.markdown, "Synthetic <em>body</em>.")
+        self.assertEqual(article.repairs[0].repair_id, "rich-text-override-001")
+        self.assertEqual(
+            article.repairs[0].evidence,
+            "PDF page 1, body paragraph: The source prints body in italics.",
+        )
+
+    def test_rich_text_override_rejects_stale_or_text_changing_markup(self) -> None:
+        source = SourceFile(
+            role="main_pdf",
+            path=Path("synthetic.pdf"),
+            relative_path=PDF_RELATIVE_PATH,
+            size=10,
+            sha256="a" * 64,
+            detected_format="pdf",
+            page_count=1,
+        )
+        base = {
+            "target_id": "body-001",
+            "expected_plain_text": "Synthetic body.",
+            "expected_markdown": "Synthetic body.",
+            "replacement_markdown": "Synthetic <em>body</em>.",
+            "source_path": PDF_RELATIVE_PATH,
+            "source_sha256": "a" * 64,
+            "source_locator": "PDF page 1, body paragraph",
+            "reason": "Restore directly reviewed emphasis.",
+            "evidence": "The source prints body in italics.",
+        }
+        stale = dict(base, expected_markdown="Stale body.")
+        with self.assertRaisesRegex(ExtractionError, "did not match target"):
+            _apply_rich_text_overrides(_article(), [stale], [source])
+        contradictory = dict(
+            base,
+            replacement_markdown="Synthetic <em>different body</em>.",
+        )
+        with self.assertRaisesRegex(ExtractionError, "changes visible plain text"):
+            _apply_rich_text_overrides(_article(), [contradictory], [source])
+
+    def test_configured_wrapped_heading_preserves_following_body_text(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="native_text",
+                    lines=[
+                        _line(1, 30, TITLE),
+                        _line(1, 45, "by Test Author"),
+                        _line(
+                            1,
+                            70,
+                            "1. Introduction. Introductory text.",
+                            markdown="**1. Introduction.** Introductory text.",
+                        ),
+                        _line(
+                            1,
+                            90,
+                            "Long Scientific",
+                            markdown="**Long** <strong><em>Scientific</em></strong>",
+                        ),
+                        _line(
+                            1,
+                            102,
+                            "Heading Body begins here.",
+                            markdown="**Heading** Body begins here.",
+                        ),
+                        _line(1, 114, "It continues on the next line."),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            config={
+                "section_headings": [
+                    {
+                        "page": 1,
+                        "box": [70, 85, 501, 110],
+                        "title": "Long Scientific Heading",
+                        "level": 3,
+                        "source_heading_text": "Long Scientific Heading",
+                    }
+                ]
+            },
+            text_document=document,
+        )
+
+        section = next(
+            section
+            for section in article.sections
+            if section.heading == "Long Scientific Heading"
+        )
+        self.assertEqual(section.heading, "Long Scientific Heading")
+        self.assertEqual(section.level, 3)
+        self.assertEqual(
+            [block.plain_text for block in section.blocks],
+            ["Body begins here. It continues on the next line."],
+        )
+        self.assertEqual(
+            [block.markdown for block in section.blocks],
+            ["Body begins here. It continues on the next line."],
+        )
+
+    def test_double_spaced_same_margin_lines_form_paragraphs_by_indent(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="native_text",
+                    lines=[
+                        _line(1, 30, "Introduction", markdown="**Introduction**"),
+                        _line(1, 100, "First paragraph", left=95, right=180),
+                        _line(1, 100, "begins here", left=205, right=270),
+                        _line(1, 130, "and continues at the ordinary margin.", left=72),
+                        _line(1, 160, "Second paragraph begins here.", left=95),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            config={"source_path": PDF_RELATIVE_PATH},
+            text_document=document,
+        )
+
+        self.assertEqual(
+            [block.plain_text for block in article.sections[0].blocks],
+            [
+                "First paragraph begins here and continues at the ordinary margin.",
+                "Second paragraph begins here.",
+            ],
+        )
+
+    def test_bare_numbered_pdf_references_are_contiguous_entries(self) -> None:
+        document = _decoded_document()
+        document.pages[1].lines[3:] = [
+            _line(2, 355, "REFERENCES", markdown="**References**"),
+            _line(2, 380, "1 A. Author, First synthetic reference."),
+            _line(2, 390, "439."),
+            _line(2, 400, "2 B. Author, Second synthetic reference."),
+        ]
+
+        with patch(
+            "scripts.extraction.pdf_article_extractor.extract_pdf_text",
+            return_value=document,
+        ):
+            article = extract_pdf_article(
+                Path("synthetic.pdf"),
+                PDF_RELATIVE_PATH,
+                _metadata(),
+                {"source_path": PDF_RELATIVE_PATH},
+            )
+
+        self.assertEqual(
+            [block.block_id for block in article.references],
+            ["reference-001", "reference-002"],
+        )
+        self.assertEqual(
+            [block.plain_text for block in article.references],
+            [
+                "1 A. Author, First synthetic reference. 439.",
+                "2 B. Author, Second synthetic reference.",
+            ],
+        )
+
+    def test_parenthesized_pdf_references_are_contiguous_entries(self) -> None:
+        document = _decoded_document()
+        document.pages[1].lines[3:] = [
+            _line(2, 355, "REFERENCES", markdown="**References**"),
+            _line(2, 380, "(1) A. Author, First synthetic reference."),
+            _line(2, 390, "439."),
+            _line(2, 400, "(2) B. Author, Second synthetic reference."),
+        ]
+
+        with patch(
+            "scripts.extraction.pdf_article_extractor.extract_pdf_text",
+            return_value=document,
+        ):
+            article = extract_pdf_article(
+                Path("synthetic.pdf"),
+                PDF_RELATIVE_PATH,
+                _metadata(),
+                {"source_path": PDF_RELATIVE_PATH},
+            )
+
+        self.assertEqual(
+            [block.block_id for block in article.references],
+            ["reference-001", "reference-002"],
+        )
+        self.assertEqual(
+            [block.plain_text for block in article.references],
+            [
+                "(1) A. Author, First synthetic reference. 439.",
+                "(2) B. Author, Second synthetic reference.",
+            ],
+        )
+
+    def test_closing_parenthesis_pdf_references_are_contiguous_entries(self) -> None:
+        document = _decoded_document()
+        document.pages[1].lines[3:] = [
+            _line(2, 355, "REFERENCES", markdown="**References**"),
+            _line(2, 380, "1) A. Author, First synthetic reference."),
+            _line(2, 390, "439."),
+            _line(2, 400, "2) B. Author, Second synthetic reference."),
+        ]
+
+        with patch(
+            "scripts.extraction.pdf_article_extractor.extract_pdf_text",
+            return_value=document,
+        ):
+            article = extract_pdf_article(
+                Path("synthetic.pdf"),
+                PDF_RELATIVE_PATH,
+                _metadata(),
+                {"source_path": PDF_RELATIVE_PATH},
+            )
+
+        self.assertEqual(
+            [block.block_id for block in article.references],
+            ["reference-001", "reference-002"],
+        )
+        self.assertEqual(
+            [block.plain_text for block in article.references],
+            [
+                "1) A. Author, First synthetic reference. 439.",
+                "2) B. Author, Second synthetic reference.",
+            ],
+        )
+
+    def test_fullwidth_closing_parenthesis_ocr_references_are_contiguous(self) -> None:
+        document = _decoded_document()
+        document.pages[1].lines[3:] = [
+            _line(2, 355, "REFERENCES", markdown="**References**"),
+            _line(2, 380, "1） A. Author, First OCR reference."),
+            _line(2, 400, "2） B. Author, Second OCR reference."),
+        ]
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            {"source_path": PDF_RELATIVE_PATH},
+            text_document=document,
+        )
+
+        self.assertEqual(
+            [block.block_id for block in article.references],
+            ["reference-001", "reference-002"],
+        )
+
+    def test_unnumbered_author_year_references_use_reviewable_hanging_indents(self) -> None:
+        document = _decoded_document()
+        document.pages[1].lines[3:] = [
+            _line(2, 355, "REFERENCES", markdown="**References**"),
+            _line(2, 380, "Alpha A, Beta B (2001) First reference.", left=72),
+            _line(2, 390, "Journal 1:1–10", left=84),
+            _line(2, 400, "Bravo B (2002a) Second reference.", left=72),
+            _line(2, 410, "Journal 2:20–30", left=84),
+        ]
+        document.pages.append(
+            PdfTextPage(
+                page=3,
+                width=595.0,
+                height=709.0,
+                classification="native_text",
+                lines=[
+                    _line(3, 45, "Continued title text.", left=84),
+                    _line(3, 55, "Charlie C (2003) Third reference.", left=72),
+                ],
+            )
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            {"source_path": PDF_RELATIVE_PATH},
+            text_document=document,
+        )
+
+        self.assertEqual(
+            [block.block_id for block in article.references],
+            ["reference-001", "reference-002", "reference-003"],
+        )
+        self.assertEqual(
+            [block.plain_text for block in article.references],
+            [
+                "Alpha A, Beta B (2001) First reference. Journal 1:1–10",
+                "Bravo B (2002a) Second reference. Journal 2:20–30 Continued title text.",
+                "Charlie C (2003) Third reference.",
+            ],
+        )
+
+    def test_unnumbered_reference_text_without_author_year_start_fails_closed(self) -> None:
+        document = _decoded_document()
+        document.pages[1].lines[3:] = [
+            _line(2, 355, "REFERENCES", markdown="**References**"),
+            _line(2, 380, "Unreviewed unnumbered bibliography prose."),
+        ]
+
+        with self.assertRaisesRegex(
+            PdfArticleExtractionError,
+            "first numbered or author-year entry",
+        ):
+            extract_pdf_article(
+                Path("synthetic.pdf"),
+                PDF_RELATIVE_PATH,
+                _metadata(),
+                {"source_path": PDF_RELATIVE_PATH},
+                text_document=document,
+            )
+
+    def test_reviewed_multi_page_abstract_regions_are_extracted_once(self) -> None:
+        document = _decoded_document()
+        document.pages[0].lines[:] = [
+            _line(1, 30, TITLE),
+            _line(1, 45, "by Test Author"),
+            _line(1, 105, "Abstract first page."),
+        ]
+        document.pages[1].lines[:] = [
+            _line(2, 45, "Abstract second page."),
+            _line(2, 75, "Introduction", markdown="**Introduction**"),
+            _line(2, 100, "Article body."),
+        ]
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            {
+                "source_path": PDF_RELATIVE_PATH,
+                "abstract_regions": [
+                    {"page": 1, "box": [70, 100, 510, 120]},
+                    {"page": 2, "box": [70, 40, 510, 60]},
+                ],
+                "exclude_regions": [
+                    {
+                        "pages": [1],
+                        "box": [0, 0, 595, 90],
+                        "reason": "reviewed title and author furniture",
+                    }
+                ],
+            },
+            text_document=document,
+        )
+
+        self.assertEqual(
+            article.sections[0].blocks[0].plain_text,
+            "Abstract first page. Abstract second page.",
+        )
+        body = " ".join(
+            block.plain_text
+            for section in article.sections[1:]
+            for block in section.blocks
+        )
+        self.assertEqual(body, "Article body.")
+        self.assertNotIn("Abstract first page", body)
+        self.assertNotIn("Abstract second page", body)
+
     def test_pdf_structure_excludes_visuals_captions_and_page_furniture(self) -> None:
         crop_specs = [
             {
@@ -424,6 +1010,49 @@ class PdfArticleExtractionTests(unittest.TestCase):
             ],
         )
 
+    def test_unstyled_numbered_procedure_is_not_a_section_heading(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="image_only",
+                    lines=[
+                        _line(1, 30, TITLE),
+                        _line(1, 45, "by Test Author"),
+                        _line(1, 75, "Introduction"),
+                        _line(
+                            1,
+                            100,
+                            "1. Prepare a 1.14× DNA solution. Add buffer.",
+                        ),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        with patch(
+            "scripts.extraction.pdf_article_extractor.extract_pdf_text",
+            return_value=document,
+        ):
+            article = extract_pdf_article(
+                Path("synthetic.pdf"), PDF_RELATIVE_PATH, _metadata()
+            )
+
+        introduction = next(
+            section for section in article.sections if section.heading == "Introduction"
+        )
+        self.assertEqual(len(introduction.blocks), 1)
+        self.assertEqual(
+            introduction.blocks[0].plain_text,
+            "1. Prepare a 1.14× DNA solution. Add buffer.",
+        )
+
     def test_colon_at_page_break_keeps_one_paragraph_and_page_range(self) -> None:
         document = PdfTextDocument(
             relative_path=PDF_RELATIVE_PATH,
@@ -528,6 +1157,97 @@ class PdfArticleExtractionTests(unittest.TestCase):
         self.assertEqual(
             blocks[0].plain_text,
             "The sentence continues into the right column without a paragraph break.",
+        )
+
+    def test_ordered_ocr_column_transition_ignores_geometry_and_ocr_punctuation(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="ocr_text",
+                    lines=[
+                        _line(
+                            1,
+                            90,
+                            "1. Results. The source line ends with a comma.",
+                            markdown="**1. Results.** The source line ends with a comma.",
+                            source_region_id="left-column",
+                        ),
+                        _line(
+                            1,
+                            30,
+                            "the sentence continues in the next reviewed column.",
+                            left=300.0,
+                            source_region_id="right-column",
+                        ),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            text_document=document,
+        )
+
+        blocks = article.sections[-1].blocks
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(
+            blocks[0].plain_text,
+            (
+                "The source line ends with a comma. the sentence continues "
+                "in the next reviewed column."
+            ),
+        )
+
+    def test_hyphenated_word_continuation_overrides_hanging_indent(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="ocr_text",
+                    lines=[
+                        _line(1, 30, TITLE),
+                        _line(1, 45, "by Test Author"),
+                        _line(
+                            1,
+                            90,
+                            "1. Methods.",
+                            markdown="**1. Methods.**",
+                        ),
+                        _line(1, 102, "(ii) Polymerase chain re-"),
+                        _line(1, 114, "action was used.", left=84.0),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            text_document=document,
+        )
+
+        blocks = article.sections[-1].blocks
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(
+            blocks[0].plain_text,
+            "(ii) Polymerase chain re-action was used.",
         )
 
     def test_empty_experimental_parent_heading_keeps_pdf_coverage(self) -> None:
@@ -649,6 +1369,170 @@ class PdfArticleExtractionTests(unittest.TestCase):
             ],
         )
 
+    def test_singular_reference_heading_routes_natural_and_configured_entries(self) -> None:
+        for title in ("REFERENCE", "Reference", "rEfErEnCe"):
+            for configured in (False, True):
+                with self.subTest(title=title, configured=configured):
+                    document = PdfTextDocument(
+                        relative_path=PDF_RELATIVE_PATH,
+                        pages=[PdfTextPage(
+                            page=1,
+                            width=595.0,
+                            height=709.0,
+                            classification="native_text",
+                            lines=[
+                                _line(1, 30, TITLE),
+                                _line(1, 45, "by Test Author"),
+                                _line(1, 90, "1. Results. Main result.",
+                                      markdown="**1. Results.** Main result."),
+                                _line(1, 120, title),
+                                _line(1, 140, "[1] A. Author, First reference."),
+                                _line(1, 160, "[2] B. Author, Second reference."),
+                            ],
+                        )],
+                        diagnostic_rows=[],
+                        warnings=[],
+                        all_pages_classified=True,
+                    )
+                    config = {}
+                    if configured:
+                        config["section_headings"] = [{
+                            "page": 1,
+                            "box": [70, 115, 501, 135],
+                            "title": title,
+                        }]
+
+                    article = extract_pdf_article(
+                        Path("synthetic.pdf"), PDF_RELATIVE_PATH, _metadata(),
+                        config=config, text_document=document,
+                    )
+
+                    self.assertEqual(
+                        [block.plain_text for block in article.references],
+                        ["[1] A. Author, First reference.",
+                         "[2] B. Author, Second reference."],
+                    )
+                    self.assertEqual(
+                        [block.plain_text for section in article.sections
+                         for block in section.blocks],
+                        ["Main result."],
+                    )
+                    self.assertFalse(any(
+                        section.heading.casefold() == "reference"
+                        for section in article.sections
+                    ))
+
+    def test_singular_same_line_reference_heading_preserves_first_entry(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[PdfTextPage(
+                page=1,
+                width=595.0,
+                height=709.0,
+                classification="native_text",
+                lines=[
+                    _line(1, 30, TITLE),
+                    _line(1, 45, "by Test Author"),
+                    _line(1, 90, "1. Results. Main result.",
+                          markdown="**1. Results.** Main result."),
+                    _line(1, 120, "Reference [1] A. Author, First reference.",
+                          markdown="**Reference** [1] A. Author, First reference."),
+                    _line(1, 140, "[2] B. Author, Second reference."),
+                ],
+            )],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"), PDF_RELATIVE_PATH, _metadata(),
+            text_document=document,
+        )
+
+        self.assertEqual(
+            [block.plain_text for block in article.references],
+            ["[1] A. Author, First reference.", "[2] B. Author, Second reference."],
+        )
+        self.assertFalse(any(
+            section.heading.casefold() == "reference" for section in article.sections
+        ))
+
+    def test_reviewed_reference_start_retains_prefatory_notes_as_article_text(self) -> None:
+        document = PdfTextDocument(
+            relative_path=PDF_RELATIVE_PATH,
+            pages=[
+                PdfTextPage(
+                    page=1,
+                    width=595.0,
+                    height=709.0,
+                    classification="native_text",
+                    lines=[
+                        _line(1, 30, TITLE),
+                        _line(
+                            1,
+                            80,
+                            "1. Results. Main result.",
+                            markdown="**1. Results.** Main result.",
+                            source_region_id="native-left-column",
+                        ),
+                        _line(1, 110, "Notes and references"),
+                        _line(1, 130, "The authors declare no competing interest."),
+                        _line(1, 150, "[1] A. Author, First reference."),
+                        _line(1, 170, "[2] B. Author, Second reference."),
+                    ],
+                )
+            ],
+            diagnostic_rows=[],
+            warnings=[],
+            all_pages_classified=True,
+        )
+
+        article = extract_pdf_article(
+            Path("synthetic.pdf"),
+            PDF_RELATIVE_PATH,
+            _metadata(),
+            config={
+                "section_headings": [
+                    {
+                        "page": 1,
+                        "box": [70, 105, 501, 125],
+                        "title": "Notes and references",
+                        "level": 2,
+                    }
+                ],
+                "reference_start": {"page": 1, "box": [70, 145, 501, 165]},
+            },
+            text_document=document,
+        )
+
+        notes = next(
+            section
+            for section in article.sections
+            if section.heading == "Notes and references"
+        )
+        self.assertEqual(
+            [block.plain_text for block in notes.blocks],
+            ["The authors declare no competing interest."],
+        )
+        self.assertEqual(
+            [block.plain_text for block in article.references],
+            [
+                "[1] A. Author, First reference.",
+                "[2] B. Author, Second reference.",
+            ],
+        )
+        self.assertTrue(
+            any(
+                row.get("kind") == "configured_reference_start"
+                for row in article.page_diagnostics
+            )
+        )
+        page_summary = next(
+            row for row in article.page_diagnostics if row.get("kind") == "page_summary"
+        )
+        self.assertFalse(page_summary["ocr_performed"])
+
     def test_reference_numbering_must_start_at_one(self) -> None:
         document = PdfTextDocument(
             relative_path=PDF_RELATIVE_PATH,
@@ -690,7 +1574,7 @@ class PdfArticleExtractionTests(unittest.TestCase):
 
 
 class PipelineSourceSelectionTests(unittest.TestCase):
-    def test_title_identity_accepts_only_equivalent_hyphen_glyphs(self) -> None:
+    def test_title_identity_accepts_only_safe_presentation_equivalents(self) -> None:
         article = _article()
         article.title = "Synthetic MMP-9 Article"
         metadata = RecordMetadata(
@@ -706,9 +1590,141 @@ class PipelineSourceSelectionTests(unittest.TestCase):
         _reconcile_article_title(article, metadata)
 
         self.assertEqual(article.title, metadata.title)
+        article.title = "Synthetic pK_{a} Article"
+        script_metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title="Synthetic pKa Article",
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+        _reconcile_article_title(article, script_metadata)
+        self.assertEqual(article.title, script_metadata.title)
+
+        article.title = 'Synthetic “quoted” Author’s Article'
+        quote_metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title='Synthetic "quoted" Author\'s Article',
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+        _reconcile_article_title(article, quote_metadata)
+        self.assertEqual(article.title, quote_metadata.title)
+
+        article.title = "Synthetic pK_{b} Article"
+        with self.assertRaisesRegex(ExtractionError, "title does not match"):
+            _reconcile_article_title(article, script_metadata)
+
         article.title = "Synthetic MMP\u20139 Article"
         with self.assertRaisesRegex(ExtractionError, "title does not match"):
             _reconcile_article_title(article, metadata)
+
+        article.title = "Synthetic «quoted» Author's Article"
+        with self.assertRaisesRegex(ExtractionError, "title does not match"):
+            _reconcile_article_title(article, quote_metadata)
+
+    def test_title_identity_accepts_terminal_stop_with_cite_card_doi(self) -> None:
+        article = _article()
+        article.title = "Synthetic Article"
+        metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title="Synthetic Article.",
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+
+        with TemporaryDirectory() as temporary:
+            source_html = Path(temporary) / "main.html"
+            source_html.write_text(
+                '<html><body><div id="getCitation">'
+                '<a href="https://doi.org/10.0000/synthetic">DOI</a>'
+                "</div></body></html>",
+                encoding="utf-8",
+            )
+            _reconcile_article_title(article, metadata, source_html=source_html)
+
+        self.assertEqual(article.title, metadata.title)
+
+    def test_title_identity_accepts_unicode_minus_as_hyphen_with_cite_card_doi(self) -> None:
+        article = _article()
+        article.title = "Synthetic Polyamide\u2212DNA Article"
+        metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title="Synthetic Polyamide-DNA Article",
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+
+        with TemporaryDirectory() as temporary:
+            source_html = Path(temporary) / "main.html"
+            source_html.write_text(
+                '<html><body><div id="getCitation">'
+                '<a href="https://doi.org/10.0000/synthetic">DOI</a>'
+                "</div></body></html>",
+                encoding="utf-8",
+            )
+            _reconcile_article_title(article, metadata, source_html=source_html)
+
+        self.assertEqual(article.title, metadata.title)
+
+    def test_title_identity_rejects_unicode_minus_with_reference_doi_only(self) -> None:
+        article = _article()
+        article.title = "Synthetic Polyamide\u2212DNA Article"
+        metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title="Synthetic Polyamide-DNA Article",
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+
+        with TemporaryDirectory() as temporary:
+            source_html = Path(temporary) / "main.html"
+            source_html.write_text(
+                '<html><body><div id="references">'
+                '<a href="https://doi.org/10.0000/synthetic">DOI</a>'
+                "</div></body></html>",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ExtractionError, "title does not match"):
+                _reconcile_article_title(article, metadata, source_html=source_html)
+
+    def test_title_identity_rejects_terminal_stop_with_reference_doi_only(self) -> None:
+        article = _article()
+        article.title = "Synthetic Article"
+        metadata = RecordMetadata(
+            record_id=RECORD_ID,
+            title="Synthetic Article.",
+            authors=("Test Author",),
+            journal="Synthetic Journal",
+            publication_year=2000,
+            doi="10.0000/synthetic",
+            document_type="research article",
+        )
+
+        with TemporaryDirectory() as temporary:
+            source_html = Path(temporary) / "main.html"
+            source_html.write_text(
+                '<html><body><div id="references">'
+                '<a href="https://doi.org/10.0000/synthetic">DOI</a>'
+                "</div></body></html>",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ExtractionError, "title does not match"):
+                _reconcile_article_title(article, metadata, source_html=source_html)
 
     def _source(
         self, root: Path, role: str, relative_path: str, content: bytes, detected: str
@@ -725,7 +1741,7 @@ class PipelineSourceSelectionTests(unittest.TestCase):
             detected_format=detected,
         )
 
-    def _run(self, *, include_html: bool):
+    def _run(self, *, include_html: bool, include_pdf_supplement: bool = False):
         temporary = TemporaryDirectory()
         root = Path(temporary.name)
         (root / "papers (private)" / "staging").mkdir(parents=True)
@@ -748,6 +1764,16 @@ class PipelineSourceSelectionTests(unittest.TestCase):
                     HTML_RELATIVE_PATH,
                     b"<html><article>Synthetic</article></html>",
                     "text/html",
+                )
+            )
+        if include_pdf_supplement:
+            sources.append(
+                self._source(
+                    root,
+                    "supplement",
+                    f"papers (private)/{RECORD_ID}/supplementary/figures.pdf",
+                    b"%PDF-image-only-supplement",
+                    "application/pdf",
                 )
             )
 
@@ -826,9 +1852,12 @@ class PipelineSourceSelectionTests(unittest.TestCase):
         self.assertFalse((result.extraction_root / "record.md").exists())
 
     def test_html_remains_primary_when_both_html_and_pdf_exist(self) -> None:
-        _result, article, mocks = self._run(include_html=True)
+        _result, article, mocks = self._run(
+            include_html=True, include_pdf_supplement=True
+        )
         pdf_extractor = mocks[3]
         html_extractor = mocks[4]
+        pdf_text_verifier = mocks[12]
 
         html_extractor.assert_called_once()
         pdf_extractor.assert_not_called()
@@ -837,6 +1866,8 @@ class PipelineSourceSelectionTests(unittest.TestCase):
             "automated_pdf_html_alignment_not_implemented",
             {warning["code"] for warning in article.warnings},
         )
+        verified_sources = pdf_text_verifier.call_args.args[1]
+        self.assertEqual([source.role for source in verified_sources], ["main_pdf"])
 
     @unittest.skipUnless(os.name == "nt", "Windows ACL regression test")
     def test_staged_run_keeps_parent_acl_inheritance_on_windows(self) -> None:

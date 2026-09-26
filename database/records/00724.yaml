@@ -1,0 +1,16 @@
+document_type: research_article
+publication_stage: publication
+title: "Relative binding affinities of distamycin and its analog to d(CGCAAGTTGGC).d(GCCAACTTGCG): comparison of simulation results with experiment."
+authors:
+  - name: "S B Singh"
+  - name: "D E Wemmer"
+  - name: "P A Kollman"
+doi: "10.1073/pnas.91.16.7673"
+publication_year: 1994
+journal: "Proceedings of the National Academy of Sciences"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

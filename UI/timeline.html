@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Explore all PIP LitDB papers on a timeline by publication year."
+    />
+    <title>PIP LitDB — Paper timeline</title>
+    <link rel="stylesheet" href="./styles.css?v=paper-timeline" />
+  </head>
+  <body data-view="timeline">
+    <a class="skip-link" href="#records">Skip to timeline</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand-block">
+          <p class="eyebrow">PIP LitDB · Public metadata database</p>
+          <h1>Paper timeline</h1>
+          <p class="intro">Every paper, arranged by publication year.</p>
+          <nav class="view-nav" aria-label="Database views">
+            <a href="./">Browse papers</a>
+            <a href="./timeline.html" aria-current="page">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 4v16M5 6h14M5 12h10M5 18h14" />
+                <circle cx="5" cy="6" r="2" />
+                <circle cx="5" cy="12" r="2" />
+                <circle cx="5" cy="18" r="2" />
+              </svg>
+              Timeline
+            </a>
+          </nav>
+        </div>
+
+        <div class="header-actions">
+          <a class="github-button" href="https://github.com/7jameslondon/PIPLitDB">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.52-1.34-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.29-5.27-5.68 0-1.25.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18A10.9 10.9 0 0 1 12 6.15c.98 0 1.95.13 2.87.39 2.2-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.73.8 1.18 1.83 1.18 3.08 0 4.4-2.7 5.38-5.28 5.67.42.36.78 1.07.78 2.16v3.24c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"
+              />
+            </svg>
+            View on GitHub
+          </a>
+
+          <a class="github-button" href="https://github.com/7jameslondon/PIPLitDB/issues">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M12 7v6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <circle cx="12" cy="17" r="1" fill="currentColor" />
+            </svg>
+            Report an issue or missing paper
+          </a>
+
+          <div class="source-card" aria-live="polite">
+            <span id="source-dot" class="source-dot" aria-hidden="true"></span>
+            <div>
+              <span class="source-label">Data source</span>
+              <strong id="source-name">Connecting…</strong>
+              <a id="source-link" class="source-link" hidden></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="database-shell" aria-label="Paper timeline">
+        <section class="controls" aria-label="Search and filter records">
+          <div class="search-field">
+            <label for="search">Search the timeline</label>
+            <div class="search-input-wrap">
+              <span aria-hidden="true">⌕</span>
+              <input
+                id="search"
+                type="search"
+                placeholder="Title, author, journal or series, DOI, ID…"
+                autocomplete="off"
+                disabled
+              />
+            </div>
+          </div>
+
+          <div class="filter-grid">
+            <fieldset id="year-range-filter" class="year-range-filter" disabled>
+              <legend>Year range</legend>
+              <div class="year-range-control">
+                <input
+                  id="year-min-input"
+                  class="year-range-number"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="From year"
+                  autocomplete="off"
+                />
+                <div id="year-range-slider" class="year-range-slider">
+                  <span class="year-range-track" aria-hidden="true"></span>
+                  <span class="year-range-selection" aria-hidden="true"></span>
+                  <input
+                    id="year-min-slider"
+                    class="year-range-slider-input is-min"
+                    type="range"
+                    step="1"
+                    aria-label="Earliest publication year"
+                  />
+                  <input
+                    id="year-max-slider"
+                    class="year-range-slider-input is-max"
+                    type="range"
+                    step="1"
+                    aria-label="Latest publication year"
+                  />
+                </div>
+                <input
+                  id="year-max-input"
+                  class="year-range-number"
+                  type="number"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="To year"
+                  autocomplete="off"
+                />
+              </div>
+            </fieldset>
+            <label>
+              <span>Document type</span>
+              <select id="document-type-filter" disabled>
+                <option value="">All types</option>
+              </select>
+            </label>
+            <label>
+              <span>Publication stage</span>
+              <select id="publication-stage-filter" disabled>
+                <option value="">All stages</option>
+              </select>
+            </label>
+            <label>
+              <span>Record status</span>
+              <select id="status-filter" disabled>
+                <option value="">All statuses</option>
+              </select>
+            </label>
+            <label>
+              <span>Sort by</span>
+              <select id="sort" disabled>
+                <option value="year-asc">Oldest first</option>
+                <option value="year-desc">Newest first</option>
+              </select>
+            </label>
+            <button id="clear-filters" class="clear-button" type="button" disabled>
+              Clear filters
+            </button>
+          </div>
+        </section>
+
+        <section id="timeline-overview" class="timeline-overview" aria-labelledby="timeline-chart-title" hidden>
+          <div class="timeline-overview-heading">
+            <h2 id="timeline-chart-title">Publications per year</h2>
+            <p id="timeline-summary" class="timeline-summary"></p>
+          </div>
+          <p class="timeline-chart-hint">Select a bar to jump to a year. Bar heights show the number of matching papers.</p>
+          <div class="timeline-chart-scroll">
+            <nav id="timeline-chart" class="timeline-chart" aria-label="Jump to a publication year"></nav>
+          </div>
+          <a id="timeline-undated" class="timeline-undated" href="#year-unknown" hidden></a>
+        </section>
+
+        <p id="record-count" class="record-count" role="status" aria-live="polite">
+          Loading records…
+        </p>
+
+        <div id="loading-state" class="loading-grid" aria-label="Loading records">
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-author"></div>
+            <div class="skeleton-line skeleton-journal"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title is-short"></div>
+            <div class="skeleton-line skeleton-author"></div>
+            <div class="skeleton-line skeleton-journal is-short"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+          <article class="record-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-title is-long"></div>
+            <div class="skeleton-line skeleton-author is-short"></div>
+            <div class="skeleton-line skeleton-journal"></div>
+            <div class="record-card-bottom skeleton-card-bottom">
+              <div class="tag-row">
+                <span class="skeleton-shape skeleton-tag"></span>
+                <span class="skeleton-shape skeleton-tag is-short"></span>
+                <span class="skeleton-shape skeleton-tag is-warm"></span>
+              </div>
+              <span class="skeleton-shape skeleton-button"></span>
+            </div>
+          </article>
+        </div>
+
+        <section id="records" class="paper-timeline" aria-busy="true" aria-label="Papers grouped by publication year"></section>
+
+        <section id="empty-state" class="empty-state" hidden>
+          <p class="empty-mark" aria-hidden="true">∅</p>
+          <h3 id="empty-title">No matching records</h3>
+          <p id="empty-detail">Try a broader search or clear the active filters.</p>
+          <button id="empty-clear-filters" class="primary-button" type="button">
+            Show all records
+          </button>
+        </section>
+
+        <section id="error-state" class="error-state" hidden>
+          <p class="section-kicker">Could not load the database</p>
+          <h3 id="error-title">The records are unavailable.</h3>
+          <p id="error-detail"></p>
+          <button id="retry-load" class="primary-button" type="button">Try again</button>
+        </section>
+        <p class="timeline-footer"><a href="#top">Back to timeline controls ↑</a></p>
+      </section>
+    </main>
+
+    <dialog id="record-dialog" class="record-dialog" aria-labelledby="dialog-title">
+      <div class="dialog-frame">
+        <div class="dialog-toolbar">
+          <span id="dialog-id" class="record-id"></span>
+          <button id="dialog-close" class="icon-button" type="button" aria-label="Close record details">
+            ×
+          </button>
+        </div>
+        <div id="dialog-content" class="dialog-content"></div>
+      </div>
+    </dialog>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script defer src="./config.js"></script>
+    <script defer src="./app.js?v=paper-timeline"></script>
+  </body>
+</html>
