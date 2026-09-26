@@ -1,0 +1,20 @@
+document_type: research_article
+publication_stage: publication
+title: "Evaluation of Docking Machine Learning and Molecular Dynamics Methodologies for DNA-Ligand Systems"
+authors:
+  - name: "Tiago Alves de Oliveira"
+  - name: "Lucas Rolim Medaglia"
+  - name: "Eduardo Habib Bechelane Maia"
+  - name: "Letícia Cristina Assis"
+  - name: "Paulo Batista de Carvalho"
+  - name: "Alisson Marques da Silva"
+  - name: "Alex Gutterres Taranto"
+doi: "10.3390/ph15020132"
+publication_year: 2022
+journal: "Pharmaceuticals"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

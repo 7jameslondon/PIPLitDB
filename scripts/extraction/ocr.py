@@ -434,8 +434,9 @@ def parse_pdf_ocr_config(
     ``page_regions`` preserves the caller's page and ``reading_order`` list
     order.  Figure/scheme crop boxes are always added as visual exclusions.
     Their ``caption_page``/``caption_box`` fields become separate caption OCR
-    regions, so a caption is recognized exactly once without exposing the
-    scientific image to OCR.
+    regions unless explicit source-reviewed caption text is supplied. Reviewed
+    captions retain their geometry in the crop specification and article; they
+    do not require OCR, including when their box lies inside the visual crop.
     """
 
     if not isinstance(config, Mapping):
@@ -502,33 +503,91 @@ def parse_pdf_ocr_config(
         if visual_role is None:
             continue
         asset_id = _portable_id(raw_crop.get("asset_id"), "PDF crop asset_id")
-        page = _positive_integer(raw_crop.get("page"), "PDF crop page")
-        crop_box = _validate_box(raw_crop.get("box"), "PDF crop box")
-        key = (page, crop_box, visual_role)
-        if key not in exclusion_keys:
-            exclusions.append(
-                PdfVisualExclusion(
-                    exclusion_id=f"crop-{asset_id}",
-                    page=page,
-                    box=crop_box,
-                    role=visual_role,
+        raw_parts = raw_crop.get("parts")
+        if raw_parts is None:
+            visual_parts = [
+                (
+                    _positive_integer(raw_crop.get("page"), "PDF crop page"),
+                    _validate_box(raw_crop.get("box"), "PDF crop box"),
                 )
-            )
-            exclusion_keys.add(key)
+            ]
+        else:
+            if (
+                not isinstance(raw_parts, (list, tuple))
+                or len(raw_parts) < 2
+                or "page" in raw_crop
+                or "box" in raw_crop
+            ):
+                raise OcrConfigurationError(
+                    f"PDF crop {crop_index} parts must contain at least two mappings "
+                    "and cannot be combined with page/box"
+                )
+            visual_parts = []
+            for part_index, raw_part in enumerate(raw_parts, start=1):
+                if not isinstance(raw_part, Mapping):
+                    raise OcrConfigurationError(
+                        f"PDF crop {crop_index} part {part_index} must be a mapping"
+                    )
+                visual_parts.append(
+                    (
+                        _positive_integer(
+                            raw_part.get("page"),
+                            f"PDF crop {crop_index} part {part_index} page",
+                        ),
+                        _validate_box(
+                            raw_part.get("box"),
+                            f"PDF crop {crop_index} part {part_index} box",
+                        ),
+                    )
+                )
+        for part_index, (page, crop_box) in enumerate(visual_parts, start=1):
+            key = (page, crop_box, visual_role)
+            if key not in exclusion_keys:
+                suffix = (
+                    ""
+                    if len(visual_parts) == 1
+                    else f"-part-{part_index:03d}"
+                )
+                exclusions.append(
+                    PdfVisualExclusion(
+                        exclusion_id=f"crop-{asset_id}{suffix}",
+                        page=page,
+                        box=crop_box,
+                        role=visual_role,
+                    )
+                )
+                exclusion_keys.add(key)
 
+        has_reviewed_caption = "caption_reviewed_value" in raw_crop
+        if has_reviewed_caption:
+            reviewed_caption = raw_crop["caption_reviewed_value"]
+            if not isinstance(reviewed_caption, str) or not reviewed_caption.strip():
+                raise OcrConfigurationError(
+                    f"PDF crop {crop_index} caption_reviewed_value must be nonempty text"
+                )
         caption_box = raw_crop.get("caption_box")
         if caption_box is None:
+            if has_reviewed_caption:
+                raise OcrConfigurationError(
+                    f"PDF crop {crop_index} reviewed caption requires caption_box"
+                )
             continue
         caption_page = _positive_integer(
-            raw_crop.get("caption_page", page), "PDF crop caption_page"
+            raw_crop.get("caption_page", visual_parts[0][0]),
+            "PDF crop caption_page",
         )
+        caption_box = _validate_box(caption_box, "PDF crop caption_box")
+        if has_reviewed_caption:
+            # Never weaken the visual exclusion to make an overlapping caption
+            # readable. The article parser uses the reviewed text and exact box.
+            continue
         caption_id = f"caption-{asset_id}"
         _reserve_id(caption_id, region_ids, "OCR region")
         regions.append(
             PdfOcrRegion(
                 region_id=caption_id,
                 page=caption_page,
-                box=_validate_box(caption_box, "PDF crop caption_box"),
+                box=caption_box,
                 role="caption",
                 asset_id=asset_id,
             )

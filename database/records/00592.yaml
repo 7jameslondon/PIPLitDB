@@ -16,5 +16,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Review article (vol. 18, issue 12, pp. 15357-15397; PMID 24335616, PMCID PMC6270009), published 2013-12-11. The indexed local PDF is the complete 41-page MDPI publisher version of record, distributed under the CC BY 3.0 license."

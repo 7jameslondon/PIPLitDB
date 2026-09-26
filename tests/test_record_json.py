@@ -228,6 +228,45 @@ def _fixture() -> tuple[
 
 
 class RecordJsonTests(unittest.TestCase):
+    def test_composite_asset_coverage_lists_each_reviewed_part(self) -> None:
+        metadata, article, supplements, assets = _fixture()
+        composite = assets[0]
+        composite.pop("page")
+        composite.pop("box")
+        composite["parts"] = [
+            {"page": 6, "box": [45, 50, 550, 690]},
+            {"page": 7, "box": [45, 50, 550, 690]},
+            {"page": 8, "box": [45, 50, 550, 670]},
+        ]
+
+        result = build_record_json(metadata, article, supplements, assets)
+        coverage = next(
+            row
+            for row in result.coverage
+            if row["coverage_id"] == "asset-figure_001"
+        )
+        self.assertEqual(
+            coverage["source_locator"],
+            (
+                "parts: page 6, box [45, 50, 550, 690]; "
+                "page 7, box [45, 50, 550, 690]; "
+                "page 8, box [45, 50, 550, 670]"
+            ),
+        )
+
+        # Near miss: a single part is not a composite and must not claim
+        # complete multi-page provenance.
+        composite["parts"] = [{"page": 6, "box": [45, 50, 550, 690]}]
+        near_miss = build_record_json(metadata, article, supplements, assets)
+        near_miss_coverage = next(
+            row
+            for row in near_miss.coverage
+            if row["coverage_id"] == "asset-figure_001"
+        )
+        self.assertEqual(
+            near_miss_coverage["source_locator"], "copied or generated asset"
+        )
+
     def test_builds_content_only_lossless_record_with_inline_tables(self) -> None:
         metadata, article, supplements, assets = _fixture()
         result = build_record_json(metadata, article, supplements, assets)
@@ -352,6 +391,30 @@ class RecordJsonTests(unittest.TestCase):
             content["plain_text"], "1. 1. Introduction\n1. These ..."
         )
 
+    def test_lettered_ordered_list_preserves_authored_markers(self) -> None:
+        metadata, article, supplements, assets = _fixture()
+        article.sections[0].blocks = [
+            ContentBlock(
+                block_id="main-list-0001",
+                kind="list",
+                markdown="a. First substep\nb. Second substep",
+                plain_text="a. First substep\nb. Second substep",
+                source_path="html/main.html",
+                source_locator="//ol[@type='a'][1]",
+            )
+        ]
+
+        payload = build_record_json(metadata, article, supplements, assets).payload
+
+        content = payload["sections"][0]["blocks"][0]["content"]
+        self.assertEqual(
+            content["html"],
+            '<ol type="a"><li>First substep</li><li>Second substep</li></ol>',
+        )
+        self.assertEqual(
+            content["plain_text"], "a. First substep\nb. Second substep"
+        )
+
     def test_nonlist_leading_markers_are_semantic_content(self) -> None:
         for plain, safe_html in (
             ("1. Introduction", "Introduction"),
@@ -406,6 +469,18 @@ class RecordJsonTests(unittest.TestCase):
 
         content = payload["sections"][0]["blocks"][0]["content"]
         self.assertEqual(content["html"], "HF/6-31G** energy minimization")
+
+    def test_expands_pdf_italic_runs_with_escaped_literal_star(self) -> None:
+        metadata, article, supplements, assets = _fixture()
+        block = article.sections[0].blocks[0]
+        block.plain_text = "*,‡ Author Name"
+        block.markdown = r"*\*,‡* *Author Name*"
+
+        payload = build_record_json(metadata, article, supplements, assets).payload
+        content = payload["sections"][0]["blocks"][0]["content"]
+
+        self.assertEqual(content["html"], "<em>*,‡</em> <em>Author Name</em>")
+        self.assertEqual(content["plain_text"], "*,‡ Author Name")
 
     def test_section_heading_uses_safe_rich_text(self) -> None:
         metadata, article, supplements, assets = _fixture()
@@ -466,6 +541,47 @@ class RecordJsonTests(unittest.TestCase):
 
         content = payload["sections"][0]["blocks"][0]["content"]
         self.assertEqual(content["plain_text"], "H^{2}O")
+
+    def test_coalesces_adjacent_same_script_runs_split_by_emphasis(self) -> None:
+        metadata, article, supplements, assets = _fixture()
+        block = article.sections[0].blocks[0]
+        block.plain_text = "P21^{WAF1/CIP1} expression"
+        block.markdown = (
+            "<em>P21<sup>WAF1</sup></em><sup>/</sup>"
+            "<em><sup>CIP1</sup></em> expression"
+        )
+
+        payload = build_record_json(metadata, article, supplements, assets).payload
+
+        content = payload["sections"][0]["blocks"][0]["content"]
+        self.assertEqual(content["plain_text"], "P21^{WAF1/CIP1} expression")
+        self.assertEqual(
+            content["html"],
+            "<em>P21<sup>WAF1</sup></em><sup>/</sup>"
+            "<em><sup>CIP1</sup></em> expression",
+        )
+
+    def test_coalesces_adjacent_plain_subscripts_split_by_emphasis(self) -> None:
+        metadata, article, supplements, assets = _fixture()
+        block = article.sections[0].blocks[0]
+        block.plain_text = "ΔT_{m(}_{1}_{)} = 1.6 °C"
+        block.markdown = (
+            "Δ<em>T</em><sub>m(</sub><strong><sub>1</sub></strong>"
+            "<sub>)</sub> = 1.6 °C"
+        )
+
+        payload = build_record_json(metadata, article, supplements, assets).payload
+
+        content = payload["sections"][0]["blocks"][0]["content"]
+        self.assertEqual(content["plain_text"], "ΔT_{m(1)} = 1.6 °C")
+
+    def test_does_not_coalesce_separated_or_mixed_script_runs(self) -> None:
+        self.assertEqual(
+            plain_text_from_safe_html(
+                "x<sup>a</sup> <sup>b</sup>H<sub>2</sub><sup>+</sup>"
+            ),
+            "x^{a} ^{b}H_{2}^{+}",
+        )
 
     def test_does_not_overwrite_explicit_plain_script_semantics(self) -> None:
         metadata, article, supplements, assets = _fixture()

@@ -224,6 +224,60 @@ class MetadataValidationTests(unittest.TestCase):
         self.assertTrue(report.passed, report.findings)
         self.assertEqual(report.record_count, 1)
 
+    def test_uncredited_correction_with_explanatory_note_passes(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "document_type: research_article", "document_type: correction"
+            ).replace('authors:\n  - name: "Alex Example"', "authors: []")
+            + '\npip_litdb_notes: "The published correction has no author byline."\n',
+        )
+        report = validate_repository(self.root)
+        self.assertTrue(report.passed, report.findings)
+
+    def test_uncredited_correction_requires_explanatory_note(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "document_type: research_article", "document_type: correction"
+            ).replace('authors:\n  - name: "Alex Example"', "authors: []"),
+        )
+        self.assertIn("schema.required", self.error_codes())
+
+    def test_credited_correction_does_not_require_note(self) -> None:
+        self.write_record(
+            "00001",
+            VALID_RECORD.replace(
+                "document_type: research_article", "document_type: correction"
+            ),
+        )
+        report = validate_repository(self.root)
+        self.assertTrue(report.passed, report.findings)
+
+    def test_other_document_types_reject_empty_authors(self) -> None:
+        for document_type in ("research_article", "review", "book"):
+            with self.subTest(document_type=document_type):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        "document_type: research_article",
+                        f"document_type: {document_type}",
+                    ).replace('authors:\n  - name: "Alex Example"', "authors: []")
+                    + '\npip_litdb_notes: "No byline supplied."\n',
+                )
+                self.assertIn("schema.minItems", self.error_codes())
+
+    def test_correction_still_requires_authors_array(self) -> None:
+        for replacement, error_code in (("", "schema.required"), ("authors: null", "schema.type")):
+            with self.subTest(replacement=replacement):
+                self.write_record(
+                    "00001",
+                    VALID_RECORD.replace(
+                        "document_type: research_article", "document_type: correction"
+                    ).replace('authors:\n  - name: "Alex Example"', replacement),
+                )
+                self.assertIn(error_code, self.error_codes())
+
     def test_trusted_rules_root_ignores_candidate_rule_changes(self) -> None:
         with tempfile.TemporaryDirectory() as trusted_directory:
             trusted_root = Path(trusted_directory)

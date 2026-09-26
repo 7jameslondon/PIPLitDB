@@ -1,0 +1,24 @@
+document_type: research_article
+publication_stage: preprint
+title: "Preclinical Study of DNA-Recognized Peptide Pyrrole-Imidazole Polyamide Targeting Human TGF-β1 Promoter for Progressive Renal Diseases in Common Marmoset"
+authors:
+  - name: "Masari Otsuki"
+  - name: "Noboru Fukuda"
+  - name: "Takashi Inoue"
+  - name: "Takayuki Mineshige"
+  - name: "Tomoyasu Otsuki"
+  - name: "Shu Horikoshi"
+  - name: "Morito Endo"
+  - name: "Masanori Abe"
+doi: "10.20944/preprints201908.0090.v1"
+publication_year: 2019
+journal: "Preprints.org"
+related_papers:
+  - pip_litdb_id: "00059"
+    relationship_type: is_preprint_of
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

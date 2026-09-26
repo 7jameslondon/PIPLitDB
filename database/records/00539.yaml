@@ -18,5 +18,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Original article (vol. 6, issue 4, pp. 2307–2312; PMID 29308145; PMCID PMC5645774), first published online 2015-01-20. The local source is the complete six-page publisher article PDF."

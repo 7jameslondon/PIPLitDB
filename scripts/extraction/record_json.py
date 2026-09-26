@@ -235,8 +235,13 @@ def _canonical_plain_for_rich(plain_text: str, rendered: str) -> str | None:
     flattened_plain = normalize_visible_text(plain_text)
     flattened_rich = normalize_visible_text(semantic_plain)
     if not _EXPLICIT_PLAIN_SCRIPT.search(plain_text):
-        flattened_plain = _SCRIPT_NOTATION.sub(r"\1", flattened_plain)
-        flattened_rich = _SCRIPT_NOTATION.sub(r"\1", flattened_rich)
+        # A raised chemical group can itself contain a subscript, e.g.
+        # <sup>H<sub>2</sub>N</sup>. Flatten innermost runs first, then
+        # enclosing runs, only in this geometry-derived plain-text branch.
+        while _SCRIPT_NOTATION.search(flattened_plain):
+            flattened_plain = _SCRIPT_NOTATION.sub(r"\1", flattened_plain)
+        while _SCRIPT_NOTATION.search(flattened_rich):
+            flattened_rich = _SCRIPT_NOTATION.sub(r"\1", flattened_rich)
     flattened_plain = _REFERENCE_BRACKETS.sub(r"\1", flattened_plain)
     flattened_rich = _REFERENCE_BRACKETS.sub(r"\1", flattened_rich)
     # Geometry-derived PDF text can insert a space at a script boundary (for
@@ -612,7 +617,24 @@ def _asset_coverage(
 ) -> dict[str, Any]:
     page = raw.get("page")
     box = raw.get("box")
-    locator = f"page {page}, box {box}" if page else "copied or generated asset"
+    parts = raw.get("parts")
+    if page:
+        locator = f"page {page}, box {box}"
+    elif (
+        isinstance(parts, list)
+        and len(parts) >= 2
+        and all(
+            isinstance(part, Mapping)
+            and part.get("page")
+            and isinstance(part.get("box"), list)
+            for part in parts
+        )
+    ):
+        locator = "parts: " + "; ".join(
+            f"page {part['page']}, box {part['box']}" for part in parts
+        )
+    else:
+        locator = "copied or generated asset"
     return _coverage(
         coverage_id=f"asset-{asset['asset_id']}",
         content_kind="asset_link",

@@ -8,7 +8,7 @@
       content="Browse the public PIP LitDB metadata records."
     />
     <title>PIP LitDB — Public metadata database</title>
-    <link rel="stylesheet" href="./styles.css?v=compact-cards" />
+    <link rel="stylesheet" href="./styles.css?v=paper-timeline" />
   </head>
   <body>
     <a class="skip-link" href="#records">Skip to records</a>
@@ -19,6 +19,18 @@
           <p class="eyebrow">Public metadata database</p>
           <h1>PIP LitDB</h1>
           <p class="intro">Literature about pyrrole–imidazole polyamides.</p>
+          <nav class="view-nav" aria-label="Database views">
+            <a href="./" aria-current="page">Browse papers</a>
+            <a href="./timeline.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 4v16M5 6h14M5 12h10M5 18h14" />
+                <circle cx="5" cy="6" r="2" />
+                <circle cx="5" cy="12" r="2" />
+                <circle cx="5" cy="18" r="2" />
+              </svg>
+              Timeline
+            </a>
+          </nav>
         </div>
 
         <div class="header-actions">
@@ -238,6 +250,6 @@
 
     <script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script defer src="./config.js"></script>
-    <script defer src="./app.js?v=jamies-human-only-notes"></script>
+    <script defer src="./app.js?v=paper-timeline"></script>
   </body>
 </html>

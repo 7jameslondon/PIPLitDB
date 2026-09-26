@@ -19,5 +19,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Research article (vol. 19, issue 18, pp. 1979-1987; PMID 29974647, PMCID PMC6398938), Version of Record published online 2018-08-15 and issue published online 2018-09-18. The indexed local PDF is the complete nine-page Wiley version of record."

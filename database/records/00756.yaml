@@ -1,0 +1,18 @@
+document_type: research_article
+publication_stage: publication
+title: "Binding of an antitumor drug to DNA, Netropsin and C-G-C-G-A-A-T-T-BrC-G-C-G"
+authors:
+  - name: "Mary L. Kopka"
+  - name: "Chun Yoon"
+  - name: "David Goodsell"
+  - name: "Philip Pjura"
+  - name: "Richard E. Dickerson"
+doi: "10.1016/0022-2836(85)90171-8"
+publication_year: 1985
+journal: "Journal of Molecular Biology"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

@@ -27,6 +27,7 @@ EXPECTED_COUNTS = {
     "main_schemes": 1,
     "main_figures_and_schemes": 2,
     "tables": 1,
+    "supplementary_tables": 0,
     "supplementary_figures": 1,
     "supplementary_files": 1,
     "presentation_embedded_files": 0,
@@ -438,6 +439,16 @@ class RecordJsonValidationTests(unittest.TestCase):
     def _codes(report: object) -> set[str]:
         return {finding.code for finding in report.findings}  # type: ignore[attr-defined]
 
+    def test_all_empty_article_sections_are_a_scientific_finding(self) -> None:
+        payload = _payload()
+        for section in payload["sections"]:  # type: ignore[index]
+            section["blocks"] = []
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertIn("article_body_empty", self._codes(report))
+
     def test_valid_declared_json_candidate_passes_with_json_counts_and_title(self) -> None:
         extraction, diagnostic, _ = self._candidate()
 
@@ -508,6 +519,21 @@ class RecordJsonValidationTests(unittest.TestCase):
         supplement["figures"] = _payload()["supplements"][0]["figures"]  # type: ignore[index]
         self.assertEqual(_record_json_counts(payload)["supplementary_figures"], 1)
 
+    def test_record_scoped_supplement_figure_counts_as_supplementary(self) -> None:
+        payload = _payload()
+        payload["supplements"] = []
+        payload["figures"] = [
+            {
+                "figure_id": "html_supplement_figure_1",
+                "kind": "supplement_figure",
+                "label": "Supplementary Fig. 1",
+            }
+        ]
+
+        counts = _record_json_counts(payload)
+        self.assertEqual(counts["main_figures"], 0)
+        self.assertEqual(counts["supplementary_figures"], 1)
+
     def test_counts_equation_blocks_and_linked_presentation_workbooks(self) -> None:
         payload = _payload()
         section = payload["sections"][0]  # type: ignore[index]
@@ -526,6 +552,13 @@ class RecordJsonValidationTests(unittest.TestCase):
             {"block_id": "equation-003", "kind": "math", "content": _rich("z")},
         ]
         supplement = payload["supplements"][0]  # type: ignore[index]
+        supplement["blocks"] = [  # type: ignore[index]
+            {
+                "block_id": "supplement-equation-001",
+                "kind": "equation",
+                "content": _rich("u"),
+            }
+        ]
         supplement["tables"] = [  # type: ignore[index]
             {
                 "table_id": "supplement_001_slide_001_chart_001",
@@ -562,8 +595,33 @@ class RecordJsonValidationTests(unittest.TestCase):
 
         counts = _record_json_counts(payload)
 
-        self.assertEqual(counts["equations"], 3)
+        self.assertEqual(counts["equations"], 4)
+        self.assertEqual(counts["tables"], 1)
+        self.assertEqual(counts["supplementary_tables"], 1)
         self.assertEqual(counts["presentation_embedded_files"], 1)
+
+    def test_main_and_supplementary_table_expectations_are_distinct(self) -> None:
+        payload = _payload()
+        supplement = payload["supplements"][0]  # type: ignore[index]
+        supplement_table = deepcopy(payload["tables"][0])  # type: ignore[index]
+        supplement_table["table_id"] = "supplement_001_table_s1"
+        supplement_table["label"] = "Table S1"
+        supplement_table["source_kind"] = "document"
+        supplement["tables"] = [supplement_table]  # type: ignore[index]
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+        expected = dict(EXPECTED_COUNTS)
+        expected["supplementary_tables"] = 1
+
+        report = validate_candidate(
+            extraction,
+            diagnostic,
+            expected_title=TITLE,
+            expected_counts=expected,
+        )
+
+        codes = self._codes(report)
+        self.assertNotIn("unknown_expected_count", codes)
+        self.assertNotIn("content_count_mismatch", codes)
 
     def test_expected_presentation_workbook_count_detects_missing_asset(self) -> None:
         extraction, diagnostic, _ = self._candidate()
@@ -639,6 +697,90 @@ class RecordJsonValidationTests(unittest.TestCase):
         payload = _payload()
         content = payload["sections"][0]["blocks"][0]["content"]  # type: ignore[index]
         content["html"] = "Opposite scientific result."
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_significance_marker_after_rich_line_break_is_not_a_list_marker(self) -> None:
+        payload = _payload()
+        caption = payload["figures"][0]["caption"]  # type: ignore[index]
+        caption["plain_text"] = "Figure 1. Result * p <0.05 vs. control."
+        caption["html"] = "Figure 1. Result<br>* <em>p</em> &lt;0.05 <em>vs.</em> control."
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertNotIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_outer_html_list_markers_are_presentation_equivalent(self) -> None:
+        payload = _payload()
+        content = payload["sections"][0]["blocks"][0]["content"]  # type: ignore[index]
+        content["plain_text"] = "- Alpha\n- Beta"
+        content["html"] = "<ul><li>Alpha</li><li>Beta</li></ul>"
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertNotIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_authored_bullet_inside_semantic_list_item_is_preserved(self) -> None:
+        payload = _payload()
+        content = payload["sections"][0]["blocks"][0]["content"]  # type: ignore[index]
+        content["plain_text"] = "- of special interest\n- • of outstanding interest"
+        content["html"] = (
+            "<ul><li>of special interest</li>"
+            "<li>• of outstanding interest</li></ul>"
+        )
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertNotIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_lettered_ordered_list_is_safe_and_text_equivalent(self) -> None:
+        payload = _payload()
+        content = payload["sections"][0]["blocks"][0]["content"]  # type: ignore[index]
+        content["plain_text"] = "a. Alpha\nb. Beta"
+        content["html"] = '<ol type="a"><li>Alpha</li><li>Beta</li></ol>'
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertNotIn("unsafe_record_html", self._codes(report))
+        self.assertNotIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_semantic_sequence_underlining_is_safe_and_text_equivalent(self) -> None:
+        payload = _payload()
+        cell = payload["tables"][0]["parts"][0]["rows"][0][0]  # type: ignore[index]
+        cell["text"] = "AATTG"
+        cell["html"] = "AA<u>TT</u><strong>G</strong>"
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertNotIn("unsafe_record_html", self._codes(report))
+        self.assertNotIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_adjacent_same_script_runs_are_one_scientific_claim(self) -> None:
+        payload = _payload()
+        content = payload["sections"][0]["blocks"][0]["content"]  # type: ignore[index]
+        content["plain_text"] = "P21^{WAF1/CIP1} expression"
+        content["html"] = (
+            "<em>P21<sup>WAF1</sup></em><sup>/<em>CIP1</em></sup> expression"
+        )
+        extraction, diagnostic, _ = self._candidate(payload=payload)
+
+        report = self._report(extraction, diagnostic)
+
+        self.assertNotIn("record_dual_text_mismatch", self._codes(report))
+
+    def test_separated_same_script_runs_remain_distinct_claims(self) -> None:
+        payload = _payload()
+        content = payload["sections"][0]["blocks"][0]["content"]  # type: ignore[index]
+        content["plain_text"] = "x^{ab}"
+        content["html"] = "x<sup>a</sup> <sup>b</sup>"
         extraction, diagnostic, _ = self._candidate(payload=payload)
 
         report = self._report(extraction, diagnostic)

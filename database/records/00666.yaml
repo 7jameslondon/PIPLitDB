@@ -1,0 +1,43 @@
+document_type: research_article
+publication_stage: publication
+title: "BRD4 recruitment into HP1 condensates desilences transcription without erasure of repressive chromatin"
+authors:
+  - name: "Christopher J. Brandon"
+  - name: "Sarah Robinson-Thiewes"
+  - name: "Mangesh Kaulage"
+  - name: "Wojciech Rosikiewicz"
+  - name: "Matthew J. Cuneo"
+  - name: "Joseph Brett"
+  - name: "Jindpreet Kandola"
+  - name: "Walter H. Lang"
+  - name: "Jonathan Low"
+  - name: "Ashraf Mohammed"
+  - name: "Adithi Danda"
+  - name: "Sam Rider"
+  - name: "Marcus Valentine"
+  - name: "Jason Ochoada"
+  - name: "Brandon Young"
+  - name: "Theresa Nguyen"
+  - name: "Sandra J. Kietlinska"
+  - name: "Aaron B. Taylor"
+  - name: "Burkhard Hoeckendorf"
+  - name: "Patrick Rodrigues"
+  - name: "Wenwei Lin"
+  - name: "Khaled Khairy"
+  - name: "Beisi Xu"
+  - name: "Anang A. Shelat"
+  - name: "Taosheng Chen"
+  - name: "Tanja Mittag"
+  - name: "Aseem Z. Ansari"
+doi: "10.1038/s41556-026-02044-1"
+publication_year: 2026
+journal: "Nature Cell Biology"
+related_papers:
+  - pip_litdb_id: "00667"
+    relationship_type: has_preprint
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

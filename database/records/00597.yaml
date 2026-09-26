@@ -14,5 +14,8 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+jamies_human_only_notes:
+  tags:
+    - read_later
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Review article (vol. 225, pp. 20-27), published online 2024-03-11 and in the May 2024 issue; PMID 38471600, PMCID PMC11055675. The indexed local PDF is the complete 21-page NIH author manuscript, made available in PMC on 2025-05-01."

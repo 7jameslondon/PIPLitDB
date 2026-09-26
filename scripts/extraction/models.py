@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 
-TABLE_SOURCE_KINDS = frozenset({"html", "pdf", "image", "presentation"})
+TABLE_SOURCE_KINDS = frozenset(
+    {"html", "pdf", "image", "presentation", "document", "spreadsheet"}
+)
 IMAGE_TABLE_SOURCE_KINDS = frozenset({"pdf", "image"})
 
 
@@ -109,6 +111,7 @@ class TableItem:
     structure_assets: dict[str, str] = field(default_factory=dict)
     image_path: str | None = None
     source_kind: str = "html"
+    machine_records: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.source_kind not in TABLE_SOURCE_KINDS:
@@ -158,6 +161,8 @@ class EmbeddedAsset:
     source_path: str
     source_locator: str
     ocr_performed: bool = False
+    parent_table_id: str | None = None
+    compound_id: str | None = None
 
 
 @dataclass
@@ -202,6 +207,7 @@ class SupplementExtraction:
     blocks: list[ContentBlock]
     figures: list[FigureItem]
     warnings: list[dict[str, Any]]
+    repairs: list[dict[str, Any]] = field(default_factory=list)
     exclusions: list[dict[str, Any]] = field(default_factory=list)
     tables: list[TableItem] = field(default_factory=list)
     assets: list[dict[str, Any]] = field(default_factory=list)

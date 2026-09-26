@@ -49,6 +49,25 @@ def _source_locator(page: int, box: tuple[float, float, float, float]) -> str:
     )
 
 
+def _escape_ocr_markdown(value: str) -> str:
+    """Escape literal OCR text before it enters the rich-text projection.
+
+    OCR observations have no source styling, but they can contain characters
+    that the downstream limited-Markdown renderer treats as markup or HTML
+    entities. Keep the plain observation unchanged and escape only its
+    Markdown twin, matching the native-PDF text path.
+    """
+
+    return (
+        value.replace("\\", "\\\\")
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("*", "\\*")
+        .replace("_", "\\_")
+    )
+
+
 def _vertical_overlap_ratio(
     first: tuple[float, float, float, float],
     second: tuple[float, float, float, float],
@@ -58,25 +77,12 @@ def _vertical_overlap_ratio(
 
 
 def _join_same_line_text(current: str, following: str) -> str:
-    """Join detector fragments, removing a duplicated overlap character."""
+    """Join detector fragments without inferring duplicated characters."""
 
     current = _clean(current)
     following = _clean(following)
     if not current:
         return following
-    if not following:
-        return current
-    maximum = min(12, len(current), len(following))
-    overlap = next(
-        (
-            size
-            for size in range(maximum, 0, -1)
-            if current[-size:].casefold() == following[:size].casefold()
-        ),
-        0,
-    )
-    if overlap:
-        following = following[overlap:]
     if not following:
         return current
     if following[0] in ",.;:!?)]}" or current[-1] in "([{/-":
@@ -127,7 +133,14 @@ def _coalesced_region_lines(region: Any) -> list[dict[str, Any]]:
     for cluster in clusters:
         cluster.sort(key=lambda item: item["bbox"][0])
         text = ""
+        seen: set[tuple[str, tuple[float, float, float, float]]] = set()
         for item in cluster:
+            # Only a repeated whole observation at identical geometry proves
+            # duplication. Adjacent words can share letters and overlap boxes.
+            identity = (item["text"], item["bbox"])
+            if identity in seen:
+                continue
+            seen.add(identity)
             text = _join_same_line_text(text, item["text"])
         box = (
             min(item["bbox"][0] for item in cluster),
@@ -264,7 +277,7 @@ def ocr_run_to_pdf_text_document(
                     page=region.page,
                     bbox=box,
                     plain_text=text,
-                    markdown=text,
+                    markdown=_escape_ocr_markdown(text),
                     source_locator=locator,
                     source_region_id=region.region_id,
                     ocr_confidence=float(line["confidence"]),

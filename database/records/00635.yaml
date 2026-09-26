@@ -18,5 +18,9 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+jamies_human_only_notes:
+  tags:
+    - read_later
+    - important_to_me
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Review article (vol. 317, article 119089; PMID 42349363), available online 2026-06-22 and assigned to the 2026-11-05 issue. The indexed local source is the complete 15-page Elsevier publisher version of record."

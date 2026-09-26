@@ -17,5 +17,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: not_applicable
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "PNAS marks this article as Free access. The publisher article page exposes only the abstract and article interface in HTML; the complete article is supplied through the official five-page PDF and PDF eReader at https://www.pnas.org/doi/pdf/10.1073/pnas.89.16.7586?download=true. The eReader explicitly reports that there are no supplementary materials to display. The indexed local PDF is the complete PNAS publisher version of record."

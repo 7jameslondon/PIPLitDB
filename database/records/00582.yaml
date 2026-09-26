@@ -24,5 +24,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "Research article (vol. 29, issue 7, article 116425; PMID 42375534, PMCID PMC13311188), published online 2026-06-17 and assigned to the eCollection dated 2026-07-17. The indexed local PDF is the complete 28-page publisher-formatted article."

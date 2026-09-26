@@ -39,19 +39,33 @@ _STRONG_PREFIX = re.compile(
     r"^\*\*(?P<strong>.+?)\*\*\s*(?:[–—]\s*)?(?P<rest>.*)$"
 )
 _REFERENCE_START = re.compile(
-    r"^(?:\[(?P<bracket_number>\d+)\]|(?P<period_number>\d+)\.)\s*"
+    r"^(?:\[(?P<bracket_number>\d+)\]|\((?P<paren_number>\d+)[)）]|(?P<close_paren_number>\d+)[)）]|(?P<period_number>\d+)\.|"
+    r"(?P<bare_number>\d+)\s+)\s*"
+)
+_AUTHOR_YEAR_REFERENCE_START = re.compile(
+    r"^\S.*\((?:18|19|20)\d{2}[a-z]?\)(?:\s|$)"
 )
 _RECEIVED = re.compile(r"^Received\b", flags=re.IGNORECASE)
 
 
 def _clean(value: str) -> str:
+    # Expand only typographic Latin ligatures, without compatibility-folding
+    # scientific superscripts, Greek letters or other semantic symbols.
+    value = value.translate(str.maketrans({"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl",
+                                          "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st"}))
     return re.sub(r"[ \t\r\f\v]+", " ", value).strip()
 
 
 def _reference_number(match: re.Match[str] | None) -> int | None:
     if match is None:
         return None
-    value = match.group("bracket_number") or match.group("period_number")
+    value = (
+        match.group("bracket_number")
+        or match.group("paren_number")
+        or match.group("close_paren_number")
+        or match.group("period_number")
+        or match.group("bare_number")
+    )
     return int(value) if value is not None else None
 
 
@@ -64,7 +78,10 @@ def _strip_source_emphasis(value: str) -> str:
     asterisks remain intact.
     """
 
-    return re.sub(r"(?<!\\)\*", "", value)
+    without_html_emphasis = re.sub(
+        r"</?(?:strong|em)>", "", value, flags=re.IGNORECASE
+    )
+    return re.sub(r"(?<!\\)\*", "", without_html_emphasis)
 
 
 def _box(value: Any, *, field: str) -> tuple[float, float, float, float]:
@@ -114,8 +131,16 @@ def _join_fragments(values: Iterable[str]) -> str:
             continue
         if not result:
             result = value
-        elif result.endswith(("-", "‐", "‑")):
-            result += value.lstrip()
+        elif re.search(r"[-‐‑](?:\*{1,2}|</(?:em|strong)>)*$", result):
+            # A source emphasis run may close after the visible line-end
+            # hyphen. Join the visible word just as in plain text, coalescing
+            # matching emphasis delimiters to avoid accidental strong markup.
+            match = re.search(r"[-‐‑](\*{1,2})$", result)
+            if match and value.startswith(match.group(1)):
+                marker = match.group(1)
+                result = result[:-len(marker)] + value[len(marker):]
+            else:
+                result += value.lstrip()
         else:
             result += " " + value
     return result
@@ -176,7 +201,34 @@ def _glyph_overrides(config: Mapping[str, Any]) -> dict[str, dict[str, str]]:
                 f"pdf_text.glyph_overrides item {index} is incomplete"
             )
         if isinstance(code_raw, str):
-            match = re.fullmatch(r"C?(\d+)", code_raw.strip(), flags=re.IGNORECASE)
+            raw_code = code_raw.strip()
+            unicode_match = re.fullmatch(
+                r"U\+([0-9A-F]{1,6})", raw_code, flags=re.IGNORECASE
+            )
+            if unicode_match:
+                codepoint = int(unicode_match.group(1), 16)
+                if codepoint > 0x10FFFF:
+                    raise PdfArticleExtractionError(
+                        f"invalid glyph code in pdf_text.glyph_overrides item {index}"
+                    )
+                semantic_key = f"U+{codepoint:04X}"
+                if semantic_key in result[font]:
+                    raise PdfArticleExtractionError(
+                        f"duplicate glyph override {font} {semantic_key}"
+                    )
+                result[font][semantic_key] = value
+                continue
+            raw_match = re.fullmatch(r"RAW:(\d+)", raw_code, flags=re.IGNORECASE)
+            if raw_match:
+                raw_value = int(raw_match.group(1))
+                semantic_key = f"RAW:{raw_value}"
+                if semantic_key in result[font]:
+                    raise PdfArticleExtractionError(
+                        f"duplicate glyph override {font} {semantic_key}"
+                    )
+                result[font][semantic_key] = value
+                continue
+            match = re.fullmatch(r"C?(\d+)", raw_code, flags=re.IGNORECASE)
             if not match:
                 raise PdfArticleExtractionError(
                     f"invalid glyph code in pdf_text.glyph_overrides item {index}"
@@ -303,11 +355,70 @@ def _configured_section_headings(
                 "title": title,
                 "level": level,
                 "evidence": evidence,
+                "source_heading_text": str(
+                    item.get("source_heading_text", "")
+                ).strip(),
                 "line_keys": {
                     (line.page, line.source_locator) for line in evidence
                 },
             }
         )
+        source_heading_text = result[-1]["source_heading_text"]
+        if source_heading_text:
+            combined_plain = _join_fragments(
+                line.plain_text for line in evidence
+            )
+            combined_markdown = _join_fragments(
+                _strip_source_emphasis(line.markdown) for line in evidence
+            )
+            if not combined_plain.startswith(source_heading_text):
+                raise PdfArticleExtractionError(
+                    f"configured section-heading target {key!r} does not begin "
+                    f"with source_heading_text {source_heading_text!r}"
+                )
+            if not combined_markdown.startswith(source_heading_text):
+                raise PdfArticleExtractionError(
+                    f"configured section-heading markdown for target {key!r} "
+                    "does not begin with source_heading_text"
+                )
+            result[-1]["body_plain"] = _clean(
+                combined_plain[len(source_heading_text) :]
+            )
+            result[-1]["body_markdown"] = _clean(
+                combined_markdown[len(source_heading_text) :]
+            )
+            if config.get("preserve_source_emphasis", False):
+                # Removing an inline heading must not strip meaningful font
+                # runs from the rest of the paragraph (compound labels,
+                # enzyme names, etc.). Consume only its visible prefix.
+                from lxml import etree, html as lxml_html
+                from .rich_text import inline_markup_to_safe_html
+                rich = inline_markup_to_safe_html(_join_fragments(line.markdown for line in evidence))
+                fragment = lxml_html.fragment_fromstring(rich, create_parent="div")
+                if not fragment.text_content().startswith(source_heading_text):
+                    raise PdfArticleExtractionError("reviewed rich heading prefix differs from source_heading_text")
+                remaining = len(source_heading_text)
+
+                def consume(node):
+                    nonlocal remaining
+                    for owner, attribute in [(node, "text")]:
+                        value = getattr(owner, attribute) or ""
+                        taken = min(remaining, len(value))
+                        setattr(owner, attribute, value[taken:])
+                        remaining -= taken
+                    for child in node:
+                        consume(child)
+                        value = child.tail or ""
+                        taken = min(remaining, len(value))
+                        child.tail = value[taken:]
+                        remaining -= taken
+
+                consume(fragment)
+                for node in reversed(list(fragment.iterdescendants())):
+                    if node.tag in {"strong", "em", "span"} and not node.text_content():
+                        node.drop_tag()
+                result[-1]["body_markdown"] = _clean((fragment.text or "") + "".join(
+                    etree.tostring(child, encoding="unicode", method="html") for child in fragment))
     return result
 
 
@@ -337,6 +448,45 @@ def _configured_abstract_lines(
         )
     configured_lines: list[PdfTextLine] = []
     region = config.get("abstract_region")
+    regions = config.get("abstract_regions", [])
+    if regions is None:
+        regions = []
+    if not isinstance(regions, list):
+        raise PdfArticleExtractionError(
+            "pdf_text.abstract_regions must be a list"
+        )
+    if region is not None and regions:
+        raise PdfArticleExtractionError(
+            "pdf_text.abstract_region and abstract_regions are mutually exclusive"
+        )
+    seen_line_keys: set[tuple[int, str]] = set()
+    for index, item in enumerate(regions, start=1):
+        if not isinstance(item, Mapping):
+            raise PdfArticleExtractionError(
+                f"pdf_text.abstract_regions item {index} must be a mapping"
+            )
+        page = item.get("page")
+        if not isinstance(page, int) or isinstance(page, bool) or page < 1:
+            raise PdfArticleExtractionError(
+                f"pdf_text.abstract_regions item {index} requires a positive page"
+            )
+        box = _box(
+            item.get("box"),
+            field=f"pdf_text.abstract_regions item {index} box",
+        )
+        lines = _lines_in_region(document, page, box)
+        if not lines:
+            raise PdfArticleExtractionError(
+                f"pdf_text.abstract_regions item {index} contains no text"
+            )
+        for line in lines:
+            key = (line.page, line.source_locator)
+            if key in seen_line_keys:
+                raise PdfArticleExtractionError(
+                    "pdf_text.abstract_regions overlap"
+                )
+            seen_line_keys.add(key)
+            configured_lines.append(line)
     if region is not None:
         if not isinstance(region, Mapping):
             raise PdfArticleExtractionError("pdf_text.abstract_region must be a mapping")
@@ -368,6 +518,40 @@ def _configured_abstract_lines(
     return result, configured_lines
 
 
+def _configured_reference_start(
+    config: Mapping[str, Any], document: PdfTextDocument
+) -> dict[str, Any] | None:
+    raw = config.get("reference_start")
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping):
+        raise PdfArticleExtractionError(
+            "pdf_text.reference_start must be a mapping"
+        )
+    page = raw.get("page")
+    if not isinstance(page, int) or isinstance(page, bool) or page < 1:
+        raise PdfArticleExtractionError(
+            "pdf_text.reference_start requires a positive page"
+        )
+    box = _box(raw.get("box"), field="pdf_text.reference_start box")
+    lines = _lines_in_region(document, page, box)
+    candidates = [
+        line
+        for line in lines
+        if _reference_number(_REFERENCE_START.match(_clean(line.plain_text))) == 1
+    ]
+    if len(candidates) != 1:
+        raise PdfArticleExtractionError(
+            "pdf_text.reference_start must contain exactly one line beginning "
+            "with reference number 1"
+        )
+    evidence = candidates[0]
+    return {
+        "line_key": (evidence.page, evidence.source_locator),
+        "evidence": evidence,
+    }
+
+
 def _configured_front_matter(
     config: Mapping[str, Any], source_path: str
 ) -> list[ContentBlock]:
@@ -392,15 +576,19 @@ def _configured_front_matter(
         group = str(item.get("group", "")).strip()
         label = str(item.get("label", "")).strip()
         value = str(item.get("reviewed_value", "")).strip()
+        markdown_value = str(item.get("reviewed_markdown", value)).strip()
+        kind = str(item.get("kind", "front_matter")).strip().casefold()
         if (
             not isinstance(page, int)
             or isinstance(page, bool)
             or page < 1
             or not field
-            or not label
             or not value
-            or "\n" in label
+            or not markdown_value
+            or not re.fullmatch(r"[a-z][a-z0-9_]*", kind)
             or "\n" in value
+            or "\n" in markdown_value
+            or "\n" in label
         ):
             raise PdfArticleExtractionError(
                 f"pdf_text.front_matter_regions item {index} is invalid"
@@ -423,9 +611,11 @@ def _configured_front_matter(
         blocks.append(
             ContentBlock(
                 block_id=block_id,
-                kind="front_matter",
-                markdown=f"**{label}:** {value}",
-                plain_text=f"{label}: {value}",
+                kind=kind,
+                markdown=(
+                    f"**{label}:** {markdown_value}" if label else markdown_value
+                ),
+                plain_text=f"{label}: {value}" if label else value,
                 source_path=source_path,
                 source_locator=locator,
                 source_geometry=[{"page": page, "bbox": list(box)}],
@@ -449,6 +639,7 @@ def _figures(
     document: PdfTextDocument,
     source_path: str,
     crop_specs: Iterable[Mapping[str, Any]],
+    *, preserve_source_emphasis: bool = False,
 ) -> tuple[list[FigureItem], dict[tuple[int, str], str]]:
     figures: list[FigureItem] = []
     caption_line_outputs: dict[tuple[int, str], str] = {}
@@ -487,10 +678,10 @@ def _figures(
             caption_line_outputs[line_key] = figure_id
         caption_plain = _join_fragments(line.plain_text for line in lines)
         caption_markdown = _join_fragments(
-            _strip_source_emphasis(line.markdown) for line in lines
+            (line.markdown if preserve_source_emphasis else _strip_source_emphasis(line.markdown)) for line in lines
         )
-        reviewed_caption = spec.get("caption_reviewed_value")
-        if reviewed_caption is not None:
+        if "caption_reviewed_value" in spec:
+            reviewed_caption = spec["caption_reviewed_value"]
             if not isinstance(reviewed_caption, str) or not reviewed_caption.strip():
                 raise PdfArticleExtractionError(
                     f"PDF visual crop {index} caption_reviewed_value must be nonempty text"
@@ -525,21 +716,40 @@ def _visual_regions(crop_specs: Iterable[Mapping[str, Any]]) -> list[dict[str, A
         category = str(spec.get("category", "")).strip().casefold()
         if category not in {"figure", "scheme", "graphical_abstract", "table"}:
             continue
-        page = spec.get("page")
-        if not isinstance(page, int):
-            continue
-        result.append(
-            {
-                "page": page,
-                "box": _box(spec.get("box"), field="PDF crop box"),
-                "output_id": str(spec.get("asset_id", "")).strip(),
-            }
-        )
+        for part in spec.get("parts", [spec]):
+            page = part.get("page")
+            if not isinstance(page, int):
+                continue
+            result.append(
+                {
+                    "page": page,
+                    "box": _box(part.get("box"), field="PDF crop box"),
+                    "output_id": str(spec.get("asset_id", "")).strip(),
+                }
+            )
     return result
 
 
 def _split_heading(line: PdfTextLine) -> tuple[str, str, str] | None:
     plain_match = _NUMBERED_HEADING.match(line.plain_text)
+    # A procedural sentence such as ``1. Prepare a 1.14× DNA solution`` can
+    # superficially match because the decimal point is mistaken for the end
+    # of a heading. Reject that exact numeric continuation while retaining
+    # legitimate unstyled headings such as ``1. General.`` and
+    # ``1. Synthesis.`` found in older PDFs.
+    if plain_match and not re.match(r"^\s*(?:\*\*|<strong\b)", line.markdown):
+        title_before_period = plain_match.group("title")[:-1].rstrip()
+        rest_after_period = plain_match.group("rest").lstrip()
+        if (
+            title_before_period[-1:].isdigit()
+            and rest_after_period[:1].isdigit()
+        ) or re.match(
+            r"^(?:add|carefully|combine|crush|denature|digest|dissolve|for\b|"
+            r"heat|precipitate|prepare|resuspend|set up|thermocycle|to\b|transfer)\b",
+            title_before_period,
+            flags=re.IGNORECASE,
+        ):
+            plain_match = None
     if plain_match:
         heading = (
             f"{plain_match.group('number')}. "
@@ -558,10 +768,12 @@ def _split_heading(line: PdfTextLine) -> tuple[str, str, str] | None:
         if separator:
             rest_markdown = _clean(unstyled_markdown[separator.end() :])
         else:
+            markup_match = _NUMBERED_HEADING.match(unstyled_markdown)
             position = unstyled_markdown.find(rest_plain)
             rest_markdown = (
-                _clean(unstyled_markdown[position:])
-                if position >= 0
+                _clean(markup_match.group("rest"))
+                if markup_match and markup_match.group("title") == plain_match.group("title")
+                else _clean(unstyled_markdown[position:]) if position >= 0
                 else rest_plain
             )
         return heading, rest_markdown, rest_plain
@@ -572,7 +784,7 @@ def _split_heading(line: PdfTextLine) -> tuple[str, str, str] | None:
         rest_markdown = _clean(
             _strip_source_emphasis(markdown_match.group("rest"))
         )
-        if heading.casefold() in {"experimental part", "references"}:
+        if heading.casefold() in {"experimental part", "reference", "references", "references and notes", "references and footnotes"}:
             rest_plain = re.sub(
                 rf"^{re.escape(heading)}\.?\s*",
                 "",
@@ -585,13 +797,20 @@ def _split_heading(line: PdfTextLine) -> tuple[str, str, str] | None:
     if folded in {
         "introduction",
         "results and discussion",
+        "materials and methods",
+        "results",
+        "discussion",
         "experimental",
         "experimental part",
+        "experimental section",
         "acknowledgment",
         "acknowledgments",
         "acknowledgement",
         "acknowledgements",
+        "reference",
         "references",
+        "references and notes",
+        "references and footnotes",
     }:
         return _clean(line.plain_text), "", ""
     return None
@@ -691,13 +910,31 @@ def _new_paragraph(previous: PdfTextLine, current: PdfTextLine) -> bool:
         # not a large first-line indent.  Continue an unfinished sentence and
         # split only when the preceding region ends with terminal punctuation.
         return previous.plain_text.rstrip().endswith((".", "?", "!"))
+    if (
+        previous.plain_text.rstrip().endswith("-")
+        and re.match(r"^[a-z]", current.plain_text.lstrip())
+    ):
+        # A hanging numbered/list item can indent its continuation far enough
+        # to resemble a new paragraph.  An unfinished lowercase word after a
+        # line-end hyphen is stronger evidence of visual line wrapping.
+        return False
+    if abs(current.bbox[1] - previous.bbox[1]) <= 1.0:
+        # Justified manuscript text can be decoded as several horizontal runs
+        # on one printed baseline. A larger x coordinate is then the next word,
+        # not a first-line indent announcing a new paragraph.
+        return False
     previous_height = max(previous.bbox[3] - previous.bbox[1], 1.0)
     gap = current.bbox[1] - previous.bbox[3]
-    if gap > previous_height * 0.9:
-        return True
     # In this journal, first lines are indented while continuations return to
     # the left margin.  Require a material indent so glyph jitter cannot split.
-    return current.bbox[0] - previous.bbox[0] > 6.0
+    if current.bbox[0] - previous.bbox[0] > 6.0:
+        return True
+    # Manuscript-layout PDFs are often double-spaced: their ordinary line gap
+    # can be roughly twice the glyph height, exactly like the visual gap
+    # between paragraphs. When first-line indentation is available, retain
+    # those same-margin lines and reserve the geometry-only fallback for a
+    # materially larger vertical separation.
+    return gap > previous_height * 3.0
 
 
 def _make_block(
@@ -708,13 +945,14 @@ def _make_block(
     *,
     markdown_prefix: str = "",
     plain_prefix: str = "",
+    preserve_source_emphasis: bool = False,
 ) -> ContentBlock:
     if not lines and not (markdown_prefix or plain_prefix):
         raise PdfArticleExtractionError("cannot make an empty PDF content block")
     markdown = _join_fragments(
         [
             markdown_prefix,
-            *(_strip_source_emphasis(line.markdown) for line in lines),
+            *((line.markdown if preserve_source_emphasis else _strip_source_emphasis(line.markdown)) for line in lines),
         ]
     )
     plain = _join_fragments([plain_prefix, *(line.plain_text for line in lines)])
@@ -748,6 +986,15 @@ def _apply_repairs(
         replacement = str(spec.get("replacement", ""))
         if not pattern:
             continue
+        expected_matches = spec.get("expected_matches")
+        if expected_matches is not None and (
+            isinstance(expected_matches, bool)
+            or not isinstance(expected_matches, int)
+            or expected_matches < 1
+        ):
+            raise PdfArticleExtractionError(
+                f"text repair {index} expected_matches must be a positive integer"
+            )
         total = 0
         for owner, field in text_fields:
             value = getattr(owner, field)
@@ -758,6 +1005,11 @@ def _apply_repairs(
         # Markdown and plain fields normally produce the same match; report
         # semantic occurrences, not storage-field writes.
         occurrences = (total + 1) // 2
+        if expected_matches is not None and occurrences != expected_matches:
+            raise PdfArticleExtractionError(
+                f"text repair {index} matched {occurrences} times; "
+                f"expected {expected_matches}"
+            )
         if occurrences:
             article.repairs.append(
                 Repair(
@@ -769,6 +1021,197 @@ def _apply_repairs(
                     evidence=str(spec.get("evidence", "")),
                 )
             )
+
+
+def _reviewed_native_regions(document: PdfTextDocument, config: Mapping[str, Any]) -> None:
+    """Replace defective hidden PDF text only in explicitly reviewed regions.
+
+    The archived PDF hash pins the transcription; native region boundaries
+    retain source coverage and every replacement carries its own geometry.
+    This is for source-specific corrupt OCR layers, never automatic repair.
+    """
+    specs = config.get("reviewed_native_regions", [])
+    if not specs:
+        return
+    if not isinstance(specs, list) or not re.fullmatch(r"[0-9a-f]{64}", str(config.get("source_sha256", ""))):
+        raise PdfArticleExtractionError("reviewed_native_regions requires a pinned PDF hash and a list")
+    regions = {item["region_id"]: item for item in config.get("native_reading_regions", [])}
+    seen: set[str] = set()
+    for spec in specs:
+        if not isinstance(spec, Mapping):
+            raise PdfArticleExtractionError("reviewed native region must be a mapping")
+        region_id = spec.get("region_id")
+        region = regions.get(region_id)
+        if region is None or region_id in seen or not str(spec.get("reason", "")).strip() or not str(spec.get("evidence", "")).strip():
+            raise PdfArticleExtractionError("reviewed native region requires unique existing region and evidence")
+        seen.add(region_id)
+        page = next((p for p in document.pages if p.page == region["page"]), None)
+        original = [line for line in page.lines if line.source_region_id == region_id] if page else []
+        raw_lines = spec.get("lines")
+        if not original or not isinstance(raw_lines, list) or not raw_lines:
+            raise PdfArticleExtractionError("reviewed native region must replace existing text with nonempty lines")
+        replacement = []
+        outer = region["box"]
+        for number, raw in enumerate(raw_lines, 1):
+            box = _box(raw.get("box"), field="reviewed native line box")
+            plain = str(raw.get("reviewed_value", "")).strip()
+            markdown = str(raw.get("reviewed_markdown", plain)).strip()
+            if not plain or not markdown or "\n" in plain or box[0] < outer[0] or box[1] < outer[1] or box[2] > outer[2] or box[3] > outer[3]:
+                raise PdfArticleExtractionError("reviewed native line must be nonempty and stay inside its source region")
+            replacement.append(PdfTextLine(page=page.page, bbox=box, plain_text=plain, markdown=markdown,
+                source_locator=f"PDF page {page.page}, reviewed text box {list(box)}",
+                source_region_id=f"{region_id}-reviewed-{number}"))
+        first = next(i for i, line in enumerate(page.lines) if line.source_region_id == region_id)
+        page.lines[:] = page.lines[:first] + replacement + [line for line in page.lines[first:] if line.source_region_id != region_id]
+        document.diagnostic_rows.append({"kind": "reviewed_native_region", "status": "reviewed", "source_path": document.relative_path,
+            "page": page.page, "region_id": region_id, "box": outer, "original_line_count": len(original),
+            "reviewed_line_count": len(replacement), "reason": spec["reason"], "evidence": spec["evidence"]})
+
+
+def _reviewed_image_only_regions(
+    document: PdfTextDocument, config: Mapping[str, Any]
+) -> None:
+    """Add an exact reviewed transcription for declared text on image-only pages.
+
+    This is a fail-closed companion to ``reviewed_native_regions`` for a mixed
+    PDF whose otherwise native text layer contains one or more rasterized
+    pages.  Every configured reading region on an affected page must be
+    transcribed explicitly.  Figure, scheme, chart and table pixels remain
+    outside these regions and are preserved through reviewed visual crops.
+    """
+
+    specs = config.get("reviewed_image_only_regions", [])
+    if not specs:
+        return
+    if not isinstance(specs, list) or not re.fullmatch(
+        r"[0-9a-f]{64}", str(config.get("source_sha256", ""))
+    ):
+        raise PdfArticleExtractionError(
+            "reviewed_image_only_regions requires a pinned PDF hash and a list"
+        )
+    raw_regions = config.get("native_reading_regions", [])
+    if not isinstance(raw_regions, list):
+        raise PdfArticleExtractionError(
+            "reviewed_image_only_regions requires native_reading_regions"
+        )
+    regions = {item.get("region_id"): item for item in raw_regions if isinstance(item, Mapping)}
+    if len(regions) != len(raw_regions):
+        raise PdfArticleExtractionError(
+            "reviewed image-only text requires uniquely named reading regions"
+        )
+
+    additions: dict[int, dict[str, list[PdfTextLine]]] = defaultdict(dict)
+    seen: set[str] = set()
+    for spec in specs:
+        if not isinstance(spec, Mapping):
+            raise PdfArticleExtractionError(
+                "reviewed image-only region must be a mapping"
+            )
+        region_id = spec.get("region_id")
+        region = regions.get(region_id)
+        if (
+            region is None
+            or region_id in seen
+            or not str(spec.get("reason", "")).strip()
+            or not str(spec.get("evidence", "")).strip()
+        ):
+            raise PdfArticleExtractionError(
+                "reviewed image-only region requires unique existing region and evidence"
+            )
+        seen.add(region_id)
+        page_number = region.get("page")
+        page = next((item for item in document.pages if item.page == page_number), None)
+        if page is None or page.classification != "image_only" or page.lines:
+            raise PdfArticleExtractionError(
+                "reviewed image-only region must target an otherwise empty image-only page"
+            )
+        raw_lines = spec.get("lines")
+        if not isinstance(raw_lines, list) or not raw_lines:
+            raise PdfArticleExtractionError(
+                "reviewed image-only region requires nonempty reviewed lines"
+            )
+        outer = _box(region.get("box"), field="reviewed image-only region box")
+        replacement: list[PdfTextLine] = []
+        for number, raw in enumerate(raw_lines, 1):
+            if not isinstance(raw, Mapping):
+                raise PdfArticleExtractionError(
+                    "reviewed image-only line must be a mapping"
+                )
+            box = _box(raw.get("box"), field="reviewed image-only line box")
+            plain = str(raw.get("reviewed_value", "")).strip()
+            markdown = str(raw.get("reviewed_markdown", plain)).strip()
+            if (
+                not plain
+                or not markdown
+                or "\n" in plain
+                or box[0] < outer[0]
+                or box[1] < outer[1]
+                or box[2] > outer[2]
+                or box[3] > outer[3]
+            ):
+                raise PdfArticleExtractionError(
+                    "reviewed image-only line must be nonempty and stay inside its source region"
+                )
+            replacement.append(
+                PdfTextLine(
+                    page=page.page,
+                    bbox=box,
+                    plain_text=plain,
+                    markdown=markdown,
+                    source_locator=(
+                        f"PDF page {page.page}, reviewed image-only text box {list(box)}"
+                    ),
+                    source_region_id=f"{region_id}-reviewed-{number}",
+                )
+            )
+        additions[page.page][str(region_id)] = replacement
+        document.diagnostic_rows.append(
+            {
+                "kind": "reviewed_image_only_region",
+                "status": "reviewed",
+                "source_path": document.relative_path,
+                "page": page.page,
+                "region_id": region_id,
+                "box": list(outer),
+                "reviewed_line_count": len(replacement),
+                "reason": spec["reason"],
+                "evidence": spec["evidence"],
+            }
+        )
+
+    for page_number, page_additions in additions.items():
+        declared = [
+            str(item["region_id"])
+            for item in raw_regions
+            if item.get("page") == page_number
+        ]
+        if not declared or set(declared) != set(page_additions):
+            raise PdfArticleExtractionError(
+                "every reading region on a reviewed image-only page must be transcribed"
+            )
+        page = next(item for item in document.pages if item.page == page_number)
+        page.lines.extend(
+            line
+            for region_id in declared
+            for line in page_additions[region_id]
+        )
+        document.warnings[:] = [
+            warning
+            for warning in document.warnings
+            if not (
+                warning.get("code") == "image_only_page"
+                and warning.get("page") == page_number
+            )
+        ]
+        document.diagnostic_rows.append(
+            {
+                "kind": "reviewed_image_only_page",
+                "status": "reviewed",
+                "source_path": document.relative_path,
+                "page": page_number,
+                "region_ids": declared,
+            }
+        )
 
 
 def extract_pdf_article(
@@ -792,6 +1235,13 @@ def extract_pdf_article(
     config = config or {}
     if not isinstance(config, Mapping):
         raise PdfArticleExtractionError("pdf_text override must be a mapping")
+    preserve_emphasis = config.get("preserve_source_emphasis", False)
+    if not isinstance(preserve_emphasis, bool):
+        raise PdfArticleExtractionError("pdf_text.preserve_source_emphasis must be boolean")
+    # Opt in only after source review establishes that the native font runs
+    # carry authored meaning (for example, bold mismatch bases in DNA sites).
+    def make_block(*args: Any, **kwargs: Any) -> ContentBlock:
+        return _make_block(*args, preserve_source_emphasis=preserve_emphasis, **kwargs)
     configured_source = str(config.get("source_path", source_path)).replace("\\", "/")
     if configured_source != source_path.replace("\\", "/"):
         raise PdfArticleExtractionError("pdf_text.source_path does not match the main PDF")
@@ -820,6 +1270,8 @@ def extract_pdf_article(
             source,
             source_path,
             glyph_overrides=_glyph_overrides(config),
+            reading_regions=config.get("native_reading_regions"),
+            word_gap_points=config.get('word_gap_points'),
         )
     else:
         document = text_document
@@ -827,13 +1279,82 @@ def extract_pdf_article(
             raise PdfArticleExtractionError(
                 "provided PDF text document does not match the main PDF"
             )
+    # Source-reviewed replacements need not inherit a detector confidence:
+    # that score describes the discarded OCR observation, not the reviewed
+    # transcription. Preserve whether OCR ran before replacing those lines.
+    ocr_pages = {
+        page.page for page in document.pages
+        if any(line.ocr_confidence is not None for line in page.lines)
+    }
+    ocr_pages.update(
+        row["page"] for row in document.diagnostic_rows
+        if row.get("kind") == "ocr_region" and isinstance(row.get("page"), int)
+    )
+    _reviewed_native_regions(document, config)
+    _reviewed_image_only_regions(document, config)
     if not document.all_pages_classified:
         raise PdfArticleExtractionError("not every PDF page received a text classification")
 
     configured_headings = _configured_section_headings(config, document)
+    configured_abstract_headings = [
+        item
+        for item in configured_headings
+        if str(item["title"]).casefold() == "abstract"
+    ]
+    if len(configured_abstract_headings) > 1:
+        raise PdfArticleExtractionError(
+            "pdf_text.section_headings must identify at most one Abstract heading"
+        )
+    configured_abstract_heading = (
+        configured_abstract_headings[0] if configured_abstract_headings else None
+    )
+    configured_reference_start = _configured_reference_start(config, document)
+    reference_entry_starts = config.get('reference_entry_starts', [])
+    if not isinstance(reference_entry_starts, list):
+        raise PdfArticleExtractionError('reference_entry_starts must be a list')
+    reference_entry_keys = {}
+    for number, spec in enumerate(reference_entry_starts, 1):
+        if not isinstance(spec, Mapping) or not isinstance(spec.get('page'), int):
+            raise PdfArticleExtractionError('reference_entry_starts requires page and exact first-line box')
+        lines = _lines_in_region(document, spec['page'], _box(spec.get('box'), field='reference entry box'))
+        if len(lines) != 1 or lines[0].plain_text != spec.get('text'):
+            raise PdfArticleExtractionError('reference entry boundary differs from reviewed first line')
+        key = (lines[0].page, lines[0].source_locator)
+        if key in reference_entry_keys:
+            raise PdfArticleExtractionError('duplicate reference entry boundary')
+        reference_entry_keys[key] = number
+    paragraph_break_regions_raw = config.get("paragraph_break_before_regions", [])
+    if (
+        not isinstance(paragraph_break_regions_raw, list)
+        or any(
+            not isinstance(region_id, str) or not region_id.strip()
+            for region_id in paragraph_break_regions_raw
+        )
+    ):
+        raise PdfArticleExtractionError(
+            "pdf_text.paragraph_break_before_regions must be a list of "
+            "non-empty region IDs"
+        )
+    paragraph_break_regions = [
+        region_id.strip() for region_id in paragraph_break_regions_raw
+    ]
+    if len(paragraph_break_regions) != len(set(paragraph_break_regions)):
+        raise PdfArticleExtractionError(
+            "pdf_text.paragraph_break_before_regions must not contain duplicates"
+        )
+    paragraph_break_region_ids = set(paragraph_break_regions)
+    for reviewed_region in config.get("reviewed_native_regions", []):
+        for number, reviewed_line in enumerate(reviewed_region["lines"], 1):
+            if reviewed_line.get("paragraph_break", True):
+                paragraph_break_region_ids.add(f"{reviewed_region['region_id']}-reviewed-{number}")
     abstract_region_ids, reviewed_abstract_lines = _configured_abstract_lines(
         config, document
     )
+    configured_abstract_line_keys = {
+        (line.page, line.source_locator)
+        for line in reviewed_abstract_lines
+        if line.source_region_id != "reviewed-abstract"
+    }
     heading_region_ids = {
         str(item["key"])[len("region:") :]
         for item in configured_headings
@@ -844,8 +1365,17 @@ def extract_pdf_article(
             "an OCR region cannot be both an abstract and a section heading"
         )
 
-    crop_specs = list(crop_specs)
-    figures, caption_keys = _figures(document, source_path, crop_specs)
+    # Record overrides can contain crops from the main article and several
+    # supplements. A page number is meaningful only within its source PDF:
+    # never let a supplement's table suppress main text at the same coordinates,
+    # or pair a supplement's figure with an unrelated main-article caption.
+    # Unqualified crops remain supported for direct legacy callers.
+    crop_specs = [
+        spec for spec in crop_specs
+        if str(spec.get("source_path", spec.get("source", source_path))).replace("\\", "/")
+        == source_path.replace("\\", "/")
+    ]
+    figures, caption_keys = _figures(document, source_path, crop_specs, preserve_source_emphasis=preserve_emphasis)
     visual_regions = _visual_regions(crop_specs)
     excluded_regions = _excluded_regions(config)
 
@@ -899,8 +1429,11 @@ def extract_pdf_article(
     front_matter: list[ContentBlock] = _configured_front_matter(config, source_path)
     abstract_lines: list[PdfTextLine] = list(reviewed_abstract_lines)
     retained: list[PdfTextLine] = []
-    if abstract_region_ids or reviewed_abstract_lines:
+    if abstract_region_ids or reviewed_abstract_lines or config.get("abstract_region_ids") == []:
         for line in body_lines:
+            key = (line.page, line.source_locator)
+            if key in configured_abstract_line_keys:
+                continue
             if line.source_region_id in abstract_region_ids:
                 abstract_lines.append(line)
             else:
@@ -930,7 +1463,7 @@ def extract_pdf_article(
                     if folded.startswith("dedicated to"):
                         if affiliation:
                             front_matter.append(
-                                _make_block(
+                                make_block(
                                     "front-matter-affiliation",
                                     "front_matter",
                                     affiliation,
@@ -941,7 +1474,7 @@ def extract_pdf_article(
                             )
                             affiliation = []
                         front_matter.append(
-                            _make_block(
+                            make_block(
                                 "front-matter-dedication",
                                 "front_matter",
                                 [line],
@@ -960,7 +1493,7 @@ def extract_pdf_article(
                     continue
             if _RECEIVED.match(text):
                 front_matter.append(
-                    _make_block(
+                    make_block(
                         "front-matter-article-history",
                         "front_matter",
                         [line],
@@ -974,7 +1507,7 @@ def extract_pdf_article(
             retained.append(line)
         if affiliation:
             front_matter.append(
-                _make_block(
+                make_block(
                     "front-matter-affiliation",
                     "front_matter",
                     affiliation,
@@ -987,20 +1520,31 @@ def extract_pdf_article(
     retained = _coalesce_wrapped_headings(retained)
 
     sections: list[Section] = []
+    abstract_heading_evidence = (
+        list(configured_abstract_heading["evidence"])
+        if configured_abstract_heading is not None
+        else []
+    )
     abstract = Section(
         section_id="section-abstract",
         heading="Abstract",
-        source_path=source_path if abstract_lines else "",
+        source_path=source_path if abstract_heading_evidence or abstract_lines else "",
         source_locator=(
-            _source_locator(abstract_lines[0].page, abstract_lines)
+            _source_locator(
+                abstract_heading_evidence[0].page, abstract_heading_evidence
+            )
+            if abstract_heading_evidence
+            else _source_locator(abstract_lines[0].page, abstract_lines)
             if abstract_lines
             else ""
         ),
-        source_geometry=_source_geometry(abstract_lines),
+        source_geometry=_source_geometry(
+            abstract_heading_evidence or abstract_lines
+        ),
     )
     if abstract_lines:
         abstract.blocks.append(
-            _make_block("main-abstract-0001", "abstract", abstract_lines, source_path)
+            make_block("main-abstract-0001", "abstract", abstract_lines, source_path)
         )
         sections.append(abstract)
 
@@ -1013,6 +1557,8 @@ def extract_pdf_article(
     block_number = 0
     reference_lines: list[PdfTextLine] = []
     references_mode = False
+    unnumbered_reference_mode = False
+    unnumbered_reference_left: float | None = None
     experimental_mode = False
 
     def flush_paragraph() -> None:
@@ -1026,7 +1572,7 @@ def extract_pdf_article(
             return
         block_number += 1
         current_section.blocks.append(
-            _make_block(
+            make_block(
                 f"main-paragraph-{block_number:04d}",
                 "paragraph",
                 current_lines,
@@ -1048,7 +1594,7 @@ def extract_pdf_article(
         nonlocal current_section, experimental_mode
         evidence = list(evidence_lines)
         folded = heading.casefold()
-        if folded in {"experimental", "experimental part"}:
+        if folded in {"experimental", "experimental part", "experimental section"}:
             level = 2
             experimental_mode = True
         elif experimental_mode and re.match(r"^\d+\.\s", heading):
@@ -1073,6 +1619,7 @@ def extract_pdf_article(
         sections.append(current_section)
 
     started_configured_headings: set[str] = set()
+    started_configured_reference = False
     for line in retained:
         text = _clean(line.plain_text)
         line_key = (line.page, line.source_locator)
@@ -1093,7 +1640,15 @@ def extract_pdf_article(
             heading_level = int(configured_heading["level"])
             heading_evidence = list(configured_heading["evidence"])
             flush_paragraph()
-            if heading_title.casefold() == "references":
+            if heading_title.casefold() == "abstract" and abstract_lines:
+                if configured_heading.get("body_plain") or configured_heading.get(
+                    "body_markdown"
+                ):
+                    raise PdfArticleExtractionError(
+                        "a configured Abstract heading must not contain body text"
+                    )
+                continue
+            if heading_title.casefold() in {"reference", "references", "references and notes", "references and footnotes"}:
                 references_mode = True
                 continue
             start_section(
@@ -1101,19 +1656,88 @@ def extract_pdf_article(
                 heading_evidence,
                 explicit_level=heading_level,
             )
+            body_plain = str(configured_heading.get("body_plain", ""))
+            body_markdown = str(configured_heading.get("body_markdown", ""))
+            if body_plain or body_markdown:
+                current_prefix_plain = body_plain
+                current_prefix_markdown = body_markdown
+                # All configured heading lines are skipped by the routing loop.
+                # Retain their geometry once, with blank text, so body prose
+                # printed after the heading remains traceable without rendering
+                # the configured title twice.
+                current_lines = [
+                    replace(evidence_line, markdown="", plain_text="")
+                    for evidence_line in heading_evidence
+                ]
             continue
+        if (
+            configured_reference_start is not None
+            and line_key == configured_reference_start["line_key"]
+        ):
+            flush_paragraph()
+            references_mode = True
+            started_configured_reference = True
         if references_mode:
-            if _REFERENCE_START.match(text) and reference_lines:
-                number = _reference_number(
-                    _REFERENCE_START.match(reference_lines[0].plain_text)
-                )
+            if reference_entry_keys:
+                entry_number = reference_entry_keys.get(line_key)
+                if entry_number is not None:
+                    if entry_number != len(references) + (2 if reference_lines else 1):
+                        raise PdfArticleExtractionError('reviewed reference entries are out of order')
+                    if reference_lines:
+                        references.append(make_block(f'reference-{len(references)+1:03d}', 'reference', reference_lines, source_path))
+                        reference_lines = []
+                if not reference_lines and entry_number is None:
+                    raise PdfArticleExtractionError('reference content precedes reviewed first entry')
+                reference_lines.append(line)
+                continue
+            next_match = _REFERENCE_START.match(text)
+            if unnumbered_reference_mode:
+                if (
+                    reference_lines
+                    and unnumbered_reference_left is not None
+                    and abs(line.bbox[0] - unnumbered_reference_left) <= 2.0
+                    and _AUTHOR_YEAR_REFERENCE_START.match(text)
+                ):
+                    references.append(
+                        make_block(
+                            f"reference-{len(references) + 1:03d}",
+                            "reference",
+                            reference_lines,
+                            source_path,
+                        )
+                    )
+                    reference_lines = []
+                reference_lines.append(line)
+                continue
+            current_number = (
+                _reference_number(_REFERENCE_START.match(reference_lines[0].plain_text))
+                if reference_lines
+                else None
+            )
+            next_number = _reference_number(next_match)
+            if not reference_lines and next_number is None:
+                if not _AUTHOR_YEAR_REFERENCE_START.match(text):
+                    raise PdfArticleExtractionError(
+                        "reference text before the first numbered or author-year entry: "
+                        f"{line.plain_text!r}"
+                    )
+                unnumbered_reference_mode = True
+                unnumbered_reference_left = line.bbox[0]
+                reference_lines.append(line)
+                continue
+            if (
+                reference_lines
+                and current_number is not None
+                and next_number == current_number + 1
+            ):
+                number = current_number
                 if number is None:
                     raise PdfArticleExtractionError(
                         "reference text before the first numbered entry: "
                         f"{reference_lines[0].plain_text!r}"
                     )
                 references.append(
-                    _make_block(
+                    make_block(
                         f"reference-{number:03d}",
                         "reference",
                         reference_lines,
@@ -1125,7 +1749,17 @@ def extract_pdf_article(
             continue
 
         heading = _split_heading(line)
-        if heading and heading[0].casefold() == "references":
+        if (heading and experimental_mode and current_lines
+                and re.match(r"^\d+\.\s", heading[0])
+                and current_lines[-1].plain_text.strip()
+                and not current_lines[-1].plain_text.rstrip().endswith((".", "?", "!"))
+                and not _new_paragraph(current_lines[-1], line)):
+            # A wrapped experimental paragraph can begin its next line with
+            # a spectrum value or compound number followed by a period.
+            # Preserve that geometrically continuous unfinished sentence;
+            # explicitly configured headings were already routed above.
+            heading = None
+        if heading and heading[0].casefold() in {"reference", "references", "references and notes", "references and footnotes"}:
             flush_paragraph()
             references_mode = True
             if heading[1] or heading[2]:
@@ -1154,18 +1788,43 @@ def extract_pdf_article(
             start_section("Acknowledgments", [line])
         if current_section is None:
             start_section("Article Text", [line])
-        if current_lines and _new_paragraph(current_lines[-1], line):
+        if (
+            current_lines
+            and line.source_region_id in paragraph_break_region_ids
+            and line.source_region_id != current_lines[-1].source_region_id
+        ):
+            flush_paragraph()
+        # A reviewed OCR plan already declares the order of distinct regions
+        # (for example, a left column followed by a right column). Geometry
+        # and OCR punctuation at that boundary are not reliable evidence of a
+        # new paragraph. Callers that observed a real paragraph boundary use
+        # ``paragraph_break_before_regions`` above; retain the default flow
+        # across all other reviewed region transitions.
+        same_region = (
+            current_lines
+            and current_lines[-1].source_region_id == line.source_region_id
+        )
+        native_geometry = current_lines and not (
+            current_lines[-1].source_region_id or line.source_region_id
+        )
+        if current_lines and (same_region or native_geometry) and _new_paragraph(
+            current_lines[-1], line
+        ):
             flush_paragraph()
         current_lines.append(line)
 
     flush_paragraph()
     if reference_lines:
         match = _REFERENCE_START.match(reference_lines[0].plain_text)
-        reference_number = _reference_number(match)
+        reference_number = (
+            len(references) + 1
+            if reference_entry_keys or unnumbered_reference_mode
+            else _reference_number(match)
+        )
         if reference_number is None:
             raise PdfArticleExtractionError("reference continuation has no numbered start")
         references.append(
-            _make_block(
+            make_block(
                 f"reference-{reference_number:03d}",
                 "reference",
                 reference_lines,
@@ -1182,6 +1841,12 @@ def extract_pdf_article(
             "configured section-heading region(s) were not routed into the article: "
             + ", ".join(missing_configured_headings)
         )
+    if configured_reference_start is not None and not started_configured_reference:
+        raise PdfArticleExtractionError(
+            "configured reference-start line was not routed into the article"
+        )
+    if reference_entry_keys and len(references) != len(reference_entry_keys):
+        raise PdfArticleExtractionError('not every reviewed reference entry was extracted')
     if not sections or not any(section.blocks for section in sections):
         raise PdfArticleExtractionError("no article text blocks were reconstructed")
     reference_numbers = [
@@ -1193,11 +1858,35 @@ def extract_pdf_article(
     if reference_numbers and reference_numbers != list(
         range(1, reference_numbers[-1] + 1)
     ):
-        raise PdfArticleExtractionError(
-            "PDF reference numbers must start at 1 and remain contiguous"
-        )
+        # Some archived publications contain an authored numbering gap. Keep
+        # those labels only with exact, source-pinned reviewed boundaries and
+        # an explicit sequence; never silently renumber the publication.
+        reviewed_labels = config.get("reference_label_sequence")
+        if not (
+            reference_entry_keys
+            and configured_hash
+            and isinstance(reviewed_labels, list)
+            and all(type(number) is int for number in reviewed_labels)
+            and reviewed_labels == reference_numbers
+        ):
+            raise PdfArticleExtractionError(
+                "PDF reference numbers must start at 1 and remain contiguous"
+            )
 
     page_diagnostics = list(document.diagnostic_rows)
+    if configured_reference_start is not None:
+        evidence = configured_reference_start["evidence"]
+        page_diagnostics.append(
+            {
+                "schema_version": "1.0",
+                "kind": "configured_reference_start",
+                "status": "reviewed",
+                "source_path": source_path,
+                "page": evidence.page,
+                "source_locator": evidence.source_locator,
+                "plain_text": evidence.plain_text,
+            }
+        )
     for exclusion_index, region in enumerate(excluded_regions, start=1):
         target_pages = (
             [page.page for page in document.pages]
@@ -1227,9 +1916,7 @@ def extract_pdf_article(
                 "classification": page.classification,
                 "decoded_lines": len(page.lines),
                 "excluded_lines": dict(sorted(excluded_counts[page.page].items())),
-                "ocr_performed": any(
-                    line.source_region_id is not None for line in page.lines
-                ),
+                "ocr_performed": page.page in ocr_pages,
             }
         if excluded_output_ids[page.page]:
             summary["excluded_output_ids"] = {

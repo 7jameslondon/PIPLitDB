@@ -1,0 +1,27 @@
+document_type: review
+publication_stage: preprint
+title: "Nucleic Acid-based Small Molecules as Targeted Transcription Therapeutics for Immunoregulation"
+authors:
+  - name: "Ganesh N. Pandian"
+  - name: "Dan Bai"
+  - name: "Reihane Ziadlou"
+  - name: "Thangavel Vaijayanthi"
+  - name: "Subramani Karthikeyan"
+  - name: "Shanmugavel Chinnathambi"
+  - name: "Anutthaman Parthasarathy"
+  - name: "Li Cai"
+  - name: "Marie-Charlotte Brüggen"
+  - name: "Hiroshi Sugiyama"
+doi: "10.22541/au.168490475.59419956/v1"
+publication_year: 2023
+journal: "Authorea"
+related_papers:
+  - pip_litdb_id: "00514"
+    relationship_type: is_preprint_of
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked
+pip_litdb_notes: "Author order follows the Authorea version 1 DOI metadata; the original manuscript byline has not been independently verified."

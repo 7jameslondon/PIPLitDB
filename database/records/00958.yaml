@@ -1,0 +1,21 @@
+document_type: research_article
+publication_stage: publication
+title: "TAMRA-polypyrrole for A/T sequence visualization on DNA molecules"
+authors:
+  - name: "Seonghyun Lee"
+  - name: "Yusuke Kawamoto"
+  - name: "Thangavel Vaijayanthi"
+  - name: "Jihyun Park"
+  - name: "Jaeyoung Bae"
+  - name: "Jeongsil Kim-Ha"
+  - name: "Hiroshi Sugiyama"
+  - name: "Kyubong Jo"
+doi: "10.1093/nar/gky531"
+publication_year: 2018
+journal: "Nucleic Acids Research"
+language_status: english
+human_user_reported_publisher_access: unknown
+pip_litdb_file_status:
+  main_pdf: unchecked
+  supplementary_material: unchecked
+  full_text_html: unchecked

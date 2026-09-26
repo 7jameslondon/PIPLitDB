@@ -12,5 +12,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: not_applicable
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "News & Views commentary (vol. 391, issue 6666, pp. 436–438; PMID 9461206), published 1998-01-29. It comments on PIP LitDB 00568 (DOI 10.1038/35106); the relationship vocabulary has no commentary relation, so no related_papers link is encoded."

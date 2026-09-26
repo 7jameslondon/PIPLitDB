@@ -35,6 +35,20 @@ def _dependency_versions() -> dict[str, str]:
     return versions
 
 
+def _repair_rows(
+    article: ArticleExtraction,
+    supplements: Iterable[SupplementExtraction],
+) -> list[dict[str, Any]]:
+    return [
+        *(repair.as_dict() for repair in article.repairs),
+        *(
+            dict(repair)
+            for supplement in supplements
+            for repair in supplement.repairs
+        ),
+    ]
+
+
 def _pipeline_code_sha256() -> str:
     """Fingerprint the checked-out extraction implementation and schemas."""
 
@@ -281,8 +295,26 @@ def _reconciliation_rows(
     for asset in assets:
         category = str(asset.get("category", ""))
         supporting_structure = None
-        if source_role in {"main_html", "main_pdf"} and category != "supplement_figure":
-            source_prefix = "HTML" if source_role == "main_html" else "PDF"
+        asset_source_path = str(asset.get("source_path") or "")
+        if category == "supplement_table" and asset_source_path.casefold().endswith(".pdf"):
+            supporting_structure = "PDF table structure"
+        elif category == "supplement_page_render":
+            supporting_structure = None
+        elif category == "table_cell" and asset_source_path.casefold().endswith(".pdf"):
+            supporting_structure = "PDF table structure"
+        elif asset_source_path.casefold().endswith((".doc", ".docx")):
+            # Supplement provenance follows the Word source, not the main
+            # article's HTML authority (including retained source images).
+            structure_kind = "table" if category in {"table", "supplement_table", "table_cell"} else "caption"
+            supporting_structure = f"Word {structure_kind} structure"
+        elif source_role in {"main_html", "main_pdf"} and category != "supplement_figure":
+            # Mixed-source articles can recover missing figures/tables from PDF.
+            # Do not label those source-backed assets as HTML merely because
+            # the surrounding article prose has HTML as its primary authority.
+            source_prefix = (
+                "PDF" if asset_source_path.casefold().endswith(".pdf")
+                else "HTML" if source_role == "main_html" else "PDF"
+            )
             structure_kind = "table" if category == "table" else "caption"
             supporting_structure = f"{source_prefix} {structure_kind} structure"
         rows.append(
@@ -297,17 +329,54 @@ def _reconciliation_rows(
             }
         )
     for supplement in supplements:
-        rows.append(
-            {
-                "schema_version": "1.0",
-                "decision_id": f"source-{supplement.supplement_id}",
-                "content": supplement.source.relative_path,
-                "selected_source": supplement.source.relative_path,
-                "supporting_source": None,
-                "reason": "original bytes copied and native text extracted into record.json",
-                "status": "included",
-            }
-        )
+        duplicate_exclusions = [
+            exclusion
+            for exclusion in getattr(supplement, "exclusions", [])
+            if exclusion.get("status") == "duplicate"
+            and exclusion.get("content_kind") == "supplement_source_content"
+        ]
+        duplicate_exclusion = duplicate_exclusions[0] if duplicate_exclusions else None
+        if duplicate_exclusion is not None:
+            supplement_reason = (
+                "original bytes copied; "
+                f"{duplicate_exclusion['reason']}"
+            )
+        elif supplement.blocks:
+            supplement_reason = (
+                "original bytes copied and source text represented in record.json; "
+                "see block provenance and reviewed repairs for the extraction method"
+            )
+        elif supplement.figures or supplement.tables:
+            supplement_reason = (
+                "original bytes copied; reviewed visual content is represented "
+                "through local assets and record.json captions or table data"
+            )
+        elif getattr(supplement, "exclusions", []):
+            supplement_reason = (
+                "original bytes copied; reviewed source text is represented "
+                "through consolidated structured items or documented exclusions"
+            )
+        else:
+            supplement_reason = (
+                "original bytes copied; no native text or reviewed visual elements "
+                "were available for semantic extraction"
+            )
+        row = {
+            "schema_version": "1.0",
+            "decision_id": f"source-{supplement.supplement_id}",
+            "content": supplement.source.relative_path,
+            "selected_source": supplement.source.relative_path,
+            "supporting_source": (
+                duplicate_exclusion.get("source_locator")
+                if duplicate_exclusion is not None
+                else None
+            ),
+            "reason": supplement_reason,
+            "status": "duplicate" if duplicate_exclusion is not None else "included",
+        }
+        if duplicate_exclusion is not None:
+            row["evidence"] = duplicate_exclusion["evidence"]
+        rows.append(row)
     return rows
 
 
@@ -543,6 +612,9 @@ def _confidence_document(
     warning_codes = {str(item.get("code", "")) for item in warnings}
     graphical_missing = "graphical_abstract_image_unavailable" in warning_codes
     supplement_warnings = any(supplement.warnings for supplement in supplements)
+    has_scientific_tables = bool(article.tables) or any(
+        supplement.tables for supplement in supplements
+    )
     main_text_pending = (
         "automated_pdf_html_alignment_not_implemented" in warning_codes
         or text_extraction["ocr_performed"]
@@ -598,11 +670,11 @@ def _confidence_document(
                 "basis": main_text_basis,
             },
             "scientific_tables": {
-                "level": "medium" if article.tables else "not_applicable",
+                "level": "medium" if has_scientific_tables else "not_applicable",
                 "basis": (
                     "machine-ready JSON is available for every table; source renderings are retained only for image/PDF-sourced tables, with graphical cell images retained when needed"
-                    if article.tables
-                    else "the article contains no scientific tables"
+                    if has_scientific_tables
+                    else "the record contains no scientific tables"
                 ),
             },
             "figures_and_schemes": {
@@ -672,6 +744,7 @@ def write_diagnostics(
     coverage: list[dict[str, Any]],
     override_text: str | None,
     source_anomalies: list[dict[str, Any]],
+    expected_counts: dict[str, int] | None = None,
 ) -> None:
     diagnostic_root.mkdir(parents=True, exist_ok=False)
     warnings = list(article.warnings)
@@ -679,39 +752,52 @@ def write_diagnostics(
     for supplement in supplements:
         warnings.extend(supplement.warnings)
     if any(figure.kind == "graphical_abstract" and not figure.output_path for figure in article.figures):
+        graphical_coverage_id = "unresolved-graphical-abstract-image"
+        graphical_source_path = next(
+            (
+                source.relative_path
+                for source in sources
+                if source.role == text_extraction["source_role"]
+            ),
+            "",
+        )
+        source_anomaly = next(
+            (
+                anomaly
+                for anomaly in source_anomalies
+                if anomaly.get("coverage_id") == graphical_coverage_id
+                and anomaly.get("source_path") == graphical_source_path
+            ),
+            None,
+        )
         warnings.append(
             {
                 "schema_version": "1.0",
                 "code": "graphical_abstract_image_unavailable",
                 "severity": "structural",
                 "message": "No graphical-abstract pixels exist in the supplied article sources.",
-                "source_path": next(
-                    (
-                        source.relative_path
-                        for source in sources
-                        if source.role == text_extraction["source_role"]
-                    ),
-                    None,
-                ),
+                "source_path": graphical_source_path or None,
             }
         )
         coverage = [
             *coverage,
             {
                 "schema_version": "1.0",
-                "coverage_id": "unresolved-graphical-abstract-image",
+                "coverage_id": graphical_coverage_id,
                 "content_kind": "graphical_abstract_image",
-                "source_path": next(
-                    (
-                        source.relative_path
-                        for source in sources
-                        if source.role == text_extraction["source_role"]
-                    ),
-                    "",
-                ),
+                "source_path": graphical_source_path,
                 "source_locator": "graphical abstract figure container",
-                "status": "unresolved",
-                "reason": "no recoverable image pixels in supplied sources",
+                "status": (
+                    "intentionally_excluded"
+                    if source_anomaly is not None
+                    else "unresolved"
+                ),
+                "reason": (
+                    "documented source limitation: "
+                    f"{source_anomaly['anomaly_id']}"
+                    if source_anomaly is not None
+                    else "no recoverable image pixels in supplied sources"
+                ),
             },
         ]
 
@@ -751,7 +837,7 @@ def write_diagnostics(
     )
     atomic_write_jsonl(
         diagnostic_root / "repairs.jsonl",
-        [repair.as_dict() for repair in article.repairs],
+        _repair_rows(article, supplements),
     )
     atomic_write_jsonl(diagnostic_root / "warnings.jsonl", warnings)
     atomic_write_jsonl(
@@ -795,6 +881,11 @@ def write_diagnostics(
         "files": inventory_files(extraction_root),
         "assets": assets,
     }
+    if expected_counts:
+        # Persist source-audited count assertions so the independent validator
+        # and promotion path enforce the same contract as the build-time
+        # validation, without needing to re-read the mutable override file.
+        manifest["expected_counts"] = dict(sorted(expected_counts.items()))
     record_json = extraction_root / "record.json"
     if record_json.is_file():
         manifest["record_document"] = {

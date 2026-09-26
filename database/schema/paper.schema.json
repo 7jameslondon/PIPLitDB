@@ -17,6 +17,27 @@
     "human_user_reported_publisher_access",
     "pip_litdb_file_status"
   ],
+  "allOf": [
+    {
+      "if": {
+        "required": ["document_type"],
+        "properties": {"document_type": {"const": "correction"}}
+      },
+      "else": {
+        "properties": {"authors": {"minItems": 1}}
+      }
+    },
+    {
+      "if": {
+        "required": ["document_type", "authors"],
+        "properties": {
+          "document_type": {"const": "correction"},
+          "authors": {"type": "array", "maxItems": 0}
+        }
+      },
+      "then": {"required": ["pip_litdb_notes"]}
+    }
+  ],
   "properties": {
     "document_type": {
       "type": "string",
@@ -34,7 +55,7 @@
     },
     "authors": {
       "type": "array",
-      "minItems": 1,
+      "description": "Ordered published byline. An empty list is permitted only for a correction verified to have no credited byline, with an explanatory pip_litdb_notes value.",
       "items": {
         "$ref": "#/$defs/author"
       }

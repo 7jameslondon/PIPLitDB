@@ -18,5 +18,5 @@ pip_litdb_file_status:
   main_pdf: present
   supplementary_material: present
   full_text_html: present
-pip_litdb_status: ready_for_extraction
+pip_litdb_status: extracted_approved
 pip_litdb_notes: "The publisher link for the first supplementary download (mmc1.pdf) is broken; the second supplementary PDF is archived as supplement_2.pdf."

@@ -1,0 +1,4 @@
+/staging/*
+!/staging/.gitkeep
+/state/*
+!/state/.gitkeep
